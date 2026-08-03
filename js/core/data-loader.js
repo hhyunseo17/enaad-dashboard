@@ -63,6 +63,12 @@
     }
 
     function fetchDataHttp() {
+      if (typeof DATA_URL === 'undefined') {
+        console.error('DATA_URL is not defined. Ensure js/core/state.js is loaded before data-loader.js');
+        showLoading(false);
+        showErrorMessage('데이터 URL이 정의되어 있지 않습니다. 스크립트 로드 순서에 문제가 있습니다. (state.js 확인)');
+        return;
+      }
       showLoading(true);
       const cacheBustUrl = DATA_URL + '?t=' + Date.now();
       fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include' })
