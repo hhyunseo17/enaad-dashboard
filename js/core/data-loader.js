@@ -65,8 +65,14 @@
     function fetchDataHttp() {
       showLoading(true);
       const cacheBustUrl = DATA_URL + '?t=' + Date.now();
-      fetch(cacheBustUrl, { cache: 'no-store' })
-        .then(res => { if (!res.ok) throw new Error(`HTTP Error ${res.status}`); const lm = res.headers.get('last-modified'); return res.arrayBuffer().then(buf => ({ buf, lm })); })
+      fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include' })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+          // Detect Cloudflare Access redirect which returns HTML login page
+          if (res.url && res.url.includes('cloudflareaccess.com')) throw new Error('Cloudflare Access authentication required');
+          const lm = res.headers.get('last-modified');
+          return res.arrayBuffer().then(buf => ({ buf, lm }));
+        })
         .then(({ buf, lm }) => {
           processWorkbookBuffer(buf);
           const modDate = workbookModifiedDate || (lm ? new Date(lm) : null);
