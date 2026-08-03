@@ -31,7 +31,7 @@ js/features/          shared-helpers · detail-pivots · kpi ·
 docs/                 data-rules · architecture · features/*.md
 .claude/agents/       feature-dev · data · reviewer
 worker.js/wrangler.toml   Cloudflare Worker(R2 서빙)
-logo-white.png        헤더 로고(다크·라이트 공통) / logo-basic.png(kt ENA 컬러, 참고용)
+logo-white.png        헤더 로고(기본)
 ```
 > 로드 순서가 곧 의존성. 상세는 `docs/architecture.md`.
 
