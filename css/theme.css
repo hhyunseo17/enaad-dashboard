@@ -104,7 +104,7 @@
     html[data-theme="light"] .revenue-basis-toggle { background: #E8F2FF; }
     html[data-theme="light"] .revenue-basis-btn { color: #4E5968; }
     html[data-theme="light"] .revenue-basis-btn:hover { color: #0064FF; }
-    html[data-theme="light"] .revenue-basis-btn.active { color: #FFFFFF; }
+    html[data-theme="light"] .revenue-basis-btn.active { background: var(--primary-blue); color: #FFFFFF; box-shadow: var(--shadow-blue-glow); }
     html[data-theme="light"] .pills-group { background: #FFFFFF; border-color: #E5E8EB; }
     html[data-theme="light"] .pill-btn { color: #191F28; }
     html[data-theme="light"] .pill-btn:hover { color: #0064FF; background: rgba(0, 100, 255, 0.06); }
