@@ -1,0 +1,132 @@
+/* ============================================================
+   theme.css — 색상/테마 토큰 (다크 :root + 라이트 오버라이드)
+   테마 관련 색상 수정은 이 파일 + js/core/theme-system.js
+   ============================================================ */
+    /* ==========================================================================
+       Toss Dark Mode Design System
+       ========================================================================== */
+    :root {
+      --bg-base: #0F1115;
+      --bg-subtle: #15171C;
+      --bg-elevated: #1A1D24;
+      --bg-card-hover: #21252F;
+      --bg-overlay: rgba(10, 12, 16, 0.85);
+
+      --border-default: #21232A;
+      --border-subtle: #15171C;
+      --border-strong: #2C2F37;
+      --border-focus: #4795FF;
+
+      --text-primary: #F2F4F6;
+      --text-secondary: #B0B8C1;
+      --text-tertiary: #8B95A1;
+      --text-disabled: #4E5968;
+      --text-on-primary: #0F1115;
+
+      --primary-blue: #4795FF;
+      --primary-blue-hover: #2C77DF;
+      --primary-blue-glow: rgba(71, 149, 255, 0.25);
+
+      --accent-green: #4ADE80;
+      --accent-green-bg: #0F2E1C;
+      --accent-orange: #FFB547;
+      --accent-orange-bg: #2E1F00;
+      --accent-red: #FF6B6B;
+      --accent-red-bg: #2E1010;
+      --accent-cyan: #38BDF8;
+      --accent-purple: #A855F7;
+      --accent-pink: #EC4899;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55);
+      --shadow-blue-glow: 0 0 0 1px rgba(71, 149, 255, 0.3), 0 8px 20px rgba(71, 149, 255, 0.18);
+    }
+
+    /* 라이트 테마 (Toss Light 톤 그대로 사용, Toss Blue #0064FF) */
+    html[data-theme="light"] {
+      --bg-base: #FFFFFF;
+      --bg-subtle: #F2F4F6;
+      --bg-elevated: #FFFFFF;
+      --bg-card-hover: #F2F4F6;
+      --bg-overlay: rgba(25, 31, 40, 0.5);
+
+      --border-default: #E5E8EB;
+      --border-subtle: #F2F4F6;
+      --border-strong: #D1D6DB;
+      --border-focus: #0064FF;
+
+      --text-primary: #191F28;
+      --text-secondary: #4E5968;
+      --text-tertiary: #8B95A1;
+      --text-disabled: #B0B8C1;
+      --text-on-primary: #FFFFFF;
+
+      --primary-blue: #0064FF;
+      --primary-blue-hover: #0050D9;
+      --primary-blue-glow: rgba(0, 100, 255, 0.20);
+
+      --accent-green: #00A85A;
+      --accent-green-bg: #E8F8EE;
+      --accent-orange: #FF9500;
+      --accent-orange-bg: #FFF4D6;
+      --accent-red: #FF4040;
+      --accent-red-bg: #FFE8E8;
+      --accent-cyan: #0284C7;
+      --accent-purple: #7B61FF;
+      --accent-pink: #DB2777;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
+      --shadow-blue-glow: 0 0 0 1px rgba(0, 100, 255, 0.25), 0 8px 20px rgba(0, 100, 255, 0.15);
+    }
+
+    /* 라이트 테마 - CSS 변수로 관리되지 않는 하드코딩 색상들에 대한 개별 오버라이드 */
+    html[data-theme="light"] .filter-bar { background: #FFFFFF; }
+    html[data-theme="light"] .filter-label { color: #4E5968; }
+    html[data-theme="light"] .multi-dropdown-btn { background: #FFFFFF; border-color: #E5E8EB; color: #191F28; }
+    html[data-theme="light"] .multi-dropdown-btn:hover { background: #F2F4F6; }
+    html[data-theme="light"] .multi-dropdown-panel { background: #FFFFFF; border-color: #E5E8EB; }
+    html[data-theme="light"] .checkbox-item { color: #191F28; }
+    html[data-theme="light"] .checkbox-item:hover { background: #F2F4F6; }
+    html[data-theme="light"] body { font-weight: 500; }
+    html[data-theme="light"] header.header-bar { background: #0064FF; border-color: #0064FF; }
+    html[data-theme="light"] header.header-bar .brand-title h1 { color: #FFFFFF; }
+    html[data-theme="light"] header.header-bar .brand-title p { color: rgba(255, 255, 255, 0.75); }
+    html[data-theme="light"] header.header-bar .status-badge { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); color: #FFFFFF; }
+    html[data-theme="light"] header.header-bar .sync-time { color: rgba(255, 255, 255, 0.75); }
+    html[data-theme="light"] .revenue-basis-toggle { background: #E8F2FF; }
+    html[data-theme="light"] .revenue-basis-btn { color: #4E5968; }
+    html[data-theme="light"] .revenue-basis-btn:hover { color: #0064FF; }
+    html[data-theme="light"] .revenue-basis-btn.active { color: #FFFFFF; }
+    html[data-theme="light"] .pills-group { background: #FFFFFF; border-color: #E5E8EB; }
+    html[data-theme="light"] .pill-btn { color: #191F28; }
+    html[data-theme="light"] .pill-btn:hover { color: #0064FF; background: rgba(0, 100, 255, 0.06); }
+    html[data-theme="light"] .pill-btn.active { color: #FFFFFF; }
+    html[data-theme="light"] .select-input, html[data-theme="light"] .text-input { background: #FFFFFF; border-color: #E5E8EB; color: #191F28; }
+    html[data-theme="light"] .select-input:focus, html[data-theme="light"] .text-input:focus { background: #F2F4F6; }
+    html[data-theme="light"] .table-wrapper { background: #FFFFFF; }
+    html[data-theme="light"] .pivot-tree-table th, html[data-theme="light"] .pivot-tree-table td { border-color: #E5E8EB; }
+    html[data-theme="light"] .pivot-tree-table th { background: #0064FF !important; box-shadow: 0 1px 0 #4795FF; }
+    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(1) th { background: #0050D9 !important; }
+    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(2) th { background: #1F7CFF !important; }
+    html[data-theme="light"] .pivot-tree-table td:first-child,
+    html[data-theme="light"] .pivot-tree-table th:first-child { background: #F2F4F6 !important; color: #191F28 !important; }
+    html[data-theme="light"] .pivot-tree-table th:first-child { background: #0064FF !important; color: #FFFFFF !important; }
+    html[data-theme="light"] .row-grand-total { background: #0050D9 !important; border-top-color: #4795FF; }
+    html[data-theme="light"] .row-grand-total td { background: #0050D9 !important; }
+    html[data-theme="light"] .row-grand-total td:first-child { background: #0064FF !important; }
+    html[data-theme="light"] .pivot-hero-card { background: linear-gradient(135deg, #FFFFFF 0%, #F2F4F6 100%) !important; }
+    html[data-theme="light"] .pivot-hero-card h2 { color: #191F28 !important; }
+    /* 헤더가 라이트 모드에서도 블루 배경이라 화이트 로고를 공통으로 사용 (테마별 전환 없음) */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; width: 100%; overscroll-behavior-x: none; }
+

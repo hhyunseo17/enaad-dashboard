@@ -1,0 +1,100 @@
+// ============================================================
+// js/features/trend-portfolio-channel.js
+// 메인 개요 차트: 트렌드/포트폴리오/채널/구간분포
+// ============================================================
+    function renderTrendChart() {
+      const ctx = document.getElementById('chartTrend').getContext('2d'); if (chartInstances.trend) chartInstances.trend.destroy();
+      const sortedMonths = [...new Set(filteredData.map(r => r.monthStr))].sort(); const categories = [...categoryOrderList];
+      const datasets = categories.map(cat => {
+        let cumulativeSum = 0;
+        const data = sortedMonths.map(m => {
+          const monthlyCatSum = filteredData.filter(r => r.monthStr === m && r.categoryReclassified === cat).reduce((sum, r) => sum + r.amount, 0) / 1e8;
+          if (trendChartMode === 'cumulative') { cumulativeSum += monthlyCatSum; return cumulativeSum; } return monthlyCatSum;
+        });
+        return { label: cat, data: data, backgroundColor: categoryColors[cat] || chartColors.blue, borderRadius: 0,
+          datalabels: {
+            display: (ctx) => cat === categories[categories.length - 1],
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 12, weight: '700' },
+            formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? `${total.toFixed(1)}억` : ''; }
+          }
+        };
+      });
+      chartInstances.trend = new Chart(ctx, {
+        type: 'bar', data: { labels: sortedMonths, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: () => null, afterBody: (t) => {
+                  let mt = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; mt += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); });
+                  return [`💰 총 매출: ${mt.toFixed(2)} 억원`, ``, ...bd];
+                }
+              }
+            }
+          },
+          scales: { x: { stacked: true, ticks: { color: CH('#8B95A1') }, grid: { color: CH('#21232A') } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+        }
+      });
+    }
+
+    function renderPortfolioChart() {
+      const ctx = document.getElementById('chartPortfolio').getContext('2d'); if (chartInstances.portfolio) chartInstances.portfolio.destroy();
+      const groupMap = {}; filteredData.forEach(r => { const k = r[portfolioMode] || '기타'; groupMap[k] = (groupMap[k] || 0) + r.amount; });
+      let sorted = Object.entries(groupMap);
+      if (portfolioMode === 'broadDigital') sorted.sort((a, b) => (broadOrderMap[a[0]] || 99) - (broadOrderMap[b[0]] || 99)); else if (portfolioMode === 'categoryReclassified') sorted.sort((a, b) => categoryOrderList.indexOf(a[0]) - categoryOrderList.indexOf(b[0])); else { sorted.sort((a, b) => b[1] - a[1]); sorted = sorted.slice(0, 8); }
+      const labels = sorted.map(s => s[0]); const dataVals = sorted.map(s => s[1] / 1e8);
+      const bgColors = labels.map((k, i) => (portfolioMode === 'categoryReclassified' && categoryColors[k]) ? categoryColors[k] : colorPaletteList[i % colorPaletteList.length]);
+
+      const totalSum = dataVals.reduce((a,b) => a+b, 0) || 1;
+      chartInstances.portfolio = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: dataVals, backgroundColor: bgColors, borderWidth: 0,
+        datalabels: {
+          display: 'auto', color: '#FFFFFF', font: { family: 'Pretendard', size: 12, weight: '700' }, textStrokeColor: 'rgba(0,0,0,0.35)', textStrokeWidth: 2,
+          formatter: (value) => `${((value / totalSum) * 100).toFixed(1)}%`
+        }
+      }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '68%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 11, family: 'Pretendard', weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } } });
+    }
+
+    function renderChannelChart() {
+      const ctx = document.getElementById('chartChannel').getContext('2d'); if (chartInstances.channel) chartInstances.channel.destroy();
+      const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
+      const channelMap = {}; filteredData.forEach(r => { channelMap[r.channel || '기타'] = true; });
+      const labels = [...targetOrder]; let hasOther = false; Object.keys(channelMap).forEach(ch => { if (!targetOrder.includes(ch) && ch !== '(미지정)') hasOther = true; }); if (hasOther) labels.push('기타');
+      const datasets = categoryOrderList.map(cat => {
+        const data = labels.map(chLabel => { if (chLabel === '기타') return filteredData.filter(r => !targetOrder.includes(r.channel) && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; return filteredData.filter(r => r.channel === chLabel && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; });
+        return { label: cat, data: data, backgroundColor: categoryColors[cat] || chartColors.blue, borderRadius: 0,
+          datalabels: {
+            display: (ctx) => cat === categoryOrderList[categoryOrderList.length - 1],
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' },
+            formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
+          }
+        };
+      });
+
+      chartInstances.channel = new Chart(ctx, {
+        type: 'bar', data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { stacked: true, type: channelScaleMode, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+        }
+      });
+    }
+
+    function renderAdvBucketChart() {
+      const ctx = document.getElementById('chartAdvBucket').getContext('2d'); if (chartInstances.advBucket) chartInstances.advBucket.destroy();
+      const targetData = filteredData.filter(r => { const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y'; return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN; });
+      const advMonthMap = {}; targetData.forEach(r => { const key = r.monthStr + '||' + r.advertiser; advMonthMap[key] = (advMonthMap[key] || 0) + r.amount; });
+      const buckets = { '1억 이상': { count: 0, sum: 0 }, '0.5~1억원': { count: 0, sum: 0 }, '0.4~0.5억원': { count: 0, sum: 0 }, '0.3~0.4억원': { count: 0, sum: 0 }, '0.2~0.3억원': { count: 0, sum: 0 }, '0.1~0.2억원': { count: 0, sum: 0 }, '0.1억원 미만': { count: 0, sum: 0 } };
+      Object.values(advMonthMap).forEach(amount => { if (amount > 0) { let bKey = ''; if (amount >= 100000000) bKey = '1억 이상'; else if (amount >= 50000000) bKey = '0.5~1억원'; else if (amount >= 40000000) bKey = '0.4~0.5억원'; else if (amount >= 30000000) bKey = '0.3~0.4억원'; else if (amount >= 20000000) bKey = '0.2~0.3억원'; else if (amount >= 10000000) bKey = '0.1~0.2억원'; else bKey = '0.1억원 미만'; buckets[bKey].count++; buckets[bKey].sum += amount; } });
+      const labels = Object.keys(buckets); const countVals = labels.map(k => buckets[k].count); const sumVals = labels.map(k => buckets[k].sum / 1e8);
+
+      chartInstances.advBucket = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: chartColors.indigo, yAxisID: 'y', borderRadius: 0, order: 2,
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v + '개' : '' }
+        }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: '#FFB547', backgroundColor: '#FFB547', borderWidth: 2, pointRadius: 4, yAxisID: 'y1', order: 1,
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+        } ] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { type: 'linear', position: 'left', ticks: { color: CH('#8B95A1'), stepSize: 1 }, grid: { color: CH('#21232A') } }, y1: { type: 'linear', position: 'right', grace: '20%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { drawOnChartArea: false } } } }
+      });
+    }
+

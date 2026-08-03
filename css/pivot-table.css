@@ -1,0 +1,44 @@
+/* ============================================================
+   pivot-table.css — 피벗 테이블 틀/Sticky 고정
+   ============================================================ */
+
+    /* ==========================================================================
+       피벗 테이블 틀 고정 및 스크롤 시 상단/좌측 고정 (Sticky)
+       ========================================================================== */
+    .pivot-tree-table { border-collapse: separate; border-spacing: 0; font-size: 13px !important; }
+    .pivot-tree-table th, .pivot-tree-table td { border: 1px solid #2C3240; padding: 5px 10px; }
+
+    .indent-step-1 { padding-left: 12px !important; }
+    .indent-step-2 { padding-left: 36px !important; }
+    .indent-step-3 { padding-left: 60px !important; }
+    .indent-step-4 { padding-left: 84px !important; }
+    .indent-step-5 { padding-left: 108px !important; }
+    
+    .pivot-tree-table th { background: #1D4ED8 !important; color: #FFFFFF !important; font-weight: 800; text-align: center; position: sticky; z-index: 30; box-shadow: 0 1px 0 #3B82F6; padding: 6px 10px !important; }
+    .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: #1E40AF !important; z-index: 32; }
+    .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: #2563EB !important; z-index: 32; }
+
+    .pivot-tree-table td:first-child,
+    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; background: #1E293B !important; color: #F8FAFC !important; font-weight: 700; }
+    .pivot-tree-table th:first-child { z-index: 35 !important; background: #1D4ED8 !important; }
+
+    .row-grand-total { font-weight: 900; background: #1E40AF !important; border-top: 3px solid #60A5FA; }
+    .row-grand-total td { background: #1E40AF !important; color: #FFFFFF !important; padding: 6px 10px !important; }
+    .row-grand-total td:first-child { background: #1D4ED8 !important; color: #FFFFFF !important; z-index: 26; }
+
+    .toggle-icon { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: #3B82F6; color: #FFFFFF; border: 1px solid #60A5FA; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; margin-right: 8px; user-select: none; }
+    .toggle-icon:hover { background: #60A5FA; }
+    
+    .year-toggle-btn { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: #3B82F6; color: #FFFFFF; border: 1px solid #60A5FA; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; margin-right: 6px; user-select: none; }
+    .year-toggle-btn:hover { background: #60A5FA; }
+
+    .pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+    .page-info { font-size: 12px; color: var(--text-tertiary); }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-overlay); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; gap: 16px; }
+    .spinner { width: 44px; height: 44px; border: 4px solid var(--border-default); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-banner { background: var(--accent-red-bg); border: 1px solid var(--accent-red); color: var(--text-primary); padding: 14px 20px; border-radius: var(--radius-md); font-size: 13px; display: none; align-items: center; justify-content: space-between; }
+
+    /* ========================================================================

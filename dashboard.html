@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KT ENA 광고사업본부 매출 분석 대시보드</title>
+  
+  <!-- Pretendard Font -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  
+  <!-- SheetJS & Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  
+  <!-- Styles (분리된 CSS 모듈) -->
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/pivot-table.css" />
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">데이터를 불러오는 중입니다.</div>
+    <div style="font-size: 12px; color: var(--text-tertiary);">잠시만 기다려 주시기 바랍니다.</div>
+  </div>
+
+  <div class="dashboard-container">
+    
+    <!-- Top Header -->
+    <header class="header-bar">
+      <div class="brand-group">
+        <div class="brand-logo" onclick="returnToMainDashboard()" style="cursor: pointer;" title="메인으로 이동">
+          <img id="logoDark" src="logo-white.png" alt="KT ENA" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <img id="logoLight" src="logo-basic.png" alt="KT ENA" style="display: none;">
+          <span style="display: none; font-weight: 800; font-size: 16px; color: #FFFFFF; letter-spacing: -0.02em;">KT ENA</span>
+        </div>
+        <div class="brand-title">
+          <h1 id="headerMainTitle" class="title-pill">광고사업본부 매출 분석 대시보드</h1>
+        </div>
+      </div>
+      
+      <div class="header-status">
+        <div id="breadcrumbBox" style="display: none; align-items: center; gap: 8px;">
+          <button class="btn btn-sm" onclick="returnToMainDashboard()">⬅ 메인으로</button>
+        </div>
+        <div class="status-badge">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusModeText">AUTO-SYNC (HTTP)</span>
+        </div>
+        <span id="fileLastModified" class="sync-time">원본 수정: -</span>
+        <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
+        <button id="themeToggleBtn" class="btn btn-sm" onclick="toggleTheme()">☀️ 라이트</button>
+      </div>
+    </header>
+
+    <!-- File Dropzone Container -->
+    <div id="fileDropzone" class="file-dropzone-container">
+      <div class="dropzone-title">📁 Excel 파일 (addata.xlsx) 업로드</div>
+      <div class="dropzone-desc">로컬 환경(file://)에서는 아래 버튼을 누르거나 addata.xlsx 파일을 끌어다 놓으세요.</div>
+      <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+      <div style="display: flex; gap: 10px; margin-top: 4px;">
+        <button class="btn btn-primary" onclick="document.getElementById('excelFileInput').click()">파일 선택하기</button>
+      </div>
+    </div>
+
+    <!-- Error Notice Banner -->
+    <div id="errorBanner" class="error-banner">
+      <span id="errorMessage">오류가 발생했습니다.</span>
+      <button class="btn btn-sm" onclick="hideErrorMessage()">닫기</button>
+    </div>
+
+    <!-- Zone 1: Global Filters Bar -->
+    <section class="filter-bar">
+      <div class="filter-row" style="justify-content: space-between;">
+        <div class="filter-group">
+          <span class="filter-label">매출 기준</span>
+          <div class="revenue-basis-toggle">
+            <button class="revenue-basis-btn active" id="btnBasisPerformance" onclick="setRevenueBasis('performance')">취급고</button>
+            <button class="revenue-basis-btn" id="btnBasisAccounting" onclick="setRevenueBasis('accounting')">회계</button>
+          </div>
+        </div>
+        <button class="btn btn-sm" onclick="resetFilters()">🔄 필터 초기화</button>
+      </div>
+
+      <div id="filterBarCollapsible" style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
+        <div class="filter-group">
+          <span class="filter-label">연도 선택</span>
+          <div id="yearPills" class="pills-group"></div>
+        </div>
+      </div>
+
+      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
+        <div class="filter-group">
+          <span class="filter-label">월 선택</span>
+          <div id="monthPills" class="pills-group">
+            <button class="pill-btn active" data-month="all">전체</button>
+            <button class="pill-btn" data-month="1">1월</button>
+            <button class="pill-btn" data-month="2">2월</button>
+            <button class="pill-btn" data-month="3">3월</button>
+            <button class="pill-btn" data-month="4">4월</button>
+            <button class="pill-btn" data-month="5">5월</button>
+            <button class="pill-btn" data-month="6">6월</button>
+            <button class="pill-btn" data-month="7">7월</button>
+            <button class="pill-btn" data-month="8">8월</button>
+            <button class="pill-btn" data-month="9">9월</button>
+            <button class="pill-btn" data-month="10">10월</button>
+            <button class="pill-btn" data-month="11">11월</button>
+            <button class="pill-btn" data-month="12">12월</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
+        <div class="filter-group">
+          <span class="filter-label">부서</span>
+          <div class="multi-dropdown" id="dropdownDept">
+            <button class="multi-dropdown-btn" onclick="toggleMultiDropdown('Dept')">
+              <span id="labelDept">전체 부서</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelDept">
+              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+                <input type="checkbox" id="checkAllDept" onchange="toggleAllCheckboxes('Dept', this)">전체선택
+              </label>
+              <div id="listDeptCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">채널</span>
+          <div class="multi-dropdown" id="dropdownChannel">
+            <button class="multi-dropdown-btn" onclick="toggleMultiDropdown('Channel')">
+              <span id="labelChannel">전체 채널</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelChannel">
+              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+                <input type="checkbox" id="checkAllChannel" onchange="toggleAllCheckboxes('Channel', this)">전체선택
+              </label>
+              <div id="listChannelCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">방송/디지털</span>
+          <div class="multi-dropdown" id="dropdownBroad">
+            <button class="multi-dropdown-btn" onclick="toggleMultiDropdown('Broad')">
+              <span id="labelBroad">전체 구분</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelBroad">
+              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+                <input type="checkbox" id="checkAllBroad" onchange="toggleAllCheckboxes('Broad', this)">전체선택
+              </label>
+              <div id="listBroadCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">매출 대분류</span>
+          <div class="multi-dropdown" id="dropdownCategory">
+            <button class="multi-dropdown-btn" onclick="toggleMultiDropdown('Category')">
+              <span id="labelCategory">전체 대분류</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelCategory">
+              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+                <input type="checkbox" id="checkAllCategory" onchange="toggleAllCheckboxes('Category', this)">전체선택
+              </label>
+              <div id="listCategoryCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">대행사 검색</span>
+          <input type="text" id="inputAgency" class="text-input" placeholder="대행사명..." style="width: 120px;">
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">광고주 검색</span>
+          <input type="text" id="inputAdvertiser" class="text-input" placeholder="광고주명..." style="width: 120px;">
+        </div>
+      </div>
+      </div>
+
+      <div style="display: flex; justify-content: center; padding-top: 4px; border-top: 1px solid var(--border-strong);">
+        <button id="filterBarToggleBtn" class="btn btn-sm" onclick="toggleFilterBar()" style="width: 100%;">▲ 조회영역 접기</button>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+       VIEW 1: MAIN DASHBOARD VIEW
+       ========================================================================== -->
+    <div id="mainDashboardView" class="view-section active">
+      
+      <!-- Zone 2: Executive Summary KPI Cards -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">본부 총 매출액</span>
+            <div class="kpi-icon">💰</div>
+          </div>
+          <div class="kpi-value-box">
+            <div id="kpiTotalRevenue" class="kpi-value">0 원</div>
+            <div class="kpi-sub" id="kpiTotalSub">선택 기간 총 누적 실적</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-accent-green">
+          <div class="kpi-header">
+            <span class="kpi-title">전년 동기 대비 증감액</span>
+            <div class="kpi-icon">📈</div>
+          </div>
+          <div class="kpi-value-box">
+            <div id="kpiYoYDiff" class="kpi-value">0 원</div>
+            <div class="kpi-sub">
+              <span id="kpiGrowthBadge" class="badge-growth up">+0.0%</span>
+              <span id="kpiGrowthText">작년 동기 대비</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-accent-purple clickable" onclick="openBucketPivotView()">
+          <div class="kpi-header">
+            <span class="kpi-title">월평균 광고주당 매출</span>
+            <div class="kpi-icon">👥</div>
+          </div>
+          <div class="kpi-value-box">
+            <div id="kpiAvgRevPerAdv" class="kpi-value">0 원</div>
+            <div class="kpi-sub" style="flex-wrap: wrap;">
+              <span id="kpiAdvGrowthBadge" class="badge-growth up">+0.0% ▲</span>
+              <span id="kpiAdvCountSub">선택기간 광고주수: 0 개</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-accent-orange clickable" onclick="openNewAdvPivotView()">
+          <div class="kpi-header">
+            <span class="kpi-title">신규 광고주 수</span>
+            <div class="kpi-icon">✨</div>
+          </div>
+          <div class="kpi-value-box">
+            <div id="kpiNewAdvCount" class="kpi-value">0 개사</div>
+            <div class="kpi-sub" id="kpiNewAdvSub">일반+IMC / 1/N 제외 기준</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-accent-pink clickable" onclick="openUpfrontPivotView()">
+          <div class="kpi-header">
+            <span class="kpi-title">업프론트 계약 대비 실적</span>
+            <div class="kpi-icon">📝</div>
+          </div>
+          <div class="kpi-value-box">
+            <div id="kpiUpfrontActual" class="kpi-value">0 원</div>
+            <div class="kpi-sub" style="flex-wrap: wrap;">
+              <span id="kpiUpfrontAchieveBadge" class="badge-growth up">0.0% 달성</span>
+              <span id="kpiUpfrontSub">계약금액 약 0.00억원(월할 추정치) 대비</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 3: Main Trends & Portfolios -->
+      <section class="grid-2col grid-zone3">
+        <div class="card-box clickable" onclick="openCategoryPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>월별 매출 추이 현황</h2>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnMonthlyActual" onclick="setTrendChartMode('monthly')">월별 매출</button>
+              <button class="pill-btn" id="btnCumulativeActual" onclick="setTrendChartMode('cumulative')">누적 매출</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartTrend"></canvas>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>매출 구성 비중</h2>
+            </div>
+            <div class="pills-group">
+              <button class="pill-btn active" id="btnPortfolioCat" onclick="setPortfolioMode('categoryReclassified')">대분류</button>
+              <button class="pill-btn" id="btnPortfolioBroad" onclick="setPortfolioMode('broadDigital')">방송/디지털</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartPortfolio"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 4: Channel & Advertiser Bucket -->
+      <section class="grid-2col grid-zone5">
+        <div class="card-box clickable" onclick="openChannelPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>채널별 매출 현황</h2>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnChannelLinear" onclick="setChannelScale('linear')">선형</button>
+              <button class="pill-btn" id="btnChannelLog" onclick="setChannelScale('logarithmic')">로그</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartChannel"></canvas>
+          </div>
+        </div>
+
+        <div class="card-box clickable" onclick="openBucketPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>월단위 광고주 금액 구간별 분포</h2>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartAdvBucket"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 5: Top 10 Ranking -->
+      <section class="grid-2col grid-zone5">
+        <div class="card-box clickable" onclick="openAgencyPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>대행사 Top 10 수주 순위</h2>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnRankAgencySolo" onclick="setRankAgencyMode('agency')">대행사</button>
+              <button class="pill-btn" id="btnRankAgencyGroup" onclick="setRankAgencyMode('agencyGroup')">대행사 그룹</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartRankAgency"></canvas>
+          </div>
+        </div>
+
+        <div class="card-box clickable" onclick="openAdvertiserPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>광고주 Top 10 수주 순위</h2>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartRankAdvertiser"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 6: Department & Manager Performance -->
+      <section class="grid-2col grid-zone5">
+        <div class="card-box clickable" onclick="openDeptPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>부서별 수주 현황 및 성과</h2>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnDeptCategory" onclick="setDeptMode('categoryReclassified')">대분류</button>
+              <button class="pill-btn" id="btnDeptBroad" onclick="setDeptMode('broadDigital')">방송/디지털</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartDept"></canvas>
+          </div>
+        </div>
+
+        <div class="card-box clickable" onclick="openManagerPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>담당별 수주 현황 및 성과</h2>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnManagerCategory" onclick="setManagerMode('categoryReclassified')">대분류</button>
+              <button class="pill-btn" id="btnManagerBroad" onclick="setManagerMode('broadDigital')">방송/디지털</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartManager"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 6.5: Month-over-Month Advertiser Movement -->
+      <section class="grid-2col grid-zone5">
+        <div class="card-box" id="momCardBox" onclick="openMoMPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>전월대비 광고주 증감 분석</h2>
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">일반광고+IMC 기준 (배분수익·1/N 제외) · 연도·월 각 1개 선택 시에만 표시</span>
+            </div>
+          </div>
+          <div id="momSummaryBar" style="display: none; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; color: var(--text-secondary);"></div>
+          <div id="momEmptyMessage" style="display: none; padding: 50px 20px; text-align: center; color: var(--text-secondary); font-size: 13px;">연도와 월을 각각 1개씩 선택하면 전월대비 증감 분석이 표시됩니다.</div>
+          <div class="chart-container" id="momChartContainer">
+            <canvas id="chartMoM"></canvas>
+          </div>
+        </div>
+
+        <div class="card-box" id="agencyCompCardBox" onclick="openAgencyCompPivotView()">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>주요 대행사 전년·전월 비교</h2>
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">일반광고+IMC 기준 · 연도·월 각 1개 선택 시에만 표시</span>
+            </div>
+            <div class="pills-group" onclick="event.stopPropagation()">
+              <button class="pill-btn active" id="btnAgencyCompRevenue" onclick="setAgencyCompMode('revenue')">매출</button>
+              <button class="pill-btn" id="btnAgencyCompCount" onclick="setAgencyCompMode('count')">광고주수</button>
+            </div>
+          </div>
+          <div id="agencyCompEmptyMessage" style="display: none; padding: 50px 20px; text-align: center; color: var(--text-secondary); font-size: 13px;">연도와 월을 각각 1개씩 선택하면 표시됩니다.</div>
+          <div class="chart-container" id="agencyCompChartContainer">
+            <canvas id="chartAgencyComp"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Zone 7: Detailed Data Table -->
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 800;">상세 매출 내역</h2>
+            <span id="tableRecordCount" class="tag-badge">총 0 건</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="text" id="tableSearchInput" class="text-input" placeholder="전체 항목 검색 (담당자, 광고주...)" style="width: 220px;" oninput="onTableSearch()">
+            <select id="selectRowsPerPage" class="select-input" style="min-width: 90px;" onchange="onChangeRowsPerPage()">
+              <option value="10">10개씩</option><option value="25" selected>25개씩</option><option value="50">50개씩</option><option value="100">100개씩</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="exportToExcel()">📥 엑셀 다운로드</button>
+            <button class="btn btn-sm" onclick="exportRawSourceData()">📦 원본 데이터 다운로드</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('monthStr')">귀속월 ↕</th><th onclick="sortTable('dept')">부서 ↕</th><th onclick="sortTable('manager')">담당자 ↕</th>
+                <th onclick="sortTable('advertiser')">광고주 ↕</th><th onclick="sortTable('agency')">대행사 ↕</th><th onclick="sortTable('channel')">채널 ↕</th>
+                <th onclick="sortTable('industry')">업종대분류 ↕</th><th onclick="sortTable('broadDigital')">방송/디지털 ↕</th>
+                <th onclick="sortTable('categoryReclassified')">대분류 ↕</th><th onclick="sortTable('revenueBasis')">매출기준 ↕</th>
+                <th onclick="sortTable('amount')" style="text-align: right;">금액 (원) ↕</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination-bar">
+          <span id="pageInfo" class="page-info">1 - 25 / 총 0건</span>
+          <div class="pagination-btns">
+            <button class="btn btn-sm" onclick="goToPage(1)">⏮ 처음</button>
+            <button class="btn btn-sm" onclick="goToPage(currentPage - 1)">◀ 이전</button>
+            <span id="pageNumbers" style="margin: 0 6px; font-size: 12px; font-weight: 700; color: var(--text-primary);">1</span>
+            <button class="btn btn-sm" onclick="goToPage(currentPage + 1)">다음 ▶</button>
+            <button class="btn btn-sm" onclick="goToPage(maxPages)">끝 ⏭</button>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /MAIN DASHBOARD VIEW -->
+
+    <!-- ==========================================================================
+       VIEW 2: CATEGORY PIVOT DETAIL VIEW (대중소분류)
+       ========================================================================== -->
+    <div id="categoryPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #152238 100%); border-color: var(--primary-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
+            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">항목별 (대·중·소분류) 월별 분석</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
+            <div id="categoryPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 백만</div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 800;">항목별 분류 피벗</h2>
+            <button class="btn btn-sm" onclick="expandAllYears('cat', true)">모든 연도 월 펼치기 (-)</button>
+            <button class="btn btn-sm" onclick="expandAllYears('cat', false)">모든 연도 월 접기 (+)</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('cat')">📥 피벗 엑셀 다운로드</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 650px;">
+          <table class="data-table pivot-tree-table" id="categoryPivotTreeTable">
+            <thead><tr id="catPivotHeaderRow1"></tr><tr id="catPivotHeaderRow2"></tr></thead>
+            <tbody id="catPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==========================================================================
+       VIEW 3: DEPT PIVOT DETAIL VIEW (부서 > 대중분류)
+       ========================================================================== -->
+    <div id="deptPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #153825 100%); border-color: var(--accent-green);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(74,222,128,0.2); color: var(--accent-green); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
+            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">부서별 / 항목별 (대·중분류) 월별 분석</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
+            <div id="deptPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-green);">0 백만</div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 800;">부서별 항목 피벗</h2>
+            <button class="btn btn-sm" onclick="expandAllYears('dept', true)">모든 연도 월 펼치기 (-)</button>
+            <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('dept')">📥 피벗 엑셀 다운로드</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 650px;">
+          <table class="data-table pivot-tree-table" id="deptPivotTreeTable">
+            <thead><tr id="deptPivotHeaderRow1"></tr><tr id="deptPivotHeaderRow2"></tr></thead>
+            <tbody id="deptPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==========================================================================
+       VIEW 4: MANAGER PIVOT DETAIL VIEW (부서 > 담당 > 대분류 > 광고주 > 채널)
+       ========================================================================== -->
+    <div id="managerPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #381525 100%); border-color: var(--accent-pink);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(236,72,153,0.2); color: var(--accent-pink); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
+            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">부서별 / 담당자별 / 대분류 / 광고주 분석</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
+            <div id="managerPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-pink);">0 백만</div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 800;">담당자별 5계층 피벗</h2>
+            <button class="btn btn-sm" onclick="expandAllYears('mgr', true)">모든 연도 월 펼치기 (-)</button>
+            <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('mgr')">📥 피벗 엑셀 다운로드</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 750px;">
+          <table class="data-table pivot-tree-table" id="managerPivotTreeTable">
+            <thead><tr id="mgrPivotHeaderRow1"></tr><tr id="mgrPivotHeaderRow2"></tr></thead>
+            <tbody id="mgrPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==========================================================================
+       VIEW 5, 6, 7, 8: OTHER PIVOT VIEWS (채널, 구간, 광고주, 대행사)
+       ========================================================================== -->
+    <div id="channelPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #152238 100%); border-color: var(--primary-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 id="pivotHeaderTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">연도별 / 채널별 통합 분석</h2></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계 : 금액 (백만원)</div><div id="pivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-sm" onclick="expandAllYears('channel', true)">모든 연도 펼치기</button>
+            <button class="btn btn-sm" onclick="expandAllYears('channel', false)">모든 연도 접기</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('channel')">📥 피벗 엑셀 다운로드</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 650px;">
+          <table class="data-table pivot-tree-table" id="pivotTreeTable">
+            <thead><tr id="pivotTableHeaderRow1"></tr><tr id="pivotTableHeaderRow2"></tr></thead>
+            <tbody id="pivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div id="bucketPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #382815 100%); border-color: var(--accent-orange);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">일반광고+IMC 기준 구간별 분석</h2></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 누적 매출</div><div id="bucketPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-orange);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-sm" onclick="expandAllYears('bucket', true)">펼치기</button>
+            <button class="btn btn-sm" onclick="expandAllYears('bucket', false)">접기</button>
+          </div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="bucketPivotTreeTable"><thead><tr id="bucketPivotHeaderRow1"></tr><tr id="bucketPivotHeaderRow2"></tr></thead><tbody id="bucketPivotTableBody"></tbody></table></div>
+      </section>
+    </div>
+
+    <div id="advertiserPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #1F1538 100%); border-color: var(--accent-purple);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">광고주별 ➔ 대분류 월별 수주 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="advertiserPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-purple);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('advertiser', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('advertiser', false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="advertiserPivotTreeTable"><thead><tr id="advertiserPivotHeaderRow1"></tr><tr id="advertiserPivotHeaderRow2"></tr></thead><tbody id="advertiserPivotTableBody"></tbody></table></div>
+      </section>
+    </div>
+
+    <div id="agencyPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #153835 100%); border-color: var(--accent-cyan);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">대행사그룹 ➔ 대행사 ➔ 광고주 월별 수주 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="agencyPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-cyan);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('agency', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('agency', false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="agencyPivotTreeTable"><thead><tr id="agencyPivotHeaderRow1"></tr><tr id="agencyPivotHeaderRow2"></tr></thead><tbody id="agencyPivotTableBody"></tbody></table></div>
+      </section>
+    </div>
+
+    <div id="momPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #153825 100%); border-color: var(--accent-green);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 id="momPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">전월대비 광고주 증감 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외)</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">전월대비 순증감</div><div id="momPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-green);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllMoMCategories(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllMoMCategories(false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="momPivotTable">
+            <thead>
+              <tr>
+                <th style="text-align: left; min-width: 280px;">구분 / 광고주</th>
+                <th style="text-align: right;">전월 금액(백만원)</th>
+                <th style="text-align: right;">당월 금액(백만원)</th>
+                <th style="text-align: right;">전월대비(백만원)</th>
+              </tr>
+            </thead>
+            <tbody id="momPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div id="agencyCompPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #153835 100%); border-color: var(--accent-cyan);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 id="agencyCompPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">주요 대행사 전년·전월 비교 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 · 금액 단위: 백만원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">당월 합계</div><div id="agencyCompPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-cyan);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllAgencyCompNodes(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllAgencyCompNodes(false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="agencyCompPivotTable">
+            <thead>
+              <tr id="agencyCompPivotHeaderRow">
+                <th style="text-align: left; min-width: 280px;">대행사그룹 / 대행사 / 광고주</th>
+                <th style="text-align: right;">전년 금액</th>
+                <th style="text-align: right;">전월 금액</th>
+                <th style="text-align: right;">당월 금액</th>
+                <th style="text-align: right;">전년비(%)</th>
+                <th style="text-align: right;">전년비(금액)</th>
+                <th style="text-align: right;">전월비(%)</th>
+                <th style="text-align: right;">전월비(금액)</th>
+              </tr>
+            </thead>
+            <tbody id="agencyCompPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+
+    <div id="newAdvPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #1F1538 100%); border-color: var(--accent-purple);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 id="newAdvPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">신규 광고주 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외) · 금액 단위: 백만원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">신규 매출 합계</div><div id="newAdvPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-purple);">0 백만</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllNewAdvGroups(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllNewAdvGroups(false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="newAdvPivotTable">
+            <thead>
+              <tr>
+                <th style="text-align: left; min-width: 280px;">연/월 / 광고주</th>
+                <th style="text-align: right;">광고주수</th>
+                <th style="text-align: right;">해당월 매출</th>
+                <th style="text-align: right;">해당연도 누적매출</th>
+              </tr>
+            </thead>
+            <tbody id="newAdvPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div id="upfrontPivotView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #152238 100%); border-color: var(--primary-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div><h2 id="upfrontPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">업프론트 실적 현황</h2><span style="font-size: 12px; color: var(--text-tertiary);">부서 ➔ 광고주(업프론트용) ➔ 대행사 · 연도 1개 선택 시에만 표시 · 금액 단위: 억원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">실적 합계</div><div id="upfrontPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 억원</div></div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllUpfrontNodes(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllUpfrontNodes(false)">접기</button></div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="upfrontPivotTable">
+            <thead>
+              <tr id="upfrontPivotHeaderRow">
+                <th style="text-align: left; min-width: 260px;">부서 / 광고주(업프론트용) / 대행사</th>
+                <th style="text-align: left;">업프론트 계약금액</th>
+                <th style="text-align: center;">계약시작일</th>
+                <th style="text-align: center;">계약종료일</th>
+              </tr>
+            </thead>
+            <tbody id="upfrontPivotTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+  <!-- App modules — 로드 순서가 곧 의존성 (architecture.md 참조) -->
+  <script src="js/core/state.js"></script>
+  <script src="js/core/theme-system.js"></script>
+  <script src="js/core/data-loader.js"></script>
+  <script src="js/core/filters.js"></script>
+  <script src="js/features/shared-helpers.js"></script>
+  <script src="js/features/detail-pivots.js"></script>
+  <script src="js/features/kpi.js"></script>
+  <script src="js/features/trend-portfolio-channel.js"></script>
+  <script src="js/features/mom.js"></script>
+  <script src="js/features/agency-comp.js"></script>
+  <script src="js/features/new-advertiser.js"></script>
+  <script src="js/features/upfront.js"></script>
+  <script src="js/features/ranking.js"></script>
+  <script src="js/features/bucket.js"></script>
+  <script src="js/core/view-router.js"></script>
+  <script src="js/core/init.js"></script>
+</body>
+</html>

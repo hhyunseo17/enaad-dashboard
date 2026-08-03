@@ -1,0 +1,24 @@
+name = "kt-ena-dashboard"
+main = "worker.js"
+compatibility_date = "2026-07-29"
+
+# R2 버킷 바인딩 - bucket_name은 실제 사용 중인 R2 버킷 이름으로 변경하세요.
+[[r2_buckets]]
+binding = "DASHBOARD_BUCKET"
+bucket_name = "adsales"
+
+# 인증은 Cloudflare Access(Zero Trust)가 담당합니다.
+# 배포 후 Zero Trust 대시보드에서 이 Worker의 도메인/라우트를 보호 대상 애플리케이션으로 등록하세요.
+
+# --- Pages 배포용 설정 (선택) -----------------------------------------
+# Pages로 배포할 때 Functions 디렉터리(`functions/`)의 함수를 사용합니다.
+# 반드시 `account_id`를 설정하세요 (wrangler publish 또는 wrangler pages deploy에 필요).
+# project_name은 Pages 하위 도메인(project_name.pages.dev)에 사용됩니다.
+project_name = "enaad"
+# account_id = "YOUR_ACCOUNT_ID"  # ← 배포 전에 이 값을 채우세요
+
+# 빌드/출력 디렉터리가 있다면 아래를 설정하세요 (예: 정적 파일이 루트에 있는 경우 생략 가능)
+#[[build]]
+#command = ""
+#directory = "./"
+# --------------------------------------------------------------------

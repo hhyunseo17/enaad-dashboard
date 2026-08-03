@@ -1,0 +1,12 @@
+# 데이터 원본 (민감 — 커밋 금지)
+addata.xlsx
+*.xlsx
+
+# OS/에디터
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 로그
+*.log
