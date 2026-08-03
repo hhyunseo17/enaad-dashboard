@@ -14,10 +14,7 @@
 
     function renderBucketPivotTable() {
       // 차트(renderAdvBucketChart)와 동일한 기준: 일반광고+IMC, 배분수익 제외, 1/N 제외
-      const targetData = filteredData.filter(r => {
-        const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y';
-        return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN;
-      });
+      const targetData = filteredData.filter(r => isAdvMetricEligible(r));
 
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
       const yearMonthsMap = {};

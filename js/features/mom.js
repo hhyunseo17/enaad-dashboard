@@ -17,8 +17,7 @@
         if (!isAllBroadsSelected && !selectedBroads.includes(r.broadDigital)) return false;
         if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false;
         if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false;
-        const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y';
-        return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN;
+        return isAdvMetricEligible(r);
       };
 
       const currRows = rawData.filter(r => r.year === cy && r.month === cm && commonMatch(r));

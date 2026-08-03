@@ -22,7 +22,7 @@
           if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false; if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false; return true;
         });
         prevRev = prevYearFiltered.reduce((acc, r) => acc + r.amount, 0);
-        prevTargetData = prevYearFiltered.filter(r => { const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y'; return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN; });
+        prevTargetData = prevYearFiltered.filter(r => isAdvMetricEligible(r));
       }
 
       const diffRev = totalRev - prevRev; const growthRate = prevRev > 0 ? (diffRev / prevRev) * 100 : 0; const diffFormatted = (diffRev >= 0 ? '+' : '') + formatCurrencyKorean(diffRev);
@@ -42,7 +42,7 @@
         document.getElementById('kpiNewAdvCount').innerText = `- 개사`; document.getElementById('kpiNewAdvSub').innerText = `조건 해당 없음 (일반/IMC 전용)`; return; 
       } else { const advGrowthBadge = document.getElementById('kpiAdvGrowthBadge'); if (advGrowthBadge) advGrowthBadge.style.display = 'inline-flex'; }
 
-      const targetData = filteredData.filter(r => { const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y'; return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN; });
+      const targetData = filteredData.filter(r => isAdvMetricEligible(r));
       const monthlyAdvMap = {}; targetData.forEach(r => { const key = r.monthStr + '||' + r.advertiser; monthlyAdvMap[key] = (monthlyAdvMap[key] || 0) + r.amount; });
 
       let totalAdvCount = 0; let targetRevenue = 0;

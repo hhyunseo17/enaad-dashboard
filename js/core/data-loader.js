@@ -197,11 +197,12 @@
           });
         });
 
-        // 신규광고주 판별용 인덱스 재구축 (advertiser별 amount>0 활동월을 1회만 스캔해 정렬 배열로 캐시)
+        // 신규광고주 판별용 인덱스 재구축 (일반광고+IMC, 배분수익·1/N 제외, 본부매출 기준 activity만 대상으로 1회 스캔해 정렬 배열로 캐시)
         advertiserActiveMonthIndex = {};
         const seenAdvMonth = new Set();
         rawData.forEach(r => {
           if (r.amount <= 0) return;
+          if (!isAdvMetricEligible(r)) return;
           const dedupeKey = r.advertiser + '||' + r.monthStr;
           if (seenAdvMonth.has(dedupeKey)) return;
           seenAdvMonth.add(dedupeKey);

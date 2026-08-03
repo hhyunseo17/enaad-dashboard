@@ -81,7 +81,7 @@
 
     function renderAdvBucketChart() {
       const ctx = document.getElementById('chartAdvBucket').getContext('2d'); if (chartInstances.advBucket) chartInstances.advBucket.destroy();
-      const targetData = filteredData.filter(r => { const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y'; return (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN; });
+      const targetData = filteredData.filter(r => isAdvMetricEligible(r));
       const advMonthMap = {}; targetData.forEach(r => { const key = r.monthStr + '||' + r.advertiser; advMonthMap[key] = (advMonthMap[key] || 0) + r.amount; });
       const buckets = { '1억 이상': { count: 0, sum: 0 }, '0.5~1억원': { count: 0, sum: 0 }, '0.4~0.5억원': { count: 0, sum: 0 }, '0.3~0.4억원': { count: 0, sum: 0 }, '0.2~0.3억원': { count: 0, sum: 0 }, '0.1~0.2억원': { count: 0, sum: 0 }, '0.1억원 미만': { count: 0, sum: 0 } };
       Object.values(advMonthMap).forEach(amount => { if (amount > 0) { let bKey = ''; if (amount >= 100000000) bKey = '1억 이상'; else if (amount >= 50000000) bKey = '0.5~1억원'; else if (amount >= 40000000) bKey = '0.4~0.5억원'; else if (amount >= 30000000) bKey = '0.3~0.4억원'; else if (amount >= 20000000) bKey = '0.2~0.3억원'; else if (amount >= 10000000) bKey = '0.1~0.2억원'; else bKey = '0.1억원 미만'; buckets[bKey].count++; buckets[bKey].sum += amount; } });

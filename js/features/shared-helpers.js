@@ -2,6 +2,13 @@
 // js/features/shared-helpers.js
 // 여러 기능이 공유하는 소형 헬퍼(신규광고주 판별, 차트 모드 토글)
 // ============================================================
+    // 광고주 단위 지표(신규광고주/광고주당매출/구간별분포/MoM 광고주별 등) 산정의 공통 대상 조건:
+    // 본부매출 + 일반광고/IMC + 배분수익·1/N 제외
+    function isAdvMetricEligible(r) {
+      const isOneN = (r.oneNFlag || '').toString().trim() === '1' || (r.oneNFlag || '').toString().toLowerCase() === 'y';
+      return r.bonbuRevenueStatus === '본부매출' && (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN;
+    }
+
     function isNewAdvertiserMonth(advName, currentMonthStr) {
       const arr = advertiserActiveMonthIndex[advName];
       if (!arr || arr.length === 0) return true;
