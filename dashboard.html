@@ -17,6 +17,18 @@
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/pivot-table.css" />
+
+  <!-- Fallback: ensure DATA_URL exists if state.js is blocked by Access -->
+  <script>
+    try {
+      if (typeof DATA_URL === 'undefined') {
+        window.DATA_URL = './addata';
+        console.info('Fallback: DATA_URL set to ./addata');
+      }
+    } catch (e) {
+      window.DATA_URL = './addata';
+    }
+  </script>
 </head>
 <body>
 
