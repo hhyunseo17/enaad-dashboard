@@ -69,7 +69,7 @@
     .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: #D1D5DB; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
     .pill-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.08); }
     .pill-btn.active { background: var(--primary-blue); color: #FFFFFF; font-weight: 700; }
-    .pill-btn:disabled, .pill-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; text-decoration: line-through; }
+    .pill-btn:disabled, .pill-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
     .kpi-card.kpi-accent-green { border-left-color: var(--accent-green); }
     .kpi-card.kpi-accent-purple { border-left-color: var(--accent-purple); }
     .kpi-card.kpi-accent-orange { border-left-color: var(--accent-orange); }
