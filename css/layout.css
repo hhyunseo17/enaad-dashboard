@@ -169,7 +169,10 @@
         font-size: 13px;
         line-height: 1.2;
         white-space: nowrap;
-        padding: 5px 10px;
+        padding: 0 10px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
       }
       .brand-title p { display: none; }
       .header-status {
