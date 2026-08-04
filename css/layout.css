@@ -129,7 +129,7 @@
     @media (max-width: 900px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       .kpi-card { padding: 14px; }
-      .kpi-value { font-size: 18px !important; }
+      .kpi-value { font-size: 19px !important; }
       .kpi-title { font-size: 11px !important; }
       .kpi-sub { font-size: 10px; gap: 6px; }
     }
@@ -138,9 +138,9 @@
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .kpi-card { padding: 10px; min-width: 0; }
       .kpi-header { align-items: flex-start; }
-      .kpi-title { font-size: 10px !important; line-height: 1.25; }
-      .kpi-value { font-size: 16px !important; white-space: normal; line-height: 1.15; }
-      .kpi-sub { font-size: 9px; gap: 4px; }
+      .kpi-title { font-size: 10.5px !important; line-height: 1.25; }
+      .kpi-value { font-size: 17px !important; white-space: normal; line-height: 1.15; }
+      .kpi-sub { font-size: 9.5px; gap: 4px; }
       .badge-growth { font-size: 9px; padding: 2px 6px; }
     }
 
