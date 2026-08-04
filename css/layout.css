@@ -136,6 +136,7 @@
 
     @media (max-width: 768px) {
       .dashboard-container { padding: 12px 12px 40px; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       header.header-bar {
         flex-direction: column;
         align-items: stretch;
@@ -144,21 +145,21 @@
       }
       .brand-group {
         width: 100%;
-        align-items: flex-start;
+        align-items: center;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
       }
       .brand-title {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
         min-width: 0;
       }
       .brand-title h1.title-pill {
-        width: 100%;
-        max-width: 100%;
-        font-size: 15px;
-        line-height: 1.35;
-        white-space: normal;
-        padding: 8px 12px;
+        width: auto;
+        max-width: none;
+        font-size: 12px;
+        line-height: 1.2;
+        white-space: nowrap;
+        padding: 5px 10px;
       }
       .brand-title p { display: none; }
       .header-status {
