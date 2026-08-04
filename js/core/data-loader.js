@@ -52,7 +52,7 @@
       const dot = document.getElementById('statusDot');
       const text = document.getElementById('statusModeText');
       if (isHttp) {
-        dot.className = 'status-dot'; text.innerText = '실시간 연결됨 (30분 주기)';
+        dot.className = 'status-dot'; text.innerText = '실시간 연결';
         document.getElementById('btnToggleDropzone').style.display = 'none';
         fetchDataHttp(); setInterval(fetchDataHttp, 1800000);
       } else {
@@ -83,7 +83,7 @@
           processWorkbookBuffer(buf);
           const modDate = workbookModifiedDate || (lm ? new Date(lm) : null);
           document.getElementById('fileLastModified').innerText = '원본 수정: ' + (modDate ? modDate.toLocaleString() : '확인 불가');
-          document.getElementById('statusDot').className = 'status-dot'; document.getElementById('statusModeText').innerText = '실시간 연결됨 (30분 주기)';
+          document.getElementById('statusDot').className = 'status-dot'; document.getElementById('statusModeText').innerText = '실시간 연결';
           document.getElementById('btnToggleDropzone').style.display = 'none';
           document.getElementById('fileDropzone').style.display = 'none';
           showLoading(false); hideErrorMessage();
