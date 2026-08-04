@@ -27,12 +27,12 @@
     .brand-title h1.title-pill { font-size: 15px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: var(--radius-full); padding: 7px 16px; }
     .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); color: #FFFFFF; white-space: nowrap; }
 
-    .header-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); color: #FFFFFF; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .header-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); color: #FFFFFF; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
 
-    .status-dot.manual { background: var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange); }
-    .sync-time { font-size: 12px; color: var(--text-tertiary); }
+    .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
+    .sync-time { font-size: 11px; color: var(--text-tertiary); }
 
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
     .btn:hover { background: var(--border-default); border-color: var(--border-strong); }
@@ -166,11 +166,11 @@
       .brand-title h1.title-pill {
         width: auto;
         max-width: none;
-        font-size: 13px;
+        font-size: 12px;
         line-height: 1.2;
         white-space: nowrap;
-        padding: 0 10px;
-        height: 28px;
+        padding: 0 8px;
+        height: 26px;
         display: inline-flex;
         align-items: center;
       }
@@ -179,12 +179,19 @@
         width: 100%;
         justify-content: flex-start;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
       }
       .header-status .btn-sm,
       .header-status .status-badge,
       .header-status .sync-time {
         width: auto;
+      }
+      .header-status .status-badge {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+      .header-status .sync-time {
+        font-size: 11px;
       }
 
       /* 모바일 피벗 테이블: 셀 여백·폰트 축소로 화면에 더 많은 열이 들어오게 함 */
