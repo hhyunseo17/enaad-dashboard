@@ -27,9 +27,9 @@
     .brand-title h1.title-pill { font-size: 15px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: var(--radius-full); padding: 7px 16px; }
     .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); color: #FFFFFF; white-space: nowrap; }
 
-    .header-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); color: #FFFFFF; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
+    .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--radius-full); font-size: 10px; font-weight: 600; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); color: #FFFFFF; }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
 
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
     .sync-time { font-size: 11px; color: var(--text-tertiary); }
