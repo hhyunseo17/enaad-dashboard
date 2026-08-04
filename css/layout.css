@@ -126,18 +126,52 @@
 
        모바일 반응형 (768px 이하) - 캐스케이드 우선순위 확보를 위해 스타일 맨 끝에 배치
        ======================================================================== */
-    @media (max-width: 768px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .kpi-card { padding: 12px; }
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .kpi-card { padding: 14px; }
       .kpi-value { font-size: 18px !important; }
       .kpi-title { font-size: 11px !important; }
+      .kpi-sub { font-size: 10px; gap: 6px; }
+    }
+
+    @media (max-width: 768px) {
       .dashboard-container { padding: 12px 12px 40px; }
-      header.header-bar { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
-      .brand-group { width: 100%; }
-      .brand-title h1 { font-size: 16px; white-space: normal; }
-      .brand-title p { display: none; } /* 영문 서브타이틀은 모바일에서 생략 */
-      .header-status { width: 100%; justify-content: flex-start; }
-      /* 원본 수정 시각은 모바일에서도 계속 표시 */
+      header.header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px 16px;
+      }
+      .brand-group {
+        width: 100%;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .brand-title {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+      .brand-title h1.title-pill {
+        width: 100%;
+        max-width: 100%;
+        font-size: 15px;
+        line-height: 1.35;
+        white-space: normal;
+        padding: 8px 12px;
+      }
+      .brand-title p { display: none; }
+      .header-status {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .header-status .btn-sm,
+      .header-status .status-badge,
+      .header-status .sync-time {
+        width: auto;
+      }
 
       /* 모바일 피벗 테이블: 셀 여백·폰트 축소로 화면에 더 많은 열이 들어오게 함 */
       .pivot-tree-table { font-size: 11px !important; }

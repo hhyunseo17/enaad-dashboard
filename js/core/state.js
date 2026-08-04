@@ -73,10 +73,10 @@
 
     const categoryColors = {
       '일반광고': '#4795FF',
-      'IMC': '#A855F7',
-      '인포머셜': '#14B8A6',
-      '큐톤광고': '#FFB547',
-      '기타광고': '#4ADE80'
+      'IMC': '#8B5CF6',
+      '인포머셜': '#10B981',
+      '큐톤광고': '#F59E0B',
+      '기타광고': '#22C55E'
     };
     const categoryOrderList = ['일반광고', 'IMC', '인포머셜', '큐톤광고', '기타광고'];
     const broadOrderMap = { '방송': 1, '디지털': 2, '기타': 3 };
@@ -88,11 +88,11 @@
     ];
 
     const chartColors = {
-      blue: '#4795FF', cyan: '#38BDF8', green: '#4ADE80', orange: '#FFB547',
-      purple: '#A855F7', pink: '#EC4899', red: '#FF6B6B', yellow: '#FACC15',
-      indigo: '#6366F1', teal: '#14B8A6'
+      blue: '#2563EB', cyan: '#06B6D4', green: '#22C55E', orange: '#F59E0B',
+      purple: '#8B5CF6', pink: '#EC4899', red: '#EF4444', yellow: '#FACC15',
+      indigo: '#4F46E5', teal: '#0EA5A4'
     };
     const colorPaletteList = [
-      '#4795FF', '#38BDF8', '#4ADE80', '#FFB547', '#A855F7',
-      '#EC4899', '#6366F1', '#14B8A6', '#FACC15', '#FF6B6B'
+      '#2563EB', '#06B6D4', '#22C55E', '#F59E0B', '#8B5CF6',
+      '#EC4899', '#4F46E5', '#0EA5A4', '#FACC15', '#EF4444'
     ];
