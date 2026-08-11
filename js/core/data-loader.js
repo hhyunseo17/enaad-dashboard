@@ -218,12 +218,13 @@
         Object.values(advertiserActiveMonthIndex).forEach(arr => arr.sort((a, b) => a.time - b.time));
 
         // 업프론트 계약 목록 재구축: 광고주(업프론트용)+계약시작+계약종료 기준 1차 유일 그룹 (대행사가 여러 개여도 1개 계약으로 묶음)
-        // 그룹핑 키는 업프론트 비고(upfrontRemark)가 있으면 그것을 우선 사용한다 — 광고주(업프론트용) 표기가 통일 안 된 경우(예: DB손해보험/DB금융네트워크)에도
-        // 같은 딜임을 나타내는 비고 텍스트로 묶어 이중 카운트를 방지한다.
+        // 그룹핑 키는 업프론트 비고(upfrontRemark)에 "합산"이 명시된 경우에만 우선 사용한다 — 광고주(업프론트용) 표기가 통일 안 된 경우(예: DB손해보험/DB금융네트워크)에도
+        // 같은 딜임을 나타내는 비고 텍스트로 묶어 이중 카운트를 방지하기 위함. "Net 금액"처럼 병합 의도가 없는 주석성 비고까지 키로 쓰면
+        // 서로 다른 광고주가 우연히 같은 비고를 적은 경우(같은 기간이면) 하나로 뭉개져 계약이 유실되므로 반드시 "합산" 표기가 있을 때만 사용.
         const contractMap = {};
         rawData.forEach(r => {
           if (!r.isUpfront || !r.contractStartYM || !r.contractEndYM) return;
-          const groupAdv = r.upfrontRemark || r.upfrontAdvertiser;
+          const groupAdv = (r.upfrontRemark && r.upfrontRemark.includes('합산')) ? r.upfrontRemark : r.upfrontAdvertiser;
           const key = groupAdv + '||' + r.contractStartYM.y + '-' + r.contractStartYM.m + '||' + r.contractEndYM.y + '-' + r.contractEndYM.m;
           if (!contractMap[key]) contractMap[key] = { advertiser: r.upfrontAdvertiser, groupKey: groupAdv, start: r.contractStartYM, end: r.contractEndYM, amountWon: r.contractAmountWon, hasNet: false };
           if (r.grossNetFlag === 'NET') contractMap[key].hasNet = true;

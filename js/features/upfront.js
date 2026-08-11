@@ -25,11 +25,13 @@
           // 동일 계약이므로 금액 텍스트가 달라도 병합 — data-loader.js의 contractMap과 동일한 그룹핑 기준(원칙 6).
           const periodKey = (r.contractStartYM ? r.contractStartYM.y + '-' + r.contractStartYM.m : '') + '~' + (r.contractEndYM ? r.contractEndYM.y + '-' + r.contractEndYM.m : '');
           const baseText = r.contractAmountText.replace(' (NET)', '');
+          // (NET) 표기는 GROSS/NET 컬럼이 아니라 업프론트 비고란에 "net"이 명시된 경우에만 붙인다.
+          const remarkHasNet = /net/i.test(r.upfrontRemark || '');
           const existing = advNode.contractByPeriod[periodKey];
           if (!existing) {
-            advNode.contractByPeriod[periodKey] = { baseText, hasNet: r.grossNetFlag === 'NET', start: r.contractStartDate, end: r.contractEndDate };
+            advNode.contractByPeriod[periodKey] = { baseText, hasNet: remarkHasNet, start: r.contractStartDate, end: r.contractEndDate };
           } else {
-            if (r.grossNetFlag === 'NET') existing.hasNet = true;
+            if (remarkHasNet) existing.hasNet = true;
             if (r.contractStartDate && (!existing.start || r.contractStartDate < existing.start)) existing.start = r.contractStartDate;
             if (r.contractEndDate && (!existing.end || r.contractEndDate > existing.end)) existing.end = r.contractEndDate;
           }
