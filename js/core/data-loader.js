@@ -180,9 +180,14 @@
           const contractEndYM = parseDateToYM(r['계약종료일']);
           const contractStartDate = parseDateFull(r['계약시작일']);
           const contractEndDate = parseDateFull(r['계약종료일']);
-          const contractAmountText = (r['업프론트 계약금액'] || '').toString().trim();
+          // 업프론트 계약금액: 원본 컬럼이 텍스트("8억원(Net 5억원)")에서 순수 숫자(억원 단위)로 변경됨.
+          // GROSS/NET 컬럼은 그 숫자가 어떤 기준액인지 나타내는 라벨일 뿐, 더 이상 한 텍스트에서 GROSS/NET 두 금액을 같이 추출하지 않음.
+          const contractAmountEok = parseFloat(r['업프론트 계약금액']) || 0;
+          const contractAmountWon = Math.round(contractAmountEok * 1e8);
           const grossNetFlag = (r['GROSS/NET'] || '').toString().trim();
+          const contractAmountText = contractAmountEok > 0 ? (contractAmountEok + '억원' + (grossNetFlag === 'NET' ? ' (NET)' : '')) : '';
           const upfrontAdvertiser = (r['광고주(업프론트용)'] || adv || '(미지정)').toString().trim();
+          const upfrontRemark = (r['업프론트 비고'] || '').toString().trim();
 
           rawData.push({
             id: idxCounter++, monthStr: monthStr, year: y, month: m,
@@ -193,7 +198,8 @@
             remark: r['비고'], amount: rowAmount,
             isUpfront: isUpfrontVal, contractStartYM: contractStartYM, contractEndYM: contractEndYM,
             contractStartDate: contractStartDate, contractEndDate: contractEndDate,
-            contractAmountText: contractAmountText, grossNetFlag: grossNetFlag, upfrontAdvertiser: upfrontAdvertiser
+            contractAmountText: contractAmountText, contractAmountWon: contractAmountWon, grossNetFlag: grossNetFlag,
+            upfrontAdvertiser: upfrontAdvertiser, upfrontRemark: upfrontRemark
           });
         });
 
@@ -212,18 +218,21 @@
         Object.values(advertiserActiveMonthIndex).forEach(arr => arr.sort((a, b) => a.time - b.time));
 
         // 업프론트 계약 목록 재구축: 광고주(업프론트용)+계약시작+계약종료 기준 1차 유일 그룹 (대행사가 여러 개여도 1개 계약으로 묶음)
+        // 그룹핑 키는 업프론트 비고(upfrontRemark)가 있으면 그것을 우선 사용한다 — 광고주(업프론트용) 표기가 통일 안 된 경우(예: DB손해보험/DB금융네트워크)에도
+        // 같은 딜임을 나타내는 비고 텍스트로 묶어 이중 카운트를 방지한다.
         const contractMap = {};
         rawData.forEach(r => {
           if (!r.isUpfront || !r.contractStartYM || !r.contractEndYM) return;
-          const key = r.upfrontAdvertiser + '||' + r.contractStartYM.y + '-' + r.contractStartYM.m + '||' + r.contractEndYM.y + '-' + r.contractEndYM.m;
-          if (!contractMap[key]) contractMap[key] = { advertiser: r.upfrontAdvertiser, start: r.contractStartYM, end: r.contractEndYM, amountText: r.contractAmountText, hasNet: false };
+          const groupAdv = r.upfrontRemark || r.upfrontAdvertiser;
+          const key = groupAdv + '||' + r.contractStartYM.y + '-' + r.contractStartYM.m + '||' + r.contractEndYM.y + '-' + r.contractEndYM.m;
+          if (!contractMap[key]) contractMap[key] = { advertiser: r.upfrontAdvertiser, groupKey: groupAdv, start: r.contractStartYM, end: r.contractEndYM, amountWon: r.contractAmountWon, hasNet: false };
           if (r.grossNetFlag === 'NET') contractMap[key].hasNet = true;
         });
 
-        // 2차: 같은 광고주 + 같은 계약금액 텍스트가 겹치는 기간으로 여러 번 등재된 경우(계약 갱신/재기재 등) 하나로 병합 - 중복 집계 방지
+        // 2차: 같은 딜(groupKey) + 같은 계약금액이 겹치는 기간으로 여러 번 등재된 경우(계약 갱신/재기재 등) 하나로 병합 - 중복 집계 방지
         const byAdvText = {};
         Object.values(contractMap).forEach(g => {
-          const k = g.advertiser + '||' + g.amountText;
+          const k = g.groupKey + '||' + g.amountWon;
           if (!byAdvText[k]) byAdvText[k] = [];
           byAdvText[k].push(g);
         });
@@ -233,20 +242,18 @@
           let current = null;
           list.forEach(g => {
             const gs = g.start.y * 12 + g.start.m; const ge = g.end.y * 12 + g.end.m;
-            if (!current) { current = { advertiser: g.advertiser, amountText: g.amountText, hasNet: g.hasNet, sIdx: gs, eIdx: ge }; return; }
+            if (!current) { current = { advertiser: g.advertiser, amountWon: g.amountWon, hasNet: g.hasNet, sIdx: gs, eIdx: ge }; return; }
             if (gs <= current.eIdx) { current.eIdx = Math.max(current.eIdx, ge); current.hasNet = current.hasNet || g.hasNet; }
-            else { mergedGroups.push(current); current = { advertiser: g.advertiser, amountText: g.amountText, hasNet: g.hasNet, sIdx: gs, eIdx: ge }; }
+            else { mergedGroups.push(current); current = { advertiser: g.advertiser, amountWon: g.amountWon, hasNet: g.hasNet, sIdx: gs, eIdx: ge }; }
           });
           if (current) mergedGroups.push(current);
         });
 
         upfrontContracts = mergedGroups.map(g => {
-          const parsed = parseContractAmountText(g.amountText);
-          const targetWon = (g.hasNet && parsed.net != null) ? parsed.net : parsed.gross;
           const totalMonths = g.eIdx - g.sIdx + 1;
           const start = { y: Math.floor((g.sIdx - 1) / 12), m: ((g.sIdx - 1) % 12) + 1 };
           const end = { y: Math.floor((g.eIdx - 1) / 12), m: ((g.eIdx - 1) % 12) + 1 };
-          return { advertiser: g.advertiser, start: start, end: end, amountText: g.amountText, hasNet: g.hasNet, grossWon: parsed.gross, netWon: parsed.net, targetWon: targetWon, totalMonths: totalMonths };
+          return { advertiser: g.advertiser, start: start, end: end, hasNet: g.hasNet, targetWon: g.amountWon, totalMonths: totalMonths };
         }).filter(c => c.totalMonths > 0 && c.targetWon > 0);
 
         const allYears = [...new Set(rawData.map(r => r.year))];
@@ -303,16 +310,6 @@
       const dm = s.match(/^(\d{4})[-./](\d{1,2})[-./]?(\d{0,2})/);
       if (dm) return new Date(Date.UTC(parseInt(dm[1]), parseInt(dm[2]) - 1, dm[3] ? parseInt(dm[3]) : 1));
       return null;
-    }
-
-    function parseContractAmountText(text) {
-      if (!text) return { gross: 0, net: null };
-      const s = text.toString();
-      const baseMatch = s.match(/^\s*([0-9]+(?:\.[0-9]+)?)\s*억원/);
-      const gross = baseMatch ? Math.round(parseFloat(baseMatch[1]) * 1e8) : 0;
-      const netMatch = s.match(/Net\s*([0-9]+(?:\.[0-9]+)?)\s*억원/i);
-      const net = netMatch ? Math.round(parseFloat(netMatch[1]) * 1e8) : null;
-      return { gross, net };
     }
 
     function exportPivotExcel(viewType) {
