@@ -16,15 +16,22 @@
         tree[dept].total += r.amount;
 
         const advKey = adv;
-        if (!tree[dept].advertisers[advKey]) tree[dept].advertisers[advKey] = { months: {}, total: 0, agencies: {}, contractRaw: [], contractSeenKeys: new Set() };
+        if (!tree[dept].advertisers[advKey]) tree[dept].advertisers[advKey] = { months: {}, total: 0, agencies: {}, contractByPeriod: {} };
         const advNode = tree[dept].advertisers[advKey];
         advNode.months[r.month] = (advNode.months[r.month] || 0) + r.amount;
         advNode.total += r.amount;
         if (r.contractAmountText) {
-          const dupKey = r.contractAmountText + '||' + (r.contractStartDate ? r.contractStartDate.getTime() : '') + '||' + (r.contractEndDate ? r.contractEndDate.getTime() : '');
-          if (!advNode.contractSeenKeys.has(dupKey)) {
-            advNode.contractSeenKeys.add(dupKey);
-            advNode.contractRaw.push({ text: r.contractAmountText, start: r.contractStartDate, end: r.contractEndDate });
+          // 계약 식별 키는 계약기간(연-월)만 사용한다. 같은 기간에 GROSS/NET 행이 별도로 존재해도
+          // 동일 계약이므로 금액 텍스트가 달라도 병합 — data-loader.js의 contractMap과 동일한 그룹핑 기준(원칙 6).
+          const periodKey = (r.contractStartYM ? r.contractStartYM.y + '-' + r.contractStartYM.m : '') + '~' + (r.contractEndYM ? r.contractEndYM.y + '-' + r.contractEndYM.m : '');
+          const baseText = r.contractAmountText.replace(' (NET)', '');
+          const existing = advNode.contractByPeriod[periodKey];
+          if (!existing) {
+            advNode.contractByPeriod[periodKey] = { baseText, hasNet: r.grossNetFlag === 'NET', start: r.contractStartDate, end: r.contractEndDate };
+          } else {
+            if (r.grossNetFlag === 'NET') existing.hasNet = true;
+            if (r.contractStartDate && (!existing.start || r.contractStartDate < existing.start)) existing.start = r.contractStartDate;
+            if (r.contractEndDate && (!existing.end || r.contractEndDate > existing.end)) existing.end = r.contractEndDate;
           }
         }
 
@@ -105,7 +112,8 @@
           const advertisers = Object.keys(dNode.advertisers).sort((a,b) => dNode.advertisers[b].total - dNode.advertisers[a].total);
           advertisers.forEach(adv => {
             const aNode = dNode.advertisers[adv]; const advKey = dept + '||' + adv; const isAdvExpanded = !!expandedUpfrontAdvertisers[advKey];
-            const contracts = mergeContractRefs(aNode.contractRaw || []);
+            const contractRaw = Object.values(aNode.contractByPeriod).map(c => ({ text: c.baseText + (c.hasNet ? ' (NET)' : ''), start: c.start, end: c.end }));
+            const contracts = mergeContractRefs(contractRaw);
             const contractText = contracts.length > 0 ? contracts.map(c => c.text).join(', ') : '-';
             const startD = contracts.length > 0 ? contracts.reduce((min,c) => (!min || (c.start && c.start < min)) ? c.start : min, null) : null;
             const endD = contracts.length > 0 ? contracts.reduce((max,c) => (!max || (c.end && c.end > max)) ? c.end : max, null) : null;
