@@ -10,29 +10,36 @@
 // ============================================================
 
 const SUPABASE_PAGE_SIZE = 1000; // PostgREST 기본 max-rows 대응
+const PAGE_CONCURRENCY = 8; // 페이지를 순차가 아니라 이만큼씩 동시에 요청 (26,000행 기준 27회 순차 대기 → 4라운드로 단축)
+
+async function fetchPage(env, viewName, offset) {
+  const url = `${env.SUPABASE_URL}/rest/v1/${viewName}?select=*&limit=${SUPABASE_PAGE_SIZE}&offset=${offset}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    // Supabase 원본 응답 본문은 브라우저로 그대로 돌려보내지 않는다(내부 쿼리/스키마 정보 노출 방지).
+    // 상세는 서버 로그(wrangler tail 또는 Pages Functions 로그)로만 남긴다.
+    console.error(`Supabase 조회 실패(${viewName}): HTTP ${res.status} ${text}`);
+    throw new Error(`upstream_error:${viewName}`);
+  }
+  return res.json();
+}
 
 export async function fetchAllFromView(env, viewName) {
   const all = [];
   let offset = 0;
   for (;;) {
-    const url = `${env.SUPABASE_URL}/rest/v1/${viewName}?select=*&limit=${SUPABASE_PAGE_SIZE}&offset=${offset}`;
-    const res = await fetch(url, {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      // Supabase 원본 응답 본문은 브라우저로 그대로 돌려보내지 않는다(내부 쿼리/스키마 정보 노출 방지).
-      // 상세는 서버 로그(wrangler tail 또는 Pages Functions 로그)로만 남긴다.
-      console.error(`Supabase 조회 실패(${viewName}): HTTP ${res.status} ${text}`);
-      throw new Error(`upstream_error:${viewName}`);
-    }
-    const page = await res.json();
-    all.push(...page);
-    if (page.length < SUPABASE_PAGE_SIZE) break;
-    offset += SUPABASE_PAGE_SIZE;
+    const batchOffsets = Array.from({ length: PAGE_CONCURRENCY }, (_, i) => offset + i * SUPABASE_PAGE_SIZE);
+    const pages = await Promise.all(batchOffsets.map((o) => fetchPage(env, viewName, o)));
+    pages.forEach((page) => all.push(...page));
+    const lastPage = pages[pages.length - 1];
+    if (lastPage.length < SUPABASE_PAGE_SIZE) break; // 마지막 라운드에 빈 페이지가 섞여 있어도 무해 — 그냥 더 볼 게 없다는 신호
+    offset += PAGE_CONCURRENCY * SUPABASE_PAGE_SIZE;
   }
   return all;
 }
