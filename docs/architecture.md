@@ -19,9 +19,15 @@ js/core/                   state, theme-system, data-loader, filters, view-route
 js/features/               shared-helpers, detail-pivots, kpi,
                            trend-portfolio-channel, mom, agency-comp,
                            new-advertiser, upfront, ranking, bucket
+functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
+  addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js
+shared/supabase-proxy.mjs  Supabase 프록시 공용 로직 (functions/api/*.js + worker.js가 공유)
 .claude/agents/            feature-dev, data, reviewer
-worker.js / wrangler.toml  Cloudflare Worker(R2 서빙) 설정
+worker.js / wrangler.toml  standalone Cloudflare Worker(R2 서빙 + Supabase 프록시) 설정 — 현재 미배포, 향후 Pages→Worker 전환 대비
+supabase/schema.sql        Supabase 스키마 (raw_sales_rows/v_sales_normalized/v_bonbu_sales/upfront_contracts 등)
+scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 프로젝트, 수동 실행)
 ```
+> **배포 방식**: 이 프로젝트는 Cloudflare Pages(Git 연동 자동배포)로 서빙된다. 정적 파일(dashboard.html/js/css)은 저장소 그대로 서빙되고, 동적 엔드포인트(`/api/*`, `/addata`)는 `functions/` 아래 파일이 처리한다. `worker.js`는 이 요청들을 실행하지 않는다 — standalone Worker 배포로 전환할 때를 위해 동일 로직을 `shared/supabase-proxy.mjs`로 공유해 둔 것뿐이다.
 
 ## 스크립트 로드 순서 (dashboard.html) — 중요
 전역 스코프 공유 방식이므로 **순서가 곧 의존성**이다. dashboard.html은 아래 순서로 로드한다:
@@ -32,7 +38,7 @@ worker.js / wrangler.toml  Cloudflare Worker(R2 서빙) 설정
   js/core/state.js                 전역변수·색상팔레트 (가장 먼저)
   js/core/theme-system.js          CH/mapPivotHtml/toggleTheme + Chart.register
   js/core/data-loader.js           연결·파싱·정규화 + export/유틸
-  js/core/filters.js               체크박스/필/applyFilters(commonMatch)
+  js/core/filters.js               체크박스/필터/applyFilters()
   js/features/shared-helpers.js    신규광고주 판별, 차트 모드 토글
   js/features/detail-pivots.js     항목/부서/담당자/채널/광고주/대행사 피벗
   js/features/kpi.js               KPI 카드 + 업프론트 목표(월할)
@@ -51,11 +57,16 @@ worker.js / wrangler.toml  Cloudflare Worker(R2 서빙) 설정
 
 ## 데이터 흐름
 ```
-data-loader.js  →  rawData[]  (원본 정규화 + K2병합 + 업프론트파싱 완료 상태)
-filters.js      →  filteredData[]  (commonMatch 적용)
-features/*.js   →  filteredData/rawData를 읽어 차트·피벗 렌더
+[xlsx 모드]      fetchDataHttp() → processWorkbookBuffer() → rawData[] (K2병합+업프론트파싱은 이 파일 안에서 수행)
+[supabase 모드]  fetchDataSupabase() → /api/sales,/api/upfront-contracts(Worker 프록시)
+                 → Supabase v_bonbu_sales/upfront_contracts (K2병합·재분류는 scripts/etl/+schema.sql에서 이미 완료)
+                 → mapRowFromSupabase() → rawData[]
+                 (두 경로 모두 finalizeLoadedData()로 합류: 신규광고주 인덱스 재구축 등)
+filters.js       →  filteredData[]  (applyFilters() 적용)
+features/*.js    →  filteredData/rawData를 읽어 차트·피벗 렌더
 ```
-- **프론트/백 경계 = data-loader.js.** Supabase 전환 시 이 파일만 교체. `rawData`/`filteredData` shape 유지가 계약(contract).
+- **프론트/백 경계 = data-loader.js.** `js/core/state.js`의 `DATA_SOURCE_MODE`('xlsx'|'supabase')로 전환. 두 경로 모두 `rawData`/`filteredData` shape을 동일하게 유지하는 게 계약(contract) — features/*는 무수정.
+- Supabase 접근은 반드시 `/api/*` 프록시(Pages 배포 시 `functions/api/*.js`, Zero Trust 보호 범위 안) 경유. 브라우저가 Supabase(`*.supabase.co`)에 anon key로 직접 쿼리하지 않는다.
 
 ## 검증 (빌드 도구 없음)
 - 문법: 각 js 파일 `node --check`.

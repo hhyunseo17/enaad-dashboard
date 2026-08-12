@@ -15,18 +15,7 @@
       let pmY = cy, pmM = cm - 1; if (pmM === 0) { pmM = 12; pmY = cy - 1; }
       const py = cy - 1;
 
-      const agencyTxt = document.getElementById('inputAgency').value.trim().toLowerCase();
-      const advTxt = document.getElementById('inputAdvertiser').value.trim().toLowerCase();
-      const commonMatch = (r) => {
-        if (r.bonbuRevenueStatus !== '본부매출') return false;
-        if (revenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false;
-        if (!isAllDeptsSelected && !selectedDepts.includes(r.dept)) return false;
-        if (!isAllChannelsSelected && !selectedChannels.includes(r.channel)) return false;
-        if (!isAllBroadsSelected && !selectedBroads.includes(r.broadDigital)) return false;
-        if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false;
-        if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false;
-        return r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC';
-      };
+      const commonMatch = makeCommonMatch(r => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC');
 
       const currRows = rawData.filter(r => r.year === cy && r.month === cm && commonMatch(r));
       const prevMonthRows = rawData.filter(r => r.year === pmY && r.month === pmM && commonMatch(r));

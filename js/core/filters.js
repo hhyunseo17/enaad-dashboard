@@ -1,6 +1,6 @@
 // ============================================================
 // js/core/filters.js
-// 필터 UI + commonMatch(applyFilters) — 매출분류/필터 규칙의 단일 지점
+// 필터 UI + applyFilters() — 매출분류/필터 규칙의 단일 지점 (커스텀 조합은 shared-helpers.js의 makeCommonMatch() 참고)
 // ============================================================
     function updateFilterCheckboxes(isInit) {
       const baseFiltered = rawData.filter(r => {

@@ -3,6 +3,11 @@
 // ?�역 ?�태 변??+ ?�상 ?�레??+ ?�마 ?�퍼(CH/mapPivotHtml/toggleTheme) ??가??먼�? 로드
 // ============================================================
     const DATA_URL = './addata';
+    // 'xlsx': R2의 addata.xlsx를 클라이언트가 SheetJS로 파싱(기존 방식, 기본값).
+    // 'supabase': Worker 프록시(/api/sales 등)를 거쳐 Supabase v_bonbu_sales/upfront_contracts 조회.
+    // 병행 운영 단계이므로 기본값은 'xlsx' — 전환 시 이 한 줄만 바꾸면 되고, 문제 생기면 즉시 되돌릴 수 있다.
+    const DATA_SOURCE_MODE = 'supabase'; // TODO: Preview 테스트 후 main 머지 전 'xlsx'로 되돌릴지 결정
+    let lastSeenBatchId = null; // Supabase 모드에서 배치 변경 감지 폴링에 사용
     let rawData = [];
     let filteredData = [];
     let tableDisplayData = [];

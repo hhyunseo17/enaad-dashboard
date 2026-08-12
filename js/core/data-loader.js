@@ -54,7 +54,12 @@
       if (isHttp) {
         dot.className = 'status-dot'; text.innerText = '실시간 연결';
         document.getElementById('btnToggleDropzone').style.display = 'none';
-        fetchDataHttp(); setInterval(fetchDataHttp, 1800000);
+        if (DATA_SOURCE_MODE === 'supabase') {
+          fetchDataSupabase();
+          setInterval(pollLatestBatch, 300000); // 5분마다 배치 변경 여부만 가볍게 확인, 변경 시에만 전체 재조회
+        } else {
+          fetchDataHttp(); setInterval(fetchDataHttp, 1800000);
+        }
       } else {
         dot.className = 'status-dot manual'; text.innerText = '수동 업로드 모드';
         document.getElementById('btnToggleDropzone').style.display = '';
@@ -203,20 +208,6 @@
           });
         });
 
-        // 신규광고주 판별용 인덱스 재구축 (일반광고+IMC, 배분수익·1/N 제외, 본부매출 기준 activity만 대상으로 1회 스캔해 정렬 배열로 캐시)
-        advertiserActiveMonthIndex = {};
-        const seenAdvMonth = new Set();
-        rawData.forEach(r => {
-          if (r.amount <= 0) return;
-          if (!isAdvMetricEligible(r)) return;
-          const dedupeKey = r.advertiser + '||' + r.monthStr;
-          if (seenAdvMonth.has(dedupeKey)) return;
-          seenAdvMonth.add(dedupeKey);
-          if (!advertiserActiveMonthIndex[r.advertiser]) advertiserActiveMonthIndex[r.advertiser] = [];
-          advertiserActiveMonthIndex[r.advertiser].push({ monthStr: r.monthStr, time: new Date(r.monthStr + '-01').getTime() });
-        });
-        Object.values(advertiserActiveMonthIndex).forEach(arr => arr.sort((a, b) => a.time - b.time));
-
         // 업프론트 계약 목록 재구축: 광고주(업프론트용)+계약시작+계약종료 기준 1차 유일 그룹 (대행사가 여러 개여도 1개 계약으로 묶음)
         // 그룹핑 키는 업프론트 비고(upfrontRemark)에 "합산"이 명시된 경우에만 우선 사용한다 — 광고주(업프론트용) 표기가 통일 안 된 경우(예: DB손해보험/DB금융네트워크)에도
         // 같은 딜임을 나타내는 비고 텍스트로 묶어 이중 카운트를 방지하기 위함. "Net 금액"처럼 병합 의도가 없는 주석성 비고까지 키로 쓰면
@@ -257,22 +248,122 @@
           return { advertiser: g.advertiser, start: start, end: end, hasNet: g.hasNet, targetWon: g.amountWon, totalMonths: totalMonths };
         }).filter(c => c.totalMonths > 0 && c.targetWon > 0);
 
-        const allYears = [...new Set(rawData.map(r => r.year))];
-        allYears.forEach(y => {
-          if (expandedYearColumns[y] === undefined) expandedYearColumns[y] = true;
-          if (expandedBucketYearColumns[y] === undefined) expandedBucketYearColumns[y] = true;
-          if (expandedAdvertiserYearColumns[y] === undefined) expandedAdvertiserYearColumns[y] = true;
-          if (expandedAgencyYearColumns[y] === undefined) expandedAgencyYearColumns[y] = true;
-          if (expandedCatYearColumns[y] === undefined) expandedCatYearColumns[y] = true;
-          if (expandedDeptYearColumns[y] === undefined) expandedDeptYearColumns[y] = true;
-          if (expandedMgrYearColumns[y] === undefined) expandedMgrYearColumns[y] = true;
-        });
-
-        setupYearPills(isFirstLoad);
-        updateFilterCheckboxes(isFirstLoad);
-        applyFilters();
-        isFirstLoad = false;
+        finalizeLoadedData();
       } catch (err) { showLoading(false); showErrorMessage(`Excel 파싱 오류: ${err.message}`); }
+    }
+
+    // rawData(+upfrontContracts)가 채워진 뒤 xlsx/Supabase 두 경로가 공통으로 수행하는 마무리 작업.
+    // (신규광고주 판별 인덱스 재구축, 연도별 UI 펼침상태 초기화, 필터 재적용)
+    function finalizeLoadedData() {
+      advertiserActiveMonthIndex = {};
+      const seenAdvMonth = new Set();
+      rawData.forEach(r => {
+        if (r.amount <= 0) return;
+        if (!isAdvMetricEligible(r)) return;
+        const dedupeKey = r.advertiser + '||' + r.monthStr;
+        if (seenAdvMonth.has(dedupeKey)) return;
+        seenAdvMonth.add(dedupeKey);
+        if (!advertiserActiveMonthIndex[r.advertiser]) advertiserActiveMonthIndex[r.advertiser] = [];
+        advertiserActiveMonthIndex[r.advertiser].push({ monthStr: r.monthStr, time: new Date(r.monthStr + '-01').getTime() });
+      });
+      Object.values(advertiserActiveMonthIndex).forEach(arr => arr.sort((a, b) => a.time - b.time));
+
+      const allYears = [...new Set(rawData.map(r => r.year))];
+      allYears.forEach(y => {
+        if (expandedYearColumns[y] === undefined) expandedYearColumns[y] = true;
+        if (expandedBucketYearColumns[y] === undefined) expandedBucketYearColumns[y] = true;
+        if (expandedAdvertiserYearColumns[y] === undefined) expandedAdvertiserYearColumns[y] = true;
+        if (expandedAgencyYearColumns[y] === undefined) expandedAgencyYearColumns[y] = true;
+        if (expandedCatYearColumns[y] === undefined) expandedCatYearColumns[y] = true;
+        if (expandedDeptYearColumns[y] === undefined) expandedDeptYearColumns[y] = true;
+        if (expandedMgrYearColumns[y] === undefined) expandedMgrYearColumns[y] = true;
+      });
+
+      setupYearPills(isFirstLoad);
+      updateFilterCheckboxes(isFirstLoad);
+      applyFilters();
+      isFirstLoad = false;
+    }
+
+    // ============================================================
+    // Supabase 모드 (DATA_SOURCE_MODE === 'supabase') — Worker 프록시(/api/*) 경유.
+    // K2 병합·5대분류 재분류·매출 미인식 필터는 이미 서버(schema.sql/scripts/etl)에서 끝난 상태로 온다.
+    // ============================================================
+
+    function fetchDataSupabase() {
+      showLoading(true);
+      const fetchJson = (path) => fetch(path, { cache: 'no-store', credentials: 'include' }).then(res => {
+        if (!res.ok) throw new Error(`HTTP Error ${res.status} (${path})`);
+        return res.json();
+      });
+
+      Promise.all([fetchJson('/api/sales'), fetchJson('/api/upfront-contracts'), fetchJson('/api/latest-batch')])
+        .then(([salesRows, upfrontRows, batchInfo]) => {
+          processSupabaseRows(salesRows, upfrontRows);
+          lastSeenBatchId = batchInfo ? batchInfo.batch_id : lastSeenBatchId;
+          workbookModifiedDate = (batchInfo && batchInfo.source_file_modified_at) ? new Date(batchInfo.source_file_modified_at) : null;
+          document.getElementById('fileLastModified').innerText = '원본 수정: ' + (workbookModifiedDate ? workbookModifiedDate.toLocaleString() : '확인 불가');
+          document.getElementById('statusDot').className = 'status-dot'; document.getElementById('statusModeText').innerText = '실시간 연결';
+          document.getElementById('btnToggleDropzone').style.display = 'none';
+          document.getElementById('fileDropzone').style.display = 'none';
+          showLoading(false); hideErrorMessage();
+        }).catch(err => {
+          showLoading(false); showErrorMessage(`데이터 로드 실패: ${err.message}`);
+          document.getElementById('fileDropzone').style.display = 'flex';
+          document.getElementById('btnToggleDropzone').style.display = '';
+          document.getElementById('statusDot').className = 'status-dot manual'; document.getElementById('statusModeText').innerText = '연결 실패 - 수동 업로드 필요';
+        });
+    }
+
+    // 배치 변경 여부만 가볍게 확인(v_latest_batch_info 1행 조회) — 바뀐 경우에만 /api/sales 전체 재조회.
+    function pollLatestBatch() {
+      fetch('/api/latest-batch', { cache: 'no-store', credentials: 'include' })
+        .then(res => res.ok ? res.json() : null)
+        .then(info => { if (info && info.batch_id !== lastSeenBatchId) fetchDataSupabase(); })
+        .catch(() => {}); // 폴링 실패는 조용히 무시하고 다음 주기에 재시도 (사용자에게는 기존 데이터가 계속 보임)
+    }
+
+    function processSupabaseRows(salesRows, upfrontRows) {
+      rawData = salesRows.map(mapRowFromSupabase);
+      upfrontContracts = (upfrontRows || []).map(mapUpfrontContractFromSupabase);
+      rawSourceSheetRef = null; rawSourceSheetName = ''; // exportRawSourceData()는 xlsx 모드 전용(원본 시트 참조 없음)
+
+      finalizeLoadedData();
+    }
+
+    // DB row(snake_case) → 기존 rawData row shape(camelCase) 매핑. features/*.js는 이 shape에만 의존하므로 무수정.
+    function mapRowFromSupabase(r) {
+      return {
+        id: r.id, monthStr: r.month_str, year: r.year, month: r.month,
+        dept: r.dept, manager: r.manager,
+        advertiser: r.advertiser, agency: r.agency, agencyGroup: r.agency_group, channel: r.channel, industry: r.industry,
+        broadDigital: r.broad_digital, categoryOriginal: r.category_original, subCategory: r.sub_category, subCategory3: r.sub_category3,
+        oneNFlag: r.one_n_flag, categoryReclassified: r.category_reclassified, revenueBasis: r.revenue_basis, bonbuRevenueStatus: r.bonbu_revenue_status,
+        remark: r.remark, amount: Number(r.amount_won) || 0,
+        isUpfront: r.is_upfront,
+        contractStartYM: (r.contract_start_y && r.contract_start_m) ? { y: r.contract_start_y, m: r.contract_start_m } : null,
+        contractEndYM: (r.contract_end_y && r.contract_end_m) ? { y: r.contract_end_y, m: r.contract_end_m } : null,
+        contractStartDate: r.contract_start_date ? new Date(r.contract_start_date + 'T00:00:00Z') : null,
+        contractEndDate: r.contract_end_date ? new Date(r.contract_end_date + 'T00:00:00Z') : null,
+        contractAmountText: buildContractAmountText(r.upfront_contract_amount_eok, r.gross_net_flag),
+        contractAmountWon: Number(r.contract_amount_won) || 0, grossNetFlag: r.gross_net_flag || '',
+        upfrontAdvertiser: r.upfront_advertiser_raw, upfrontRemark: r.upfront_note || ''
+      };
+    }
+
+    function mapUpfrontContractFromSupabase(c) {
+      return {
+        advertiser: c.advertiser, start: { y: c.start_year, m: c.start_month }, end: { y: c.end_year, m: c.end_month },
+        hasNet: c.has_net, targetWon: Number(c.target_amount_won) || 0, totalMonths: c.total_months
+      };
+    }
+
+    // contractAmountText 산출(원본 data-loader.js:188과 동일 규칙) — Postgres numeric↔JS 부동소수 텍스트 표현
+    // 차이를 피하기 위해 SQL이 아니라 여기서 계산한다.
+    function buildContractAmountText(eok, grossNetFlag) {
+      const amt = Number(eok) || 0;
+      if (amt <= 0) return '';
+      return amt + '억원' + (grossNetFlag === 'NET' ? ' (NET)' : '');
     }
 
     function classifyCategory(rawCat, rawSub) {

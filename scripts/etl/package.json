@@ -1,0 +1,15 @@
+{
+  "name": "enaad-etl",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "KT ENA 광고매출 대시보드 — 엑셀(addata.xlsx) → Supabase ETL. 프론트엔드(빌드 도구 없음)와 무관한 독립 Node 프로젝트.",
+  "scripts": {
+    "load": "node run.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "xlsx": "^0.18.5"
+  }
+}
