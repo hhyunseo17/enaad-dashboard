@@ -9,8 +9,11 @@
 // 이 프록시(Worker 또는 Pages Functions, 둘 다 Zero Trust로 보호되는 도메인)만 호출한다.
 // ============================================================
 
-const SUPABASE_PAGE_SIZE = 1000; // PostgREST 기본 max-rows 대응
-const PAGE_CONCURRENCY = 8; // 페이지를 순차가 아니라 이만큼씩 동시에 요청 (26,000행 기준 27회 순차 대기 → 4라운드로 단축)
+// PostgREST 기본 max-rows(1000)보다 크게 요청하려면 Supabase 프로젝트 설정(Settings → API → Max Rows)도
+// 이 값 이상으로 올려야 한다 — 설정만 올리고 클라이언트 요청 limit을 그대로 두면 여전히 1000행씩 잘린다.
+// 현재 데이터가 26,000행대이므로 30,000으로 잡으면 보통 1라운드(=1왕복)로 끝난다.
+const SUPABASE_PAGE_SIZE = 30000;
+const PAGE_CONCURRENCY = 4; // 데이터가 늘어나 페이지가 여러 장으로 나뉘는 경우를 대비한 안전판(순차 대기 방지)
 
 async function fetchPage(env, viewName, offset) {
   const url = `${env.SUPABASE_URL}/rest/v1/${viewName}?select=*&limit=${SUPABASE_PAGE_SIZE}&offset=${offset}`;
