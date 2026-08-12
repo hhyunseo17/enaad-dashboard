@@ -61,10 +61,10 @@ KT ENA 광고사업본부(광고전략팀)의 광고 매출 분석용 내부 대
 
 ---
 
-## Supabase 전환 (진행 중 — 병행 운영 단계)
+## Supabase 전환 (완료 — 운영 중, xlsx 경로는 안전망으로 코드 유지)
 - `js/core/data-loader.js`가 **프론트/백 경계**. `rawData`/`filteredData`의 형태(shape)는 xlsx/Supabase 두 경로가 동일하게 유지하며, `features/*`는 건드리지 않는다.
 - 스키마: `supabase/schema.sql` — `raw_sales_rows`(bronze, 엑셀 행 전량) → `v_sales_normalized`(silver, 정규화+5대분류 재분류) → `v_bonbu_sales`(gold, 본부매출+매출미인식 제외, **프론트가 유일하게 읽는 매출 뷰**) + `upfront_contracts`(K2 병합 결과 실체 테이블) + `etl_load_batches`/`current_batch`(적재 이력+원자적 컷오버).
 - **매출기준(취급고/회계) 토글은 뷰에서 좁히지 않는다.** `v_bonbu_sales`는 실적+회계조정 행을 전부 반환하고, 토글은 기존과 동일하게 `js/core/filters.js`의 `applyFilters()`가 클라이언트에서 처리한다.
 - K2 병합·업프론트 계약금액 파싱 → `scripts/etl/`(수동 실행, `docs 참고: scripts/etl/README.md`)에서만 수행. `data-loader.js`는 결과를 읽기만 한다.
 - **접근통제는 Cloudflare 프록시(`/api/sales`, `/api/upfront-contracts`, `/api/latest-batch`)를 경유.** 이 프로젝트는 Cloudflare **Pages**(Git 연동 자동배포)로 서빙되므로 실제 실행되는 코드는 `functions/api/*.js`이며, 공용 로직은 `shared/supabase-proxy.mjs`에 있다(standalone Worker로 전환할 경우를 대비해 `worker.js`도 같은 모듈을 재사용하도록 유지 — 현재는 배포에 쓰이지 않음). Supabase(`*.supabase.co`)는 Zero Trust 보호 범위 밖(별도 도메인)이라 브라우저가 anon key로 직접 쿼리하지 않는다 — Pages Functions가 서버 측에서 `SUPABASE_SERVICE_ROLE_KEY`로 대신 조회해 프록시한다. anon key는 발급·사용하지 않는다.
-- 전환 스위치: `js/core/state.js`의 `DATA_SOURCE_MODE`(`'xlsx'`|`'supabase'`, 기본 `'xlsx'`). 병행 운영 중이며, 검증 후 이 한 줄을 바꿔 전환한다. 문제 시 즉시 되돌릴 수 있다.
+- 전환 스위치: `js/core/state.js`의 `DATA_SOURCE_MODE`(`'xlsx'`|`'supabase'`, 현재 `'supabase'`). 문제 발생 시 이 한 줄을 `'xlsx'`로 되돌리는 배포만으로 즉시 롤백 가능 — xlsx 관련 코드(`fetchDataHttp`/`processWorkbookBuffer` 등)와 수동 업로드 폴백은 안전망으로 계속 유지한다.
