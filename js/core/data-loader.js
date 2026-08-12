@@ -255,7 +255,6 @@
     // rawData(+upfrontContracts)가 채워진 뒤 xlsx/Supabase 두 경로가 공통으로 수행하는 마무리 작업.
     // (신규광고주 판별 인덱스 재구축, 연도별 UI 펼침상태 초기화, 필터 재적용)
     function finalizeLoadedData() {
-      console.time('[perf] advertiserActiveMonthIndex'); // TODO: 로딩 성능 진단용 임시 로그, 확인 후 제거
       advertiserActiveMonthIndex = {};
       const seenAdvMonth = new Set();
       rawData.forEach(r => {
@@ -268,7 +267,6 @@
         advertiserActiveMonthIndex[r.advertiser].push({ monthStr: r.monthStr, time: new Date(r.monthStr + '-01').getTime() });
       });
       Object.values(advertiserActiveMonthIndex).forEach(arr => arr.sort((a, b) => a.time - b.time));
-      console.timeEnd('[perf] advertiserActiveMonthIndex');
 
       const allYears = [...new Set(rawData.map(r => r.year))];
       allYears.forEach(y => {
@@ -281,13 +279,9 @@
         if (expandedMgrYearColumns[y] === undefined) expandedMgrYearColumns[y] = true;
       });
 
-      console.time('[perf] setupYearPills+updateFilterCheckboxes');
       setupYearPills(isFirstLoad);
       updateFilterCheckboxes(isFirstLoad);
-      console.timeEnd('[perf] setupYearPills+updateFilterCheckboxes');
-      console.time('[perf] applyFilters(렌더 포함)');
       applyFilters();
-      console.timeEnd('[perf] applyFilters(렌더 포함)');
       isFirstLoad = false;
     }
 
@@ -303,13 +297,9 @@
         return res.json();
       });
 
-      console.time('[perf] fetch(3개 병렬, JSON 파싱 포함)'); // TODO: 로딩 성능 진단용 임시 로그, 확인 후 제거
       Promise.all([fetchJson('/api/sales'), fetchJson('/api/upfront-contracts'), fetchJson('/api/latest-batch')])
         .then(([salesRows, upfrontRows, batchInfo]) => {
-          console.timeEnd('[perf] fetch(3개 병렬, JSON 파싱 포함)');
-          console.time('[perf] processSupabaseRows(매핑+finalize 전체)');
           processSupabaseRows(salesRows, upfrontRows);
-          console.timeEnd('[perf] processSupabaseRows(매핑+finalize 전체)');
           lastSeenBatchId = batchInfo ? batchInfo.batch_id : lastSeenBatchId;
           workbookModifiedDate = (batchInfo && batchInfo.source_file_modified_at) ? new Date(batchInfo.source_file_modified_at) : null;
           document.getElementById('fileLastModified').innerText = '원본 수정: ' + (workbookModifiedDate ? workbookModifiedDate.toLocaleString() : '확인 불가');
@@ -334,9 +324,7 @@
     }
 
     function processSupabaseRows(salesRows, upfrontRows) {
-      console.time('[perf]   mapRowFromSupabase'); // TODO: 로딩 성능 진단용 임시 로그, 확인 후 제거
       rawData = salesRows.map(mapRowFromSupabase);
-      console.timeEnd('[perf]   mapRowFromSupabase');
       upfrontContracts = (upfrontRows || []).map(mapUpfrontContractFromSupabase);
       rawSourceSheetRef = null; rawSourceSheetName = ''; // exportRawSourceData()는 xlsx 모드 전용(원본 시트 참조 없음)
 
