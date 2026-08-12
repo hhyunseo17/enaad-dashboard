@@ -29,10 +29,10 @@ function pageUrl(env, viewName, offset) {
 async function assertOk(res, viewName) {
   if (!res.ok) {
     const text = await res.text();
+    // Supabase 원본 응답 본문은 브라우저로 그대로 돌려보내지 않는다(내부 쿼리/스키마 정보 노출 방지).
+    // 상세는 서버 로그(wrangler tail 또는 Pages Functions 로그)로만 남긴다.
     console.error(`Supabase 조회 실패(${viewName}): HTTP ${res.status} ${text}`);
-    // TODO(임시 진단용, 확인 후 원복): 평소엔 상세를 감추지만 지금은 프로덕션 502 원인을 찾는 중이라
-    // 상태코드+본문을 그대로 담아 던진다. proxyErrorResponse도 임시로 이 메시지를 그대로 내려보낸다.
-    throw new Error(`upstream_error:${viewName}: HTTP ${res.status} ${text.slice(0, 300)}`);
+    throw new Error(`upstream_error:${viewName}`);
   }
 }
 
@@ -101,10 +101,10 @@ export function missingEnvResponse() {
 }
 
 export function proxyErrorResponse(err) {
+  // err.message는 "upstream_error:<view>" 형태로만 만들어지므로 Supabase 응답 원문이나 키가
+  // 여기 실릴 일은 없다. 그래도 클라이언트에는 일반화된 메시지만 내려준다.
   console.error('API 프록시 오류:', err.message);
-  // TODO(임시 진단용, 확인 후 원복): 평소엔 일반 메시지만 내려보내야 한다. 지금은 프로덕션 502
-  // 원인 파악을 위해 err.message(상태코드+Supabase 응답 일부)를 그대로 노출한다.
-  return new Response(JSON.stringify({ error: err.message }), {
+  return new Response(JSON.stringify({ error: '데이터 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }), {
     status: 502,
     headers: { 'Content-Type': 'application/json;charset=UTF-8' },
   });
