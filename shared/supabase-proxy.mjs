@@ -15,13 +15,11 @@
 const SUPABASE_PAGE_SIZE = 30000;
 const PAGE_CONCURRENCY = 4; // 데이터가 더 늘어나 여러 페이지가 필요해지는 경우를 대비한 안전판(순차 대기 방지)
 
-function authHeaders(env, withExactCount) {
-  const headers = {
+function authHeaders(env) {
+  return {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
   };
-  if (withExactCount) headers.Prefer = 'count=exact'; // Content-Range 헤더에 총 행수를 실어달라는 요청
-  return headers;
 }
 
 function pageUrl(env, viewName, offset) {
@@ -38,62 +36,57 @@ async function assertOk(res, viewName) {
   }
 }
 
-// Content-Range 예: "0-999/26320"(count=exact 요청 시) 또는 "0-999/*"(요청 안 했을 때). 후자는 null 반환.
-function parseTotalFromContentRange(res) {
+// Content-Range 헤더(예: "0-26319/*")는 Prefer: count=exact 없이도 항상 내려오고, 이번 페이지가
+// 실제로 몇 행을 반환했는지 알려준다. 총 행수(count=exact)를 몰라도 "이 페이지가 마지막인지"는
+// 이걸로 판단 가능하다 — count=exact는 그 자체로 쿼리 비용이 붙어서(실측 +600ms) 일부러 안 쓴다.
+function returnedCountFromContentRange(res) {
   const cr = res.headers.get('content-range');
   if (!cr) return null;
-  const totalStr = cr.split('/')[1];
-  if (!totalStr || totalStr === '*') return null;
-  return parseInt(totalStr, 10);
+  const range = cr.split('/')[0];
+  const parts = range.split('-');
+  if (parts.length !== 2) return null;
+  const start = parseInt(parts[0], 10);
+  const end = parseInt(parts[1], 10);
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  return end - start + 1;
 }
 
 async function fetchPageJson(env, viewName, offset) {
-  const res = await fetch(pageUrl(env, viewName, offset), { headers: authHeaders(env, false) });
+  const res = await fetch(pageUrl(env, viewName, offset), { headers: authHeaders(env) });
   await assertOk(res, viewName);
   return res.json();
 }
 
 // 뷰 전체를 프록시 응답으로 반환한다.
 //
-// 데이터가 한 페이지(SUPABASE_PAGE_SIZE) 안에 다 들어오는 게 확인되면(count=exact로 총 행수 확인),
-// Supabase 응답 바디를 JSON으로 파싱했다가 다시 문자열로 만드는 과정 없이 그대로 스트리밍 전달한다 —
-// 26,000행 규모에서 이 파싱+재직렬화 비용이 로딩 시간의 상당 부분을 차지했다(체감 3초 이상).
-// count=exact를 못 받아오는 경우(total === null)에는 정확성을 위해 마지막 페이지가 다 안 찰 때까지
-// 순차 조회하는 방식으로 안전하게 폴백한다. 데이터가 자라서 여러 페이지가 필요해지면 알고 있는
-// 총 행수만큼 나머지를 병렬로 채운다.
+// 첫 페이지 응답이 SUPABASE_PAGE_SIZE보다 적게 왔으면 그게 전부라는 뜻이므로, JSON으로 파싱했다가
+// 다시 문자열로 만드는 과정 없이 Supabase 응답 바디를 그대로 스트리밍 전달한다 — 26,000행 규모에서
+// 이 파싱+재직렬화 비용이 로딩 시간의 상당 부분을 차지했다(체감 3초 이상). 페이지가 꽉 찬 경우(더
+// 있을 수 있음)에만 파싱해서 이어지는 페이지를 병렬 배치로 채운다.
 export async function proxyView(env, viewName) {
-  const firstRes = await fetch(pageUrl(env, viewName, 0), { headers: authHeaders(env, true) });
+  const firstRes = await fetch(pageUrl(env, viewName, 0), { headers: authHeaders(env) });
   await assertOk(firstRes, viewName);
-  const total = parseTotalFromContentRange(firstRes);
+  const returnedCount = returnedCountFromContentRange(firstRes);
 
-  if (total !== null && total <= SUPABASE_PAGE_SIZE) {
-    // 흔한 경우: 한 페이지로 전체 커버 — 파싱 없이 그대로 흘려보낸다.
+  if (returnedCount !== null && returnedCount < SUPABASE_PAGE_SIZE) {
+    // 흔한 경우: 이 페이지가 마지막(=전체)이라는 게 확실 — 파싱 없이 그대로 흘려보낸다.
     return new Response(firstRes.body, {
       headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Cache-Control': 'private, no-cache' },
     });
   }
 
+  // 페이지가 꽉 찼거나(더 있을 수 있음) Content-Range를 못 읽은 경우 — 안전하게 파싱 후 이어서 조회.
   const firstPage = await firstRes.json();
   const all = [...firstPage];
 
-  if (total !== null) {
-    // 총 행수를 아니까 나머지 페이지 offset을 미리 계산해 병렬로 조회.
-    const offsets = [];
-    for (let offset = SUPABASE_PAGE_SIZE; offset < total; offset += SUPABASE_PAGE_SIZE) offsets.push(offset);
-    for (let i = 0; i < offsets.length; i += PAGE_CONCURRENCY) {
-      const batch = offsets.slice(i, i + PAGE_CONCURRENCY);
-      const pages = await Promise.all(batch.map((offset) => fetchPageJson(env, viewName, offset)));
-      pages.forEach((page) => all.push(...page));
-    }
-  } else if (firstPage.length === SUPABASE_PAGE_SIZE) {
-    // count=exact를 못 받은 경우(total 불명) — 마지막 페이지가 다 안 찰 때까지 순차 조회(안전한 폴백).
-    let offset = SUPABASE_PAGE_SIZE;
-    for (;;) {
-      const page = await fetchPageJson(env, viewName, offset);
-      all.push(...page);
-      if (page.length < SUPABASE_PAGE_SIZE) break;
-      offset += SUPABASE_PAGE_SIZE;
-    }
+  let offset = SUPABASE_PAGE_SIZE;
+  let more = firstPage.length >= SUPABASE_PAGE_SIZE;
+  while (more) {
+    const batchOffsets = Array.from({ length: PAGE_CONCURRENCY }, (_, i) => offset + i * SUPABASE_PAGE_SIZE);
+    const pages = await Promise.all(batchOffsets.map((o) => fetchPageJson(env, viewName, o)));
+    pages.forEach((page) => all.push(...page));
+    more = pages[pages.length - 1].length >= SUPABASE_PAGE_SIZE;
+    offset += PAGE_CONCURRENCY * SUPABASE_PAGE_SIZE;
   }
 
   return jsonResponse(all);
