@@ -50,7 +50,7 @@
 
     /* 라이트 테마 (Toss Light 톤 그대로 사용, Toss Blue #0064FF) */
     html[data-theme="light"] {
-      --bg-base: #FFFFFF;
+      --bg-base: #FAFBFC;
       --bg-subtle: #F2F4F6;
       --bg-elevated: #FFFFFF;
       --bg-card-hover: #F2F4F6;
