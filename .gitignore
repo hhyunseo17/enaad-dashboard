@@ -10,3 +10,7 @@ Thumbs.db
 
 # 로그
 *.log
+
+# ETL (scripts/etl) — 자격증명·의존성
+scripts/etl/.env
+scripts/etl/node_modules/

@@ -17,7 +17,7 @@ VS Code Live Server 등 임의의 정적 서버도 가능. 자동 연결되면 �
 ## Claude Code로 작업하기
 - 이 폴더에서 `claude` 실행. `CLAUDE.md`가 지도 역할.
 - 수정 시 관련 `js/features/<name>.js` + `docs/features/<name>.md`만 열면 된다 (CLAUDE.md "파일 지도" 표 참조).
-- 매출분류/필터 규칙은 `js/core/filters.js`(commonMatch) + `docs/data-rules.md`가 단일 기준.
+- 매출분류/필터 규칙은 `js/core/filters.js`(applyFilters()) + `js/features/shared-helpers.js`(makeCommonMatch()) + `docs/data-rules.md`가 단일 기준.
 - 서브에이전트: `.claude/agents/` (feature-dev / data / reviewer). 단일 파일 수정은 서브에이전트 없이, 여러 파일 탐색·검증만 위임.
 
 ## 구조
@@ -50,6 +50,7 @@ id↔getElementById, onclick↔function 대조는 reviewer 에이전트가 자�
 - GitHub 푸시 → Cloudflare Pages/Worker 배포. 데이터는 R2, 서빙은 `worker.js`, 접근통제는 Zero Trust(Access).
 - `wrangler.toml`의 `bucket_name`을 실제 R2 버킷명으로 수정.
 
-## 장기 로드맵
-- 엑셀 파싱 → Supabase 이전. `js/core/data-loader.js`가 프론트/백 경계이며 전환 시 이 파일만 교체(`rawData`/`filteredData` shape 유지).
-- `commonMatch` → SQL VIEW, K2병합·업프론트 파싱 → ETL 승격. 상세는 `CLAUDE.md`/`docs/data-rules.md`.
+## Supabase 전환 (진행 중)
+- 엑셀 파싱 → Supabase 이전 중(병행 운영). `js/core/data-loader.js`가 프론트/백 경계, `rawData`/`filteredData` shape 유지.
+- 스키마 `supabase/schema.sql`, 적재 `scripts/etl/*`(수동 실행, `scripts/etl/README.md` 참고), 접근은 `/api/*` 프록시 경유(Pages 배포 시 `functions/api/*.js` 실행, 공용 로직은 `shared/supabase-proxy.mjs`; Supabase anon key는 발급하지 않음).
+- 전환 스위치는 `js/core/state.js`의 `DATA_SOURCE_MODE`. 상세는 `CLAUDE.md`/`docs/data-rules.md`.

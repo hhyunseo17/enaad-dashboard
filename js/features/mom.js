@@ -7,18 +7,7 @@
       const cy = selectedYears[0]; const cm = selectedMonths[0];
       let py = cy, pm = cm - 1; if (pm === 0) { pm = 12; py = cy - 1; }
 
-      const agencyTxt = document.getElementById('inputAgency').value.trim().toLowerCase();
-      const advTxt = document.getElementById('inputAdvertiser').value.trim().toLowerCase();
-      const commonMatch = (r) => {
-        if (r.bonbuRevenueStatus !== '본부매출') return false;
-        if (revenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false;
-        if (!isAllDeptsSelected && !selectedDepts.includes(r.dept)) return false;
-        if (!isAllChannelsSelected && !selectedChannels.includes(r.channel)) return false;
-        if (!isAllBroadsSelected && !selectedBroads.includes(r.broadDigital)) return false;
-        if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false;
-        if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false;
-        return isAdvMetricEligible(r);
-      };
+      const commonMatch = makeCommonMatch(isAdvMetricEligible);
 
       const currRows = rawData.filter(r => r.year === cy && r.month === cm && commonMatch(r));
       const prevRows = rawData.filter(r => r.year === py && r.month === pm && commonMatch(r));

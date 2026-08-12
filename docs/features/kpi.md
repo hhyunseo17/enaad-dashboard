@@ -12,6 +12,6 @@
 - `renderUpfrontKPI()` — 업프론트 실적 합계 + 달성률 + "약 XX.XX억원(월할 추정치)".
 
 ## 규칙/주의
-- 집계는 filteredData(commonMatch 적용) 기준.
+- 집계는 filteredData(applyFilters() 적용) 기준.
 - 클릭 연결: 광고주당매출→bucket, 신규광고주→newAdvPivot, 업프론트→upfrontPivot.
 - 금액: 억원.

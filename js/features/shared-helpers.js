@@ -9,6 +9,24 @@
       return r.bonbuRevenueStatus === '본부매출' && (r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC') && r.subCategory3 !== '배분수익' && !isOneN;
     }
 
+    // mom.js/agency-comp.js/new-advertiser.js가 공유하던 필터 체인(본부매출+취급고/회계+부서/채널/방송구분+대행사·광고주 텍스트 검색)을
+    // 단일 지점으로 통합. applyFilters()(filters.js)와 조건은 동일하되, 연/월·대분류 필터는 호출부가 별도로 처리하므로 여기 포함하지 않는다.
+    // eligibilityFn으로 마지막 대상범위 조건(예: isAdvMetricEligible, 일반광고/IMC 여부)을 주입받는다.
+    function makeCommonMatch(eligibilityFn) {
+      const agencyTxt = document.getElementById('inputAgency').value.trim().toLowerCase();
+      const advTxt = document.getElementById('inputAdvertiser').value.trim().toLowerCase();
+      return (r) => {
+        if (r.bonbuRevenueStatus !== '본부매출') return false;
+        if (revenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false;
+        if (!isAllDeptsSelected && !selectedDepts.includes(r.dept)) return false;
+        if (!isAllChannelsSelected && !selectedChannels.includes(r.channel)) return false;
+        if (!isAllBroadsSelected && !selectedBroads.includes(r.broadDigital)) return false;
+        if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false;
+        if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false;
+        return eligibilityFn(r);
+      };
+    }
+
     function isNewAdvertiserMonth(advName, currentMonthStr) {
       const arr = advertiserActiveMonthIndex[advName];
       if (!arr || arr.length === 0) return true;

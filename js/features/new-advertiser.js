@@ -6,18 +6,7 @@
       const hasGeneralOrIMC = isAllCategoriesSelected || selectedCategories.includes('일반광고') || selectedCategories.includes('IMC');
       if (!hasGeneralOrIMC) return null;
 
-      const agencyTxt = document.getElementById('inputAgency').value.trim().toLowerCase();
-      const advTxt = document.getElementById('inputAdvertiser').value.trim().toLowerCase();
-      const commonMatch = (r) => {
-        if (r.bonbuRevenueStatus !== '본부매출') return false;
-        if (revenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false;
-        if (!isAllDeptsSelected && !selectedDepts.includes(r.dept)) return false;
-        if (!isAllChannelsSelected && !selectedChannels.includes(r.channel)) return false;
-        if (!isAllBroadsSelected && !selectedBroads.includes(r.broadDigital)) return false;
-        if (agencyTxt && !(r.agency.toLowerCase().includes(agencyTxt) || r.agencyGroup.toLowerCase().includes(agencyTxt))) return false;
-        if (advTxt && !r.advertiser.toLowerCase().includes(advTxt)) return false;
-        return isAdvMetricEligible(r);
-      };
+      const commonMatch = makeCommonMatch(isAdvMetricEligible);
 
       // 선택된 연/월(복수 가능) 및 기타 필터를 반영한 대상 데이터
       const targetData = filteredData.filter(r => commonMatch(r));
