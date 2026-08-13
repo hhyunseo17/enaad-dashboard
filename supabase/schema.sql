@@ -227,27 +227,27 @@ cross join lateral unnest(
       array[
         row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
         row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
-      ]
+      ]::manager_split[]
     when r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합') then
       array[
         row('박영상', round(r.amount_won * 0.65)::bigint)::manager_split,
         row('김기철', r.amount_won - round(r.amount_won * 0.65)::bigint)::manager_split
-      ]
+      ]::manager_split[]
     -- 2026년 1~4월: 소분류 무관 50/50
     when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4 then
       array[
         row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
         row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
-      ]
+      ]::manager_split[]
     -- 2026년 5~12월: 소분류 무관 50/30/20
     when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12 then
       array[
         row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
         row('남형진', round(r.amount_won * 0.3)::bigint)::manager_split,
         row('이신우', r.amount_won - round(r.amount_won * 0.5)::bigint - round(r.amount_won * 0.3)::bigint)::manager_split
-      ]
+      ]::manager_split[]
     -- 그 외(skylife큐톤이지만 규칙 없는 소분류, 2025/2026 외 연도, skylife큐톤이 아닌 모든 행): 재배분 없음
-    else array[row(r.manager, r.amount_won)::manager_split]
+    else array[row(r.manager, r.amount_won)::manager_split]::manager_split[]
   end
 ) with ordinality as u(split, split_idx)
 where r.load_batch_id = (select batch_id from current_batch where id = 1);
