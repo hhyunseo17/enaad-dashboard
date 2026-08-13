@@ -226,20 +226,11 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
-              // 목표가 실적보다 클 때 실적 라벨이 목표 막대와 겹치지 않도록, 둘 중 더 높은 쪽 위로 띄운다.
-              offset: (ctx) => {
-                const idx = ctx.dataIndex; const yScale = ctx.chart.scales.y;
-                const actual = actualVals[idx]; const target = targetVals[idx];
-                const base = 10;
-                if (target > actual) return base + Math.max(0, yScale.getPixelForValue(actual) - yScale.getPixelForValue(target));
-                return base;
-              },
-              color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
-          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 40 } },
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
             legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
@@ -251,7 +242,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '25%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
         }
       });
     }
@@ -313,21 +304,11 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
-              // 실적 막대 기준 10px만 띄우면 목표 막대가 더 클 때 그 목표 막대와 겹친다.
-              // 두 막대 중 더 높은 쪽(대개 목표) 위로 라벨이 뜨도록 부족한 픽셀만큼 오프셋을 더한다.
-              offset: (ctx) => {
-                const idx = ctx.dataIndex; const yScale = ctx.chart.scales.y;
-                const actual = actualVals[idx]; const target = targetVals[idx];
-                const base = 10;
-                if (target > actual) return base + Math.max(0, yScale.getPixelForValue(actual) - yScale.getPixelForValue(target));
-                return base;
-              },
-              color: chartColors.green, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: chartColors.green, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
-          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 40 } },
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
             legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `${groupLabelText}: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
@@ -339,7 +320,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '30%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
         }
       });
     }
