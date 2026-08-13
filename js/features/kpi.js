@@ -221,10 +221,10 @@
       chartInstances.goalTrend = new Chart(ctx, {
         type: 'bar',
         data: { labels: labels, datasets: [
-          { label: '목표', data: targetVals, backgroundColor: chartColors.orange, borderRadius: 0,
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.teal, borderRadius: 0,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
@@ -302,10 +302,10 @@
       chartInstances.goalBreakdown = new Chart(ctx, {
         type: 'bar',
         data: { labels: groups, datasets: [
-          { label: '목표', data: targetVals, backgroundColor: chartColors.orange, borderRadius: 0,
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.teal, borderRadius: 0,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
