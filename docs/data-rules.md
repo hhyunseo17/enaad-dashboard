@@ -75,7 +75,7 @@
 | 2026년 5~12월 | 소분류 무관 | 박영상 / 남형진 / 이신우 | 50% / 30% / 20% |
 | 2023·2024·2027년 등 (2025/2026 외) | 소분류 무관 | 재배분 없음(원본 담당자 유지) | - |
 
-- **구현 위치**: Supabase 경로는 `supabase/schema.sql`의 `v_sales_normalized`(SQL `cross join lateral unnest` + `manager_split` 복합타입으로 1행→N행 확장, `CASE WHEN`으로 감사 가능하게 하드코딩). xlsx 안전망 경로는 `js/core/data-loader.js`의 `getManagerSplitParts()`(`processWorkbookBuffer()` 내부, `finalizeLoadedData()` 호출 전). **두 경로 모두 동일 규칙을 유지해야 한다** — 한쪽만 고치면 xlsx 롤백 시(`DATA_SOURCE_MODE='xlsx'`) 재배분이 사라진다.
+- **구현 위치**: Supabase 경로는 `supabase/schema.sql`의 `v_manager_split`(규칙별 `UNION ALL` 브랜치 — 복합타입+`unnest` 방식은 SQL Editor에서 CASE 분기 간 배열 타입 통일이 깨지는 문제를 실제로 겪어서 포기하고, 브랜치별 `SELECT`를 나열하는 더 단순한 방식으로 구현) → `v_sales_normalized`가 `raw_sales_rows`와 `v_manager_split`을 `raw_id`로 조인해 1행→N행 확장을 반영. xlsx 안전망 경로는 `js/core/data-loader.js`의 `getManagerSplitParts()`(`processWorkbookBuffer()` 내부, `finalizeLoadedData()` 호출 전). **두 경로 모두 동일 규칙을 유지해야 한다** — 한쪽만 고치면 xlsx 롤백 시(`DATA_SOURCE_MODE='xlsx'`) 재배분이 사라진다.
 - **id 처리(Supabase)**: `v_sales_normalized`/`v_bonbu_sales`의 `id`는 `raw_sales_rows.id * 100 + split_idx`(1-based)로 합성한다 — 분할로 한 raw 행이 여러 행이 되면서 `id`가 중복되는 것을 방지. 최대 3분할이므로 100이면 여유 있음. 원본 raw 행은 `raw_id` 컬럼으로 추적 가능.
 - **검증 시점(2025년, 2026-08 데이터 기준)**: 2025년 skylife큐톤 본부매출 166건 전부 위 5개 소분류(`LiveAD+`/`심포니`/`영업대행수수료`/`장초수`/`인포결합`) 안에 들어와 있었다(규칙 미정의 소분류 0건). 2026년은 8월까지 111건. 데이터가 갱신되며 새 소분류가 추가될 수 있으니, ETL 재적재 시 규칙 밖 소분류가 새로 생기지 않았는지 주기적으로 확인할 것.
 

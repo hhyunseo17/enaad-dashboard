@@ -98,19 +98,6 @@ create index if not exists idx_raw_sales_rows_batch on raw_sales_rows (load_batc
 create index if not exists idx_raw_sales_rows_batch_bonbu on raw_sales_rows (load_batch_id, bonbu_revenue_status);
 
 -- ------------------------------------------------------------
--- 1b. manager_split — skylife큐톤 담당자 재배분(아래 2.)에서 "1행 → N행" 확장에 쓰는 보조 복합타입.
---     `amt`는 비율이 아니라 이미 원 단위로 나눈 실제 배분액이다(마지막 조각 = 원금 - 앞 조각들의 반올림합,
---     즉 나머지 방식으로 계산해 SUM(amount_won)이 재배분 전후 항상 정확히 보존되도록 한다 — 조각별로
---     독립적으로 반올림하면 원 단위 오차가 누적될 수 있어 이 방식을 쓰지 않는다).
--- ------------------------------------------------------------
-
-do $$ begin
-  if not exists (select 1 from pg_type where typname = 'manager_split') then
-    create type manager_split as (mgr text, amt bigint);
-  end if;
-end $$;
-
--- ------------------------------------------------------------
 -- 2. v_sales_normalized (silver) — 정규화 + 5대분류 재분류 + skylife큐톤 담당자 재배분. 필터링은 하지 않는다.
 --    최신 배치(current_batch)만 노출한다.
 --
@@ -123,18 +110,74 @@ end $$;
 --     2025년 소분류 장초수/인포결합:              박영상 65% / 김기철 35%
 --     2026년 1~4월(소분류 무관):                  박영상 50% / 남형진 50%
 --     2026년 5~12월(소분류 무관):                 박영상 50% / 남형진 30% / 이신우 20%
+--
+-- 구현: 커스텀 복합타입 + unnest 대신, 각 규칙을 UNION ALL 브랜치로 풀어 쓴다. Postgres/SQL Editor에서
+-- CASE 분기마다 다른 배열 타입을 만들어 unnest하는 방식은 타입 통일이 깨지기 쉬워(실제로 겪은 문제),
+-- 브랜치별로 그냥 SELECT를 하나씩 쓰는 게 더 단순하고 안전하다. 마지막 조각은 항상 "원금 - 앞 조각들의
+-- 반올림 합"(나머지 방식)으로 계산해 SUM(amount_won)이 재배분 전후 정확히 보존되게 한다.
 -- ------------------------------------------------------------
+
+create or replace view v_manager_split as
+  -- 규칙 없음(기본): skylife큐톤이 아니거나, 2025/2026 규칙 대상이 아닌 모든 행 → 원본 담당자 그대로 1행
+  select r.id as raw_id, 1 as split_idx, r.manager as split_manager, r.amount_won as split_amount
+  from raw_sales_rows r
+  where r.sub_category <> 'skylife큐톤'
+     or (r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 not in ('LiveAD+', '심포니', '영업대행수수료', '장초수', '인포결합'))
+     or (r.sub_category = 'skylife큐톤' and r.year not in (2025, 2026))
+
+  union all
+  -- 2025년 LiveAD+/심포니/영업대행수수료: 박영상 50% / 남형진 50%
+  select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료')
+  union all
+  select r.id, 2, '남형진', r.amount_won - round(r.amount_won * 0.5)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료')
+
+  union all
+  -- 2025년 장초수/인포결합: 박영상 65% / 김기철 35%
+  select r.id, 1, '박영상', round(r.amount_won * 0.65)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합')
+  union all
+  select r.id, 2, '김기철', r.amount_won - round(r.amount_won * 0.65)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합')
+
+  union all
+  -- 2026년 1~4월(소분류 무관): 박영상 50% / 남형진 50%
+  select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4
+  union all
+  select r.id, 2, '남형진', r.amount_won - round(r.amount_won * 0.5)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4
+
+  union all
+  -- 2026년 5~12월(소분류 무관): 박영상 50% / 남형진 30% / 이신우 20%
+  select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12
+  union all
+  select r.id, 2, '남형진', round(r.amount_won * 0.3)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12
+  union all
+  select r.id, 3, '이신우', r.amount_won - round(r.amount_won * 0.5)::bigint - round(r.amount_won * 0.3)::bigint
+  from raw_sales_rows r
+  where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12;
 
 create or replace view v_sales_normalized as
 select
-  r.id * 100 + u.split_idx as id,   -- 합성 id: 최대 3분할이므로 100이면 raw id 간 충돌 없음(바로 아래 raw_id 컬럼으로 원본 추적 가능)
-  r.id as raw_id,
+  r.id * 100 + s.split_idx as id,   -- 합성 id: 최대 3분할이므로 100이면 raw id 간 충돌 없음(맨 뒤 raw_id 컬럼으로 원본 추적 가능)
   r.load_batch_id,
   r.month_str,
   r.year,
   r.month,
   r.dept,
-  (u.split).mgr as manager,
+  s.split_manager as manager,
   r.advertiser,
 
   -- 대행사 정규화 (data-loader.js:164-165)
@@ -191,7 +234,7 @@ select
   r.revenue_basis,
   r.bonbu_revenue_status,
   r.remark,
-  (u.split).amt as amount_won,
+  s.split_amount as amount_won,
 
   r.is_upfront,
   r.contract_start_y,
@@ -217,39 +260,12 @@ select
     when r.category_original = '교환광고' then '교환광고 미인식'
     when r.category_original = '대행수익' and r.sub_category <> 'skylife큐톤' then '대행수익 미인식(skylife큐톤 예외 아님)'
     else null
-  end as excluded_reason
+  end as excluded_reason,
+
+  r.id as raw_id   -- 재배분으로 쪼개진 행의 원본 raw_sales_rows.id 추적용. CREATE OR REPLACE VIEW 제약상 새 컬럼은 항상 맨 뒤에 추가.
 
 from raw_sales_rows r
-cross join lateral unnest(
-  case
-    -- 2025년: 소분류별 비율. 마지막 조각은 원금에서 앞 조각(들)의 반올림값을 뺀 나머지 — 합계 보존.
-    when r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료') then
-      array[
-        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
-        row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
-      ]::manager_split[]
-    when r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합') then
-      array[
-        row('박영상', round(r.amount_won * 0.65)::bigint)::manager_split,
-        row('김기철', r.amount_won - round(r.amount_won * 0.65)::bigint)::manager_split
-      ]::manager_split[]
-    -- 2026년 1~4월: 소분류 무관 50/50
-    when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4 then
-      array[
-        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
-        row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
-      ]::manager_split[]
-    -- 2026년 5~12월: 소분류 무관 50/30/20
-    when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12 then
-      array[
-        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
-        row('남형진', round(r.amount_won * 0.3)::bigint)::manager_split,
-        row('이신우', r.amount_won - round(r.amount_won * 0.5)::bigint - round(r.amount_won * 0.3)::bigint)::manager_split
-      ]::manager_split[]
-    -- 그 외(skylife큐톤이지만 규칙 없는 소분류, 2025/2026 외 연도, skylife큐톤이 아닌 모든 행): 재배분 없음
-    else array[row(r.manager, r.amount_won)::manager_split]::manager_split[]
-  end
-) with ordinality as u(split, split_idx)
+join v_manager_split s on s.raw_id = r.id
 where r.load_batch_id = (select batch_id from current_batch where id = 1);
 
 -- ------------------------------------------------------------
@@ -348,12 +364,13 @@ revoke all on etl_load_batches from anon, authenticated;
 revoke all on current_batch from anon, authenticated;
 revoke all on upfront_contracts from anon, authenticated;
 revoke all on sales_targets from anon, authenticated;
+revoke all on v_manager_split from anon, authenticated;
 revoke all on v_sales_normalized from anon, authenticated;
 revoke all on v_bonbu_sales from anon, authenticated;
 revoke all on v_upfront_contracts_current from anon, authenticated;
 revoke all on v_latest_batch_info from anon, authenticated;
 
 grant select on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts, sales_targets,
-  v_sales_normalized, v_bonbu_sales, v_upfront_contracts_current, v_latest_batch_info
+  v_manager_split, v_sales_normalized, v_bonbu_sales, v_upfront_contracts_current, v_latest_batch_info
   to service_role;
 grant insert, update on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts, sales_targets to service_role;
