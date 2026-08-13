@@ -221,18 +221,25 @@
       chartInstances.goalTrend = new Chart(ctx, {
         type: 'bar',
         data: { labels: labels, datasets: [
-          // 목표/실적을 동일 두께로 완전히 같은 자리에 겹쳐 그린다(grouped:false로 나란히 배치되는 걸 막음) —
-          // 담당자/월 수가 많아져도 막대가 옆으로 밀리며 늘어나지 않도록. 실적(order 값이 더 큼)이 나중에 그려져
-          // 항상 목표 위(앞)에 오고, 목표는 실적보다 클 때만 위로 삐져나와 보인다.
-          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, grouped: false, order: 1,
+          // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
+          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, grouped: false, order: 2,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 10, color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
+              // 목표가 실적보다 클 때 실적 라벨이 목표 막대와 겹치지 않도록, 둘 중 더 높은 쪽 위로 띄운다.
+              offset: (ctx) => {
+                const idx = ctx.dataIndex; const yScale = ctx.chart.scales.y;
+                const actual = actualVals[idx]; const target = targetVals[idx];
+                const base = 10;
+                if (target > actual) return base + Math.max(0, yScale.getPixelForValue(actual) - yScale.getPixelForValue(target));
+                return base;
+              },
+              color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
-          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 40 } },
           plugins: {
             legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
@@ -244,7 +251,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '25%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
         }
       });
     }
@@ -300,14 +307,12 @@
       chartInstances.goalBreakdown = new Chart(ctx, {
         type: 'bar',
         data: { labels: groups, datasets: [
-          // 목표/실적을 동일 두께로 완전히 같은 자리에 겹쳐 그린다(grouped:false로 나란히 배치되는 걸 막음) —
-          // 담당자 수가 많아져도 막대가 옆으로 밀리며 늘어나지 않도록. 실적(order 값이 더 큼 → 나중에 그려짐)이
-          // 항상 목표 위(앞)에 오고, 목표는 실적보다 클 때만 위로 삐져나와 보인다. 월별 추이 차트(파랑/주황)와
+          // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치. 월별 추이 차트(파랑/주황)와
           // 구분되도록 이 차트는 회색/초록 유지.
-          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, grouped: false, order: 1,
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, grouped: false, order: 2,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
               // 실적 막대 기준 10px만 띄우면 목표 막대가 더 클 때 그 목표 막대와 겹친다.
               // 두 막대 중 더 높은 쪽(대개 목표) 위로 라벨이 뜨도록 부족한 픽셀만큼 오프셋을 더한다.
