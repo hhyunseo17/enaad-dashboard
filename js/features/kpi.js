@@ -297,12 +297,12 @@
       chartInstances.goalBreakdown = new Chart(ctx, {
         type: 'bar',
         data: { labels: groups, datasets: [
-          // 담당자 모드는 인원이 많아질 수 있어 목표/실적을 나란히(그룹) 대신 겹쳐서(같은 stack, 폭만 다르게) 표시 —
-          // 카테고리당 폭을 적게 써서 더 많은 그룹을 한 화면에 담는다.
-          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, stack: 'goal', barPercentage: 0.85, categoryPercentage: 0.85, order: 2,
+          // 기존처럼 목표/실적을 나란히 배치하되, barPercentage를 1보다 크게 줘서 두 막대가 살짝 겹치게 —
+          // 실적(order:1)이 겹치는 부분에서 위로 오도록.
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 1.25, categoryPercentage: 0.8, order: 2,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, stack: 'goal', barPercentage: 0.45, categoryPercentage: 0.85, order: 1,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1.25, categoryPercentage: 0.8, order: 1,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 10, color: chartColors.green, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
