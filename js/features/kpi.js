@@ -208,7 +208,11 @@
       const groupSet = new Set();
       scopedTargets.forEach(t => { if (t[groupField]) groupSet.add(t[groupField]); });
       scopedActuals.forEach(r => { if (r[groupField]) groupSet.add(r[groupField]); });
-      let groups = [...groupSet];
+      let groups = [...groupSet].filter(g => {
+        const t = scopedTargets.filter(x => x[groupField] === g).reduce((s, x) => s + x.targetWon, 0);
+        const a = scopedActuals.filter(x => x[groupField] === g).reduce((s, x) => s + x.amount, 0);
+        return t > 0 && a > 0; // 목표 또는 실적이 0인 그룹은 비교 의미가 없으니 차트에서 제외
+      });
 
       if (goalBreakdownMode === 'dept') {
         groups.sort((a, b) => {
