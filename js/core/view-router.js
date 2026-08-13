@@ -8,7 +8,7 @@
     });
 
     function renderDashboard() {
-      renderKPIs(); renderTrendChart(); renderPortfolioChart(); renderChannelChart(); renderAdvBucketChart();
+      renderKPIs(); renderTrendChart(); renderGoalBreakdownChart(); renderPortfolioChart(); renderChannelChart(); renderAdvBucketChart();
       renderRankAgencyChart(); renderRankAdvertiserChart(); renderDeptChart(); renderManagerChart(); renderMoMChart(); renderAgencyCompChart(); renderTableData();
     }
 

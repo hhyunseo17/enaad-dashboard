@@ -36,6 +36,8 @@
       --accent-cyan: #38BDF8;
       --accent-purple: #A855F7;
       --accent-pink: #EC4899;
+      --accent-teal: #14B8A6;
+      --accent-teal-bg: #0B2E2A;
 
       --radius-sm: 8px;
       --radius-md: 12px;
@@ -80,6 +82,8 @@
       --accent-cyan: #0284C7;
       --accent-purple: #7B61FF;
       --accent-pink: #DB2777;
+      --accent-teal: #0D9488;
+      --accent-teal-bg: #E1F5F2;
 
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
       --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);

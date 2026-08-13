@@ -34,6 +34,7 @@
       } else { document.getElementById('kpiYoYDiff').innerText = '-'; document.getElementById('kpiGrowthBadge').style.display = 'none'; document.getElementById('kpiGrowthText').innerText = `단일 연도 선택 시 제공`; }
 
       renderUpfrontKPI();
+      renderGoalKPI();
 
       const hasGeneralOrIMC = isAllCategoriesSelected || selectedCategories.includes('일반광고') || selectedCategories.includes('IMC');
       if (!hasGeneralOrIMC) {
@@ -99,5 +100,150 @@
       if (badge) { badge.className = achieveRate >= 100 ? 'badge-growth up' : 'badge-growth down'; badge.innerText = targetTotal > 0 ? `${achieveRate.toFixed(1)}% 달성` : '계약 없음'; }
       const targetEok = (targetTotal / 1e8).toFixed(2);
       document.getElementById('kpiUpfrontSub').innerText = `계약금액 약 ${targetEok}억원(월할 추정치) 대비`;
+    }
+
+    function computeRevenueTargetForScope() {
+      // 선택된 연/월 스코프(미선택 시 전체)와 겹치는 담당자×대분류 목표를 전부 합산 (본부 전체 합산 기준)
+      const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
+      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
+      const scopeSet = new Set();
+      scopeYears.forEach(y => scopeMonths.forEach(m => scopeSet.add(y + '-' + m)));
+      return salesTargets
+        .filter(t => scopeSet.has(t.year + '-' + t.month))
+        .reduce((sum, t) => sum + t.targetWon, 0);
+    }
+
+    function computeRevenuePerformanceActualForScope() {
+      // 목표가 부서/채널/대분류 축으로 쪼개져 있지 않으므로, 좌측 체크박스 필터와 무관하게
+      // 본부매출 + 실적(취급고) + 선택 연/월 스코프로만 집계 (업프론트 KPI의 계약금액 집계와 동일 원칙)
+      const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
+      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
+      return rawData
+        .filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적'
+          && scopeYears.includes(r.year) && scopeMonths.includes(r.month))
+        .reduce((sum, r) => sum + r.amount, 0);
+    }
+
+    function renderGoalKPI() {
+      const badge = document.getElementById('kpiGoalAchieveBadge');
+      const annualEl = document.getElementById('kpiGoalAnnualProgress');
+      if (revenueBasisMode === 'accounting') {
+        document.getElementById('kpiGoalActual').innerText = '-';
+        if (badge) badge.style.display = 'none';
+        document.getElementById('kpiGoalSub').innerText = `회계기준 목표 미제공`;
+        if (annualEl) annualEl.style.display = 'none';
+        return;
+      }
+
+      const targetTotal = computeRevenueTargetForScope();
+      const actualTotal = computeRevenuePerformanceActualForScope();
+      const achieveRate = targetTotal > 0 ? (actualTotal / targetTotal * 100) : 0;
+
+      document.getElementById('kpiGoalActual').innerText = formatCurrencyKorean(actualTotal);
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.className = achieveRate >= 100 ? 'badge-growth up' : 'badge-growth down';
+        badge.innerText = targetTotal > 0 ? `${achieveRate.toFixed(1)}% 달성` : '목표 미등록';
+      }
+      const targetEok = (targetTotal / 1e8).toFixed(2);
+      document.getElementById('kpiGoalSub').innerText = `목표 약 ${targetEok}억원 대비`;
+
+      // 연간 목표 대비 진도율: 단일 연도 선택 시에만 노출 (해당 기간 실적 ÷ 선택 연도 전체(12개월) 목표)
+      if (annualEl) {
+        if (selectedYears.length === 1) {
+          annualEl.style.display = '';
+          const annualTargetTotal = salesTargets
+            .filter(t => t.year === selectedYears[0])
+            .reduce((sum, t) => sum + t.targetWon, 0);
+          if (annualTargetTotal > 0) {
+            const annualRate = actualTotal / annualTargetTotal * 100;
+            annualEl.innerText = `연간 목표 대비 진도율: ${annualRate.toFixed(1)}% (연간 목표 약 ${(annualTargetTotal / 1e8).toFixed(2)}억원)`;
+          } else {
+            annualEl.innerText = `연간 목표 미등록`;
+          }
+        } else {
+          annualEl.style.display = 'none';
+        }
+      }
+    }
+
+    function renderGoalBreakdownChart() {
+      // 현재 선택된 연/월 스코프 기준 부서별/담당자별 목표 대비 실적 (좌측 체크박스 필터 미반영 — 목표가 그 축으로 안 쪼개지므로)
+      const canvas = document.getElementById('chartGoalBreakdown');
+      const placeholder = document.getElementById('chartGoalBreakdownPlaceholder');
+      if (!canvas) return;
+
+      if (revenueBasisMode === 'accounting') {
+        if (chartInstances.goalBreakdown) { chartInstances.goalBreakdown.destroy(); chartInstances.goalBreakdown = null; }
+        canvas.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        return;
+      }
+      canvas.style.display = '';
+      if (placeholder) placeholder.style.display = 'none';
+
+      const ctx = canvas.getContext('2d'); if (chartInstances.goalBreakdown) chartInstances.goalBreakdown.destroy();
+
+      const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
+      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
+      const groupField = goalBreakdownMode === 'dept' ? 'dept' : 'manager';
+      const groupLabelText = goalBreakdownMode === 'dept' ? '부서' : '담당자';
+
+      const scopedTargets = salesTargets.filter(t => scopeYears.includes(t.year) && scopeMonths.includes(t.month));
+      const scopedActuals = rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적'
+        && scopeYears.includes(r.year) && scopeMonths.includes(r.month));
+
+      const groupSet = new Set();
+      scopedTargets.forEach(t => { if (t[groupField]) groupSet.add(t[groupField]); });
+      scopedActuals.forEach(r => { if (r[groupField]) groupSet.add(r[groupField]); });
+      let groups = [...groupSet];
+
+      if (goalBreakdownMode === 'dept') {
+        groups.sort((a, b) => {
+          let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1; if (idxB !== -1) return 1;
+          return a.localeCompare(b, undefined, { numeric: true });
+        });
+      } else {
+        // 담당자 모드: 목표+실적 합산 큰 순 정렬 (목표가 있는 담당자는 전부 포함, 별도 상한 없음)
+        const sortKey = {};
+        groups.forEach(g => {
+          const t = scopedTargets.filter(x => x[groupField] === g).reduce((s, x) => s + x.targetWon, 0);
+          const a = scopedActuals.filter(x => x[groupField] === g).reduce((s, x) => s + x.amount, 0);
+          sortKey[g] = t + a;
+        });
+        groups.sort((a, b) => sortKey[b] - sortKey[a]);
+      }
+
+      const actualVals = groups.map(g => scopedActuals.filter(r => r[groupField] === g).reduce((s, r) => s + r.amount, 0) / 1e8);
+      const targetVals = groups.map(g => scopedTargets.filter(t => t[groupField] === g).reduce((s, t) => s + t.targetWon, 0) / 1e8);
+
+      chartInstances.goalBreakdown = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: groups, datasets: [
+          { type: 'bar', label: '실적', data: actualVals, backgroundColor: chartColors.teal, yAxisID: 'y', borderRadius: 0, order: 2,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          },
+          { type: 'line', label: '목표', data: targetVals, borderColor: '#FFB547', backgroundColor: '#FFB547', borderWidth: 2, pointRadius: 4, yAxisID: 'y', order: 1,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          }
+        ] },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            tooltip: { callbacks: { title: (t) => `${groupLabelText}: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
+                afterBody: (t) => {
+                  const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];
+                  const rate = target > 0 ? (actual / target * 100).toFixed(1) + '%' : '-';
+                  return [``, `달성률: ${rate}`];
+                }
+              }
+            }
+          },
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+        }
+      });
     }
 

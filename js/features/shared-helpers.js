@@ -45,4 +45,5 @@
     function setRankAgencyMode(mode) { rankAgencyMode = mode; document.getElementById('btnRankAgencySolo').classList.toggle('active', mode === 'agency'); document.getElementById('btnRankAgencyGroup').classList.toggle('active', mode === 'agencyGroup'); renderRankAgencyChart(); }
     function setDeptMode(mode) { deptMode = mode; document.getElementById('btnDeptCategory').classList.toggle('active', mode === 'categoryReclassified'); document.getElementById('btnDeptBroad').classList.toggle('active', mode === 'broadDigital'); renderDeptChart(); }
     function setManagerMode(mode) { managerMode = mode; document.getElementById('btnManagerCategory').classList.toggle('active', mode === 'categoryReclassified'); document.getElementById('btnManagerBroad').classList.toggle('active', mode === 'broadDigital'); renderManagerChart(); }
+    function setGoalBreakdownMode(mode) { goalBreakdownMode = mode; document.getElementById('btnGoalBreakdownDept').classList.toggle('active', mode === 'dept'); document.getElementById('btnGoalBreakdownManager').classList.toggle('active', mode === 'manager'); renderGoalBreakdownChart(); }
 

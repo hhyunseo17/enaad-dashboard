@@ -134,6 +134,15 @@ export async function handleUpfrontContractsRequest(env) {
   }
 }
 
+export async function handleTargetsRequest(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  try {
+    return await proxyView(env, 'sales_targets');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
 export async function handleLatestBatchRequest(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   try {

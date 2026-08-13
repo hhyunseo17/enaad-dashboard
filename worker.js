@@ -27,11 +27,12 @@
  *    (wrangler.toml에 평문으로 넣지 말 것 — git에 커밋되는 파일이다)
  */
 
-import { handleSalesRequest, handleUpfrontContractsRequest, handleLatestBatchRequest } from './shared/supabase-proxy.mjs';
+import { handleSalesRequest, handleUpfrontContractsRequest, handleTargetsRequest, handleLatestBatchRequest } from './shared/supabase-proxy.mjs';
 
 async function handleApiRequest(env, pathname) {
   if (pathname === '/api/sales') return handleSalesRequest(env);
   if (pathname === '/api/upfront-contracts') return handleUpfrontContractsRequest(env);
+  if (pathname === '/api/targets') return handleTargetsRequest(env);
   if (pathname === '/api/latest-batch') return handleLatestBatchRequest(env);
   return new Response('Not found', { status: 404 });
 }

@@ -4,9 +4,10 @@
 --
 -- 계층: raw_sales_rows(bronze) → v_sales_normalized(silver) → v_bonbu_sales(gold)
 --       + upfront_contracts(ETL 산출 실체 테이블) + etl_load_batches/current_batch(적재 이력+컷오버 포인터)
+--       + sales_targets(목표 적재 실체 테이블, scripts/etl/load-targets.mjs가 채움, 배치/컷오버 없음)
 --
 -- 이 스키마는 scripts/etl/*.mjs가 채우고, 대시보드는 Worker 프록시(worker.js /api/*)를 통해서만
--- v_bonbu_sales / upfront_contracts / v_latest_batch_info 세 개를 읽는다. 원본(raw_sales_rows)과
+-- v_bonbu_sales / upfront_contracts / sales_targets / v_latest_batch_info 네 개를 읽는다. 원본(raw_sales_rows)과
 -- 적재 이력(etl_load_batches)은 service_role(ETL/Worker)만 접근 가능하며 외부에 노출하지 않는다.
 --
 -- 적용: Supabase SQL Editor 또는 `psql "$SUPABASE_DB_URL" -f supabase/schema.sql`
@@ -239,6 +240,25 @@ from upfront_contracts
 where load_batch_id = (select batch_id from current_batch where id = 1);
 
 -- ------------------------------------------------------------
+-- 4b. sales_targets — 목표 적재 실체 테이블(scripts/etl/load-targets.mjs가 채움, target.xlsx `목표 합산` 시트)
+--     담당자 x 5대분류 x 연월 단위. 배치/컷오버 개념 없음(분기/반기 단위로 담당자가 수동 재적재,
+--     upsert만 수행하므로 파일에서 삭제된 과거 행은 자동 정리되지 않음 — README 참고).
+--     현재는 취급고(실적) 기준 목표만 존재. 회계기준 목표가 생기면 basis 컬럼을 추가할 것.
+-- ------------------------------------------------------------
+
+create table if not exists sales_targets (
+  id                     bigint generated always as identity primary key,
+  manager                text not null,
+  dept                   text not null default '(미지정)',       -- 목표 수립 시점 스냅샷, 조인 키 아님(참고용)
+  category_reclassified  text not null,                          -- 5대분류 값(일반광고/IMC/인포머셜/큐톤광고/기타광고)
+  year                   int not null,
+  month                  int not null,
+  target_amount_won      bigint not null,                        -- 취급고(실적) 기준 원 단위
+  updated_at             timestamptz not null default now(),
+  unique (manager, category_reclassified, year, month)
+);
+
+-- ------------------------------------------------------------
 -- 5. v_latest_batch_info — 대시보드가 "원본 수정" 표시 + 배치 변경 감지 폴링에 쓰는 경량 뷰
 -- ------------------------------------------------------------
 
@@ -266,18 +286,20 @@ alter table raw_sales_rows enable row level security;
 alter table etl_load_batches enable row level security;
 alter table current_batch enable row level security;
 alter table upfront_contracts enable row level security;
+alter table sales_targets enable row level security;
 -- 정책을 하나도 만들지 않으므로 anon/authenticated는 RLS에 의해 전부 차단된다. service_role은 BYPASSRLS로 무관.
 
 revoke all on raw_sales_rows from anon, authenticated;
 revoke all on etl_load_batches from anon, authenticated;
 revoke all on current_batch from anon, authenticated;
 revoke all on upfront_contracts from anon, authenticated;
+revoke all on sales_targets from anon, authenticated;
 revoke all on v_sales_normalized from anon, authenticated;
 revoke all on v_bonbu_sales from anon, authenticated;
 revoke all on v_upfront_contracts_current from anon, authenticated;
 revoke all on v_latest_batch_info from anon, authenticated;
 
-grant select on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts,
+grant select on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts, sales_targets,
   v_sales_normalized, v_bonbu_sales, v_upfront_contracts_current, v_latest_batch_info
   to service_role;
-grant insert, update on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts to service_role;
+grant insert, update on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts, sales_targets to service_role;

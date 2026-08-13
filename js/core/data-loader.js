@@ -297,9 +297,9 @@
         return res.json();
       });
 
-      Promise.all([fetchJson('/api/sales'), fetchJson('/api/upfront-contracts'), fetchJson('/api/latest-batch')])
-        .then(([salesRows, upfrontRows, batchInfo]) => {
-          processSupabaseRows(salesRows, upfrontRows);
+      Promise.all([fetchJson('/api/sales'), fetchJson('/api/upfront-contracts'), fetchJson('/api/targets'), fetchJson('/api/latest-batch')])
+        .then(([salesRows, upfrontRows, targetRows, batchInfo]) => {
+          processSupabaseRows(salesRows, upfrontRows, targetRows);
           lastSeenBatchId = batchInfo ? batchInfo.batch_id : lastSeenBatchId;
           workbookModifiedDate = (batchInfo && batchInfo.source_file_modified_at) ? new Date(batchInfo.source_file_modified_at) : null;
           document.getElementById('fileLastModified').innerText = '원본 수정: ' + (workbookModifiedDate ? workbookModifiedDate.toLocaleString() : '확인 불가');
@@ -323,9 +323,10 @@
         .catch(() => {}); // 폴링 실패는 조용히 무시하고 다음 주기에 재시도 (사용자에게는 기존 데이터가 계속 보임)
     }
 
-    function processSupabaseRows(salesRows, upfrontRows) {
+    function processSupabaseRows(salesRows, upfrontRows, targetRows) {
       rawData = salesRows.map(mapRowFromSupabase);
       upfrontContracts = (upfrontRows || []).map(mapUpfrontContractFromSupabase);
+      salesTargets = (targetRows || []).map(mapSalesTargetFromSupabase);
       rawSourceSheetRef = null; rawSourceSheetName = ''; // exportRawSourceData()는 xlsx 모드 전용(원본 시트 참조 없음)
 
       finalizeLoadedData();
@@ -355,6 +356,13 @@
       return {
         advertiser: c.advertiser, start: { y: c.start_year, m: c.start_month }, end: { y: c.end_year, m: c.end_month },
         hasNet: c.has_net, targetWon: Number(c.target_amount_won) || 0, totalMonths: c.total_months
+      };
+    }
+
+    function mapSalesTargetFromSupabase(t) {
+      return {
+        manager: t.manager, dept: t.dept, categoryReclassified: t.category_reclassified,
+        year: t.year, month: t.month, targetWon: Number(t.target_amount_won) || 0
       };
     }
 

@@ -20,7 +20,7 @@ js/features/               shared-helpers, detail-pivots, kpi,
                            trend-portfolio-channel, mom, agency-comp,
                            new-advertiser, upfront, ranking, bucket
 functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
-  addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js
+  addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js  api/targets.js
 shared/supabase-proxy.mjs  Supabase 프록시 공용 로직 (functions/api/*.js + worker.js가 공유)
 .claude/agents/            feature-dev, data, reviewer
 worker.js / wrangler.toml  standalone Cloudflare Worker(R2 서빙 + Supabase 프록시) 설정 — 현재 미배포, 향후 Pages→Worker 전환 대비
@@ -58,9 +58,9 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 ## 데이터 흐름
 ```
 [xlsx 모드]      fetchDataHttp() → processWorkbookBuffer() → rawData[] (K2병합+업프론트파싱은 이 파일 안에서 수행)
-[supabase 모드]  fetchDataSupabase() → /api/sales,/api/upfront-contracts(Worker 프록시)
-                 → Supabase v_bonbu_sales/upfront_contracts (K2병합·재분류는 scripts/etl/+schema.sql에서 이미 완료)
-                 → mapRowFromSupabase() → rawData[]
+[supabase 모드]  fetchDataSupabase() → /api/sales,/api/upfront-contracts,/api/targets(Worker 프록시)
+                 → Supabase v_bonbu_sales/upfront_contracts/sales_targets (K2병합·재분류는 scripts/etl/+schema.sql에서 이미 완료)
+                 → mapRowFromSupabase() → rawData[] (targets는 mapSalesTargetFromSupabase() → salesTargets[])
                  (두 경로 모두 finalizeLoadedData()로 합류: 신규광고주 인덱스 재구축 등)
 filters.js       →  filteredData[]  (applyFilters() 적용)
 features/*.js    →  filteredData/rawData를 읽어 차트·피벗 렌더
