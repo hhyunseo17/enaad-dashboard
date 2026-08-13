@@ -222,10 +222,10 @@
         type: 'bar',
         data: { labels: labels, datasets: [
           // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
-          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
+          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
               // 목표가 실적보다 클 때 실적 라벨이 목표 막대와 겹치지 않도록, 둘 중 더 높은 쪽 위로 띄운다.
               offset: (ctx) => {
@@ -309,10 +309,10 @@
         data: { labels: groups, datasets: [
           // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치. 월별 추이 차트(파랑/주황)와
           // 구분되도록 이 차트는 회색/초록 유지.
-          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 0.7, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
               // 실적 막대 기준 10px만 띄우면 목표 막대가 더 클 때 그 목표 막대와 겹친다.
               // 두 막대 중 더 높은 쪽(대개 목표) 위로 라벨이 뜨도록 부족한 픽셀만큼 오프셋을 더한다.
