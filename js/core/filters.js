@@ -133,7 +133,9 @@
 
       // 기존에 특정 월이 선택돼 있었다면, 더 이상 데이터가 없는 월은 선택에서 제외
       if (selectedMonths.length > 0) selectedMonths = selectedMonths.filter(m => availableMonths.has(m));
-      const isAllMode = selectedMonths.length === 0;
+      const isImplicitAll = selectedMonths.length === 0; // "전체"를 눌러서 아무 월도 명시 선택 안 한 상태
+      // 개별 월을 하나씩 눌러서 결국 선택 가능한 월을 전부 골랐다면, 의미상 "전체"와 동일하므로 같이 강조
+      const isExplicitAll = !isImplicitAll && availableMonths.size > 0 && [...availableMonths].every(m => selectedMonths.includes(m));
 
       container.querySelectorAll('.pill-btn').forEach(btn => {
         const val = btn.getAttribute('data-month');
@@ -143,12 +145,14 @@
         btn.disabled = !isAvailable;
         btn.classList.toggle('disabled', !isAvailable);
         if (!isAvailable) { btn.classList.remove('active'); return; }
-        // 전체 모드에서는 사용 가능한 월 전부를 "전체"와 함께 강조 표시
-        btn.classList.toggle('active', isAllMode ? true : selectedMonths.includes(m));
+        // "전체"(미선택) 상태에서는 아직 아무것도 명시 선택된 게 아니므로 개별 월은 강조하지 않는다
+        // — 강제로 강조해두면 클릭 시 "이미 선택된 여러 달 중 하나를 해제"하는 것처럼 보이지만
+        // 실제로는 그 달 하나만 선택되는 상태로 바뀌어 혼동을 준다.
+        btn.classList.toggle('active', isImplicitAll ? false : selectedMonths.includes(m));
       });
 
       const allBtn = container.querySelector('[data-month="all"]');
-      if (allBtn) allBtn.classList.toggle('active', isAllMode);
+      if (allBtn) allBtn.classList.toggle('active', isImplicitAll || isExplicitAll);
     }
 
     function setupMonthPills() {
