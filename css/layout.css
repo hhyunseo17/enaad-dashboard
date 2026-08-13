@@ -85,7 +85,7 @@
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: #282D3A; }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-left: 3px solid var(--primary-blue); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
+    .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-left: 3px solid var(--primary-blue); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; position: relative; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
     .kpi-card.clickable:hover { border-color: var(--primary-blue); transform: translateY(-2px); box-shadow: 0 0 0 1px var(--primary-blue); }
     .kpi-card.kpi-accent-purple.clickable:hover { border-color: var(--accent-purple); box-shadow: 0 0 0 1px var(--accent-purple); }
     .kpi-card.kpi-accent-orange.clickable:hover { border-color: var(--accent-orange); box-shadow: 0 0 0 1px var(--accent-orange); }
