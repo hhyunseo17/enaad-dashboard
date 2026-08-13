@@ -185,6 +185,67 @@
       }
     }
 
+    function renderGoalTrendChart() {
+      // 선택된 연/월 스코프(전체면 실적 존재 월까지)의 월별 목표 대비 실적 추이 — 본부 전체 합산 기준
+      const canvas = document.getElementById('chartGoalTrend');
+      const placeholder = document.getElementById('chartGoalTrendPlaceholder');
+      if (!canvas) return;
+
+      if (revenueBasisMode === 'accounting') {
+        if (chartInstances.goalTrend) { chartInstances.goalTrend.destroy(); chartInstances.goalTrend = null; }
+        canvas.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        return;
+      }
+      canvas.style.display = '';
+      if (placeholder) placeholder.style.display = 'none';
+
+      const ctx = canvas.getContext('2d'); if (chartInstances.goalTrend) chartInstances.goalTrend.destroy();
+
+      const months = [...buildGoalScopeSet()].sort((a, b) => {
+        const [ay, am] = a.split('-').map(Number); const [by, bm] = b.split('-').map(Number);
+        return ay - by || am - bm;
+      });
+      const labels = months.map(ym => { const [y, m] = ym.split('-'); return `${y}-${String(m).padStart(2, '0')}`; });
+
+      const actualVals = months.map(ym => {
+        const [y, m] = ym.split('-').map(Number);
+        return rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && r.year === y && r.month === m)
+          .reduce((s, r) => s + r.amount, 0) / 1e8;
+      });
+      const targetVals = months.map(ym => {
+        const [y, m] = ym.split('-').map(Number);
+        return salesTargets.filter(t => t.year === y && t.month === m).reduce((s, t) => s + t.targetWon, 0) / 1e8;
+      });
+
+      chartInstances.goalTrend = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [
+          { label: '목표', data: targetVals, backgroundColor: chartColors.orange, borderRadius: 0,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          },
+          { label: '실적', data: actualVals, backgroundColor: chartColors.teal, borderRadius: 0,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          }
+        ] },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
+                afterBody: (t) => {
+                  const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];
+                  const rate = target > 0 ? (actual / target * 100).toFixed(1) + '%' : '-';
+                  return [``, `달성률: ${rate}`];
+                }
+              }
+            }
+          },
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+        }
+      });
+    }
+
     function renderGoalBreakdownChart() {
       // 현재 선택된 연/월 스코프 기준 부서별/담당자별 목표 대비 실적 (좌측 체크박스 필터 미반영 — 목표가 그 축으로 안 쪼개지므로)
       const canvas = document.getElementById('chartGoalBreakdown');
@@ -214,8 +275,7 @@
       scopedActuals.forEach(r => { if (r[groupField]) groupSet.add(r[groupField]); });
       let groups = [...groupSet].filter(g => {
         const t = scopedTargets.filter(x => x[groupField] === g).reduce((s, x) => s + x.targetWon, 0);
-        const a = scopedActuals.filter(x => x[groupField] === g).reduce((s, x) => s + x.amount, 0);
-        return t > 0 && a > 0; // 목표 또는 실적이 0인 그룹은 비교 의미가 없으니 차트에서 제외
+        return t > 0; // 목표가 아예 없는 그룹만 제외 — 목표는 있는데 실적이 0인 경우(0% 달성)는 의미 있는 정보라 보여준다
       });
 
       if (goalBreakdownMode === 'dept') {

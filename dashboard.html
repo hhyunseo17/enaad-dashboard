@@ -325,6 +325,37 @@
 
       </section>
 
+      <!-- Zone 3.5: Goal Trend & Breakdown -->
+      <section class="grid-2col grid-zone5">
+        <div class="card-box">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>월별 목표 대비 실적 추이</h2>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartGoalTrend"></canvas>
+            <div id="chartGoalTrendPlaceholder" class="chart-placeholder" style="display:none;">취급고 기준에서만 제공됩니다</div>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="card-box-header">
+            <div class="card-box-title">
+              <h2>부서별/담당자별 목표 대비 실적</h2>
+            </div>
+            <div class="pills-group">
+              <button class="pill-btn active" id="btnGoalBreakdownDept" onclick="setGoalBreakdownMode('dept')">부서</button>
+              <button class="pill-btn" id="btnGoalBreakdownManager" onclick="setGoalBreakdownMode('manager')">담당자</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartGoalBreakdown"></canvas>
+            <div id="chartGoalBreakdownPlaceholder" class="chart-placeholder" style="display:none;">취급고 기준에서만 제공됩니다</div>
+          </div>
+        </div>
+      </section>
+
       <!-- Zone 4: Channel & Advertiser Bucket -->
       <section class="grid-2col grid-zone5">
         <div class="card-box clickable" onclick="openChannelPivotView()">
@@ -412,25 +443,6 @@
           </div>
           <div class="chart-container">
             <canvas id="chartManager"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <!-- Zone 6.4: Goal Breakdown (half-width — 옆 칸은 추후 배치 예정) -->
-      <section class="grid-2col grid-zone5">
-        <div class="card-box">
-          <div class="card-box-header">
-            <div class="card-box-title">
-              <h2>부서별/담당자별 목표 대비 실적</h2>
-            </div>
-            <div class="pills-group">
-              <button class="pill-btn active" id="btnGoalBreakdownDept" onclick="setGoalBreakdownMode('dept')">부서</button>
-              <button class="pill-btn" id="btnGoalBreakdownManager" onclick="setGoalBreakdownMode('manager')">담당자</button>
-            </div>
-          </div>
-          <div class="chart-container">
-            <canvas id="chartGoalBreakdown"></canvas>
-            <div id="chartGoalBreakdownPlaceholder" class="chart-placeholder" style="display:none;">취급고 기준에서만 제공됩니다</div>
           </div>
         </div>
       </section>
