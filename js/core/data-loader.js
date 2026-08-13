@@ -193,18 +193,26 @@
           const contractAmountText = contractAmountEok > 0 ? (contractAmountEok + '억원' + (grossNetFlag === 'NET' ? ' (NET)' : '')) : '';
           const upfrontAdvertiser = (r['광고주(업프론트용)'] || adv || '(미지정)').toString().trim();
           const upfrontRemark = (r['업프론트 비고'] || '').toString().trim();
+          const deptVal = (r['부서'] || '(미지정)').toString().trim();
+          const originalManager = (r['담당자'] || '(미지정)').toString().trim();
 
-          rawData.push({
-            id: idxCounter++, monthStr: monthStr, year: y, month: m,
-            dept: (r['부서'] || '(미지정)').toString().trim(), manager: (r['담당자'] || '(미지정)').toString().trim(),
-            advertiser: adv, agency: agy, agencyGroup: grpDisp, channel: normalizedChannel, industry: (r['업종대분류'] || '(미지정)').toString().trim(),
-            broadDigital: broadDigitalVal, categoryOriginal: rawCategory, subCategory: rawSubCategory || '일반', subCategory3: rawSubCategory3,
-            oneNFlag: oneNFlag, categoryReclassified: reclassifiedCat, revenueBasis: revBasis, bonbuRevenueStatus: isBonbuVal,
-            remark: r['비고'], amount: rowAmount,
-            isUpfront: isUpfrontVal, contractStartYM: contractStartYM, contractEndYM: contractEndYM,
-            contractStartDate: contractStartDate, contractEndDate: contractEndDate,
-            contractAmountText: contractAmountText, contractAmountWon: contractAmountWon, grossNetFlag: grossNetFlag,
-            upfrontAdvertiser: upfrontAdvertiser, upfrontRemark: upfrontRemark
+          // skylife큐톤 담당자 재배분 (docs/data-rules.md 10번 항목) — 1행을 N행으로 분할, 부서는 원본 유지.
+          // Supabase 경로(supabase/schema.sql의 v_sales_normalized)와 동일 규칙을 유지해야 한다.
+          const splitParts = getManagerSplitParts(rawSubCategory, rawSubCategory3, y, m, originalManager, rowAmount);
+
+          splitParts.forEach(part => {
+            rawData.push({
+              id: idxCounter++, monthStr: monthStr, year: y, month: m,
+              dept: deptVal, manager: part.manager,
+              advertiser: adv, agency: agy, agencyGroup: grpDisp, channel: normalizedChannel, industry: (r['업종대분류'] || '(미지정)').toString().trim(),
+              broadDigital: broadDigitalVal, categoryOriginal: rawCategory, subCategory: rawSubCategory || '일반', subCategory3: rawSubCategory3,
+              oneNFlag: oneNFlag, categoryReclassified: reclassifiedCat, revenueBasis: revBasis, bonbuRevenueStatus: isBonbuVal,
+              remark: r['비고'], amount: part.amount,
+              isUpfront: isUpfrontVal, contractStartYM: contractStartYM, contractEndYM: contractEndYM,
+              contractStartDate: contractStartDate, contractEndDate: contractEndDate,
+              contractAmountText: contractAmountText, contractAmountWon: contractAmountWon, grossNetFlag: grossNetFlag,
+              upfrontAdvertiser: upfrontAdvertiser, upfrontRemark: upfrontRemark
+            });
           });
         });
 
@@ -381,6 +389,41 @@
       if (rawCat === '큐톤광고' || lowerSub.includes('skylife')) return '큐톤광고';
       if (['기타광고', '어드레서블', '콘텐츠편성', '기타수익', 'ARA', '대행수익'].includes(rawCat) || rawSub === '자사큐톤' || rawSub === '티온애드') return '기타광고';
       return rawCat || '기타광고';
+    }
+
+    // skylife큐톤 담당자 재배분 (docs/data-rules.md 10번 항목) — 원본 행 1개를 N개 조각으로 나눈다.
+    // 마지막 조각 = 원금 - 앞 조각(들)의 반올림 합 (나머지 방식) — 조각별 독립 반올림 시 생길 수 있는
+    // 원 단위 오차 없이 amount 합계가 재배분 전후 항상 정확히 보존된다.
+    // Supabase 경로(supabase/schema.sql의 v_sales_normalized, manager_split 복합타입)와 동일 규칙 유지 필수.
+    function getManagerSplitParts(subCategory, subCategory3, year, month, originalManager, amount) {
+      if (subCategory !== 'skylife큐톤') return [{ manager: originalManager, amount: amount }];
+
+      if (year === 2025) {
+        if (['LiveAD+', '심포니', '영업대행수수료'].includes(subCategory3)) {
+          const p1 = Math.round(amount * 0.5);
+          return [{ manager: '박영상', amount: p1 }, { manager: '남형진', amount: amount - p1 }];
+        }
+        if (['장초수', '인포결합'].includes(subCategory3)) {
+          const p1 = Math.round(amount * 0.65);
+          return [{ manager: '박영상', amount: p1 }, { manager: '김기철', amount: amount - p1 }];
+        }
+        return [{ manager: originalManager, amount: amount }]; // 규칙 없는 소분류 — 재배분 안 함
+      }
+
+      if (year === 2026) {
+        if (month >= 1 && month <= 4) {
+          const p1 = Math.round(amount * 0.5);
+          return [{ manager: '박영상', amount: p1 }, { manager: '남형진', amount: amount - p1 }];
+        }
+        if (month >= 5 && month <= 12) {
+          const p1 = Math.round(amount * 0.5);
+          const p2 = Math.round(amount * 0.3);
+          return [{ manager: '박영상', amount: p1 }, { manager: '남형진', amount: p2 }, { manager: '이신우', amount: amount - p1 - p2 }];
+        }
+        return [{ manager: originalManager, amount: amount }];
+      }
+
+      return [{ manager: originalManager, amount: amount }]; // 2025/2026 외 연도 — 재배분 없음
     }
 
     function parseMonthValue(val) {

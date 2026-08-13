@@ -98,19 +98,43 @@ create index if not exists idx_raw_sales_rows_batch on raw_sales_rows (load_batc
 create index if not exists idx_raw_sales_rows_batch_bonbu on raw_sales_rows (load_batch_id, bonbu_revenue_status);
 
 -- ------------------------------------------------------------
--- 2. v_sales_normalized (silver) — 정규화 + 5대분류 재분류. 필터링은 하지 않는다.
+-- 1b. manager_split — skylife큐톤 담당자 재배분(아래 2.)에서 "1행 → N행" 확장에 쓰는 보조 복합타입.
+--     `amt`는 비율이 아니라 이미 원 단위로 나눈 실제 배분액이다(마지막 조각 = 원금 - 앞 조각들의 반올림합,
+--     즉 나머지 방식으로 계산해 SUM(amount_won)이 재배분 전후 항상 정확히 보존되도록 한다 — 조각별로
+--     독립적으로 반올림하면 원 단위 오차가 누적될 수 있어 이 방식을 쓰지 않는다).
+-- ------------------------------------------------------------
+
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'manager_split') then
+    create type manager_split as (mgr text, amt bigint);
+  end if;
+end $$;
+
+-- ------------------------------------------------------------
+-- 2. v_sales_normalized (silver) — 정규화 + 5대분류 재분류 + skylife큐톤 담당자 재배분. 필터링은 하지 않는다.
 --    최신 배치(current_batch)만 노출한다.
+--
+-- skylife큐톤 담당자 재배분 (docs/data-rules.md 10번 항목, 사용자 확정 비율):
+--   원본 데이터는 sub_category='skylife큐톤'인 행 전액이 담당자 '박영상' 한 명에게 잡혀 있으나,
+--   실제로는 여러 담당자가 나눠 갖는 구조라 아래 규칙으로 raw 행 1개를 N개 행으로 쪼갠다(부서는
+--   원본 그대로 유지, 담당자·금액만 분배). 규칙에 해당하지 않는 skylife큐톤 행(연도 불일치, 2025년
+--   미정의 소분류)은 재배분하지 않고 원본 담당자를 그대로 유지한다.
+--     2025년 소분류 LiveAD+/심포니/영업대행수수료: 박영상 50% / 남형진 50%
+--     2025년 소분류 장초수/인포결합:              박영상 65% / 김기철 35%
+--     2026년 1~4월(소분류 무관):                  박영상 50% / 남형진 50%
+--     2026년 5~12월(소분류 무관):                 박영상 50% / 남형진 30% / 이신우 20%
 -- ------------------------------------------------------------
 
 create or replace view v_sales_normalized as
 select
-  r.id,
+  r.id * 100 + u.split_idx as id,   -- 합성 id: 최대 3분할이므로 100이면 raw id 간 충돌 없음(바로 아래 raw_id 컬럼으로 원본 추적 가능)
+  r.id as raw_id,
   r.load_batch_id,
   r.month_str,
   r.year,
   r.month,
   r.dept,
-  r.manager,
+  (u.split).mgr as manager,
   r.advertiser,
 
   -- 대행사 정규화 (data-loader.js:164-165)
@@ -167,7 +191,7 @@ select
   r.revenue_basis,
   r.bonbu_revenue_status,
   r.remark,
-  r.amount_won,
+  (u.split).amt as amount_won,
 
   r.is_upfront,
   r.contract_start_y,
@@ -196,6 +220,36 @@ select
   end as excluded_reason
 
 from raw_sales_rows r
+cross join lateral unnest(
+  case
+    -- 2025년: 소분류별 비율. 마지막 조각은 원금에서 앞 조각(들)의 반올림값을 뺀 나머지 — 합계 보존.
+    when r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료') then
+      array[
+        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
+        row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
+      ]
+    when r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합') then
+      array[
+        row('박영상', round(r.amount_won * 0.65)::bigint)::manager_split,
+        row('김기철', r.amount_won - round(r.amount_won * 0.65)::bigint)::manager_split
+      ]
+    -- 2026년 1~4월: 소분류 무관 50/50
+    when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4 then
+      array[
+        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
+        row('남형진', r.amount_won - round(r.amount_won * 0.5)::bigint)::manager_split
+      ]
+    -- 2026년 5~12월: 소분류 무관 50/30/20
+    when r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12 then
+      array[
+        row('박영상', round(r.amount_won * 0.5)::bigint)::manager_split,
+        row('남형진', round(r.amount_won * 0.3)::bigint)::manager_split,
+        row('이신우', r.amount_won - round(r.amount_won * 0.5)::bigint - round(r.amount_won * 0.3)::bigint)::manager_split
+      ]
+    -- 그 외(skylife큐톤이지만 규칙 없는 소분류, 2025/2026 외 연도, skylife큐톤이 아닌 모든 행): 재배분 없음
+    else array[row(r.manager, r.amount_won)::manager_split]
+  end
+) with ordinality as u(split, split_idx)
 where r.load_batch_id = (select batch_id from current_batch where id = 1);
 
 -- ------------------------------------------------------------
