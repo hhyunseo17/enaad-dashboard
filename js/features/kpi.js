@@ -102,12 +102,28 @@
       document.getElementById('kpiUpfrontSub').innerText = `계약금액 약 ${targetEok}억원(월할 추정치) 대비`;
     }
 
-    function computeRevenueTargetForScope() {
-      // 선택된 연/월 스코프(미선택 시 전체)와 겹치는 담당자×대분류 목표를 전부 합산 (본부 전체 합산 기준)
+    // 목표 KPI/차트 공용 연-월 스코프. 월을 명시적으로 선택했으면 그대로 쓰지만,
+    // "전체"(미선택)일 때는 연도별로 무조건 1~12월을 다 넣지 않고 그 연도에 실제 실적 데이터가
+    // 있는 월까지만 스코프에 넣는다 — 그렇지 않으면 진행 중인 연도(예: 아직 8월까지만 실적이 쌓인 26년)를
+    // "전체"로 볼 때 9~12월치 목표까지 분모에 끼어들어 달성률이 실제보다 낮게 나온다.
+    function buildGoalScopeSet() {
       const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
-      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
       const scopeSet = new Set();
-      scopeYears.forEach(y => scopeMonths.forEach(m => scopeSet.add(y + '-' + m)));
+      if (selectedMonths.length > 0) {
+        scopeYears.forEach(y => selectedMonths.forEach(m => scopeSet.add(y + '-' + m)));
+        return scopeSet;
+      }
+      scopeYears.forEach(y => {
+        const monthsWithData = new Set(rawData.filter(r => r.year === y && r.bonbuRevenueStatus === '본부매출').map(r => r.month));
+        if (monthsWithData.size === 0) { for (let m = 1; m <= 12; m++) scopeSet.add(y + '-' + m); }
+        else monthsWithData.forEach(m => scopeSet.add(y + '-' + m));
+      });
+      return scopeSet;
+    }
+
+    function computeRevenueTargetForScope() {
+      // 선택된 연/월 스코프(미선택 시 실적 존재 월까지)와 겹치는 담당자×대분류 목표를 전부 합산 (본부 전체 합산 기준)
+      const scopeSet = buildGoalScopeSet();
       return salesTargets
         .filter(t => scopeSet.has(t.year + '-' + t.month))
         .reduce((sum, t) => sum + t.targetWon, 0);
@@ -116,11 +132,9 @@
     function computeRevenuePerformanceActualForScope() {
       // 목표가 부서/채널/대분류 축으로 쪼개져 있지 않으므로, 좌측 체크박스 필터와 무관하게
       // 본부매출 + 실적(취급고) + 선택 연/월 스코프로만 집계 (업프론트 KPI의 계약금액 집계와 동일 원칙)
-      const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
-      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
+      const scopeSet = buildGoalScopeSet();
       return rawData
-        .filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적'
-          && scopeYears.includes(r.year) && scopeMonths.includes(r.month))
+        .filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && scopeSet.has(r.year + '-' + r.month))
         .reduce((sum, r) => sum + r.amount, 0);
     }
 
@@ -184,14 +198,12 @@
 
       const ctx = canvas.getContext('2d'); if (chartInstances.goalBreakdown) chartInstances.goalBreakdown.destroy();
 
-      const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
-      const scopeMonths = selectedMonths.length > 0 ? selectedMonths : [1,2,3,4,5,6,7,8,9,10,11,12];
+      const scopeSet = buildGoalScopeSet();
       const groupField = goalBreakdownMode === 'dept' ? 'dept' : 'manager';
       const groupLabelText = goalBreakdownMode === 'dept' ? '부서' : '담당자';
 
-      const scopedTargets = salesTargets.filter(t => scopeYears.includes(t.year) && scopeMonths.includes(t.month));
-      const scopedActuals = rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적'
-        && scopeYears.includes(r.year) && scopeMonths.includes(r.month));
+      const scopedTargets = salesTargets.filter(t => scopeSet.has(t.year + '-' + t.month));
+      const scopedActuals = rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && scopeSet.has(r.year + '-' + r.month));
 
       const groupSet = new Set();
       scopedTargets.forEach(t => { if (t[groupField]) groupSet.add(t[groupField]); });
@@ -222,11 +234,11 @@
       chartInstances.goalBreakdown = new Chart(ctx, {
         type: 'bar',
         data: { labels: groups, datasets: [
-          { type: 'bar', label: '실적', data: actualVals, backgroundColor: chartColors.teal, yAxisID: 'y', borderRadius: 0, order: 2,
+          { label: '목표', data: targetVals, backgroundColor: chartColors.orange, borderRadius: 0,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           },
-          { type: 'line', label: '목표', data: targetVals, borderColor: '#FFB547', backgroundColor: '#FFB547', borderWidth: 2, pointRadius: 4, yAxisID: 'y', order: 1,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          { label: '실적', data: actualVals, backgroundColor: chartColors.teal, borderRadius: 0,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
