@@ -223,10 +223,10 @@
         data: { labels: labels, datasets: [
           // 목표/실적을 나란히 배치하되 barPercentage/categoryPercentage로 상당폭 겹치게(원래 두께는 유지) —
           // 실적(order 값이 더 큰 쪽, Chart.js는 order가 큰 데이터셋을 나중에 그려서 위로 오게 함)이 겹치는 부분에서 위로 보이게 한다.
-          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, order: 1,
+          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 2.2, categoryPercentage: 0.55, order: 1,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, order: 2,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 2.2, categoryPercentage: 0.55, order: 2,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 10, color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
@@ -302,10 +302,10 @@
           // 목표/실적을 나란히 배치하되 barPercentage/categoryPercentage로 상당폭 겹치게(원래 두께는 유지) —
           // 실적(order 값이 더 큼 → 나중에 그려짐)이 겹치는 부분에서 위로 오도록. 월별 추이 차트(파랑/주황)와
           // 구분되도록 이 차트는 회색/초록 유지.
-          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, order: 1,
+          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 2.2, categoryPercentage: 0.55, order: 1,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1.5, categoryPercentage: 0.55, order: 2,
+          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 2.2, categoryPercentage: 0.55, order: 2,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', clip: false,
               // 실적 막대 기준 10px만 띄우면 목표 막대가 더 클 때 그 목표 막대와 겹친다.
               // 두 막대 중 더 높은 쪽(대개 목표) 위로 라벨이 뜨도록 부족한 픽셀만큼 오프셋을 더한다.
