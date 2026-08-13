@@ -93,12 +93,7 @@
 
       const fmtEok = (won) => { const v = won / 1e8; if (!v) return '-'; return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
 
-      const depts = Object.keys(tree).sort((a, b) => {
-        let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-        return a.localeCompare(b, undefined, { numeric: true });
-      });
+      const depts = Object.keys(tree).sort(compareDeptOrder);
       let grandTotal = 0; const grandMonthTotals = {}; months.forEach(m => { grandMonthTotals[m] = 0; });
 
       let html = '';

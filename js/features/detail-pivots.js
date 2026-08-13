@@ -115,12 +115,7 @@
 
       let html = '';
       // **부서 정렬 로직 적용 (매출순이 아닌 팀 순서)**
-      const l1Keys = Object.keys(tree).sort((a, b) => {
-        let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-        return a.localeCompare(b, undefined, { numeric: true });
-      });
+      const l1Keys = Object.keys(tree).sort(compareDeptOrder);
 
       l1Keys.forEach(l1 => {
         const isL1Exp = !!expandedDeptPivot[l1];
@@ -195,12 +190,7 @@
 
       let html = '';
       // **부서 정렬 로직 적용 (매출순이 아닌 팀 순서)**
-      const l1Keys = Object.keys(tree).sort((a, b) => {
-        let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-        return a.localeCompare(b, undefined, { numeric: true });
-      });
+      const l1Keys = Object.keys(tree).sort(compareDeptOrder);
 
       l1Keys.forEach(l1 => {
         const isL1Exp = !!expandedMgrPivot[l1];

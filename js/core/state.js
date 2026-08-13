@@ -88,11 +88,14 @@
     const categoryOrderList = ['일반광고', 'IMC', '인포머셜', '큐톤광고', '기타광고'];
     const broadOrderMap = { '방송': 1, '디지털': 2, '기타': 3 };
 
-    // **부???�렬???�한 부??커스?� 배열 (매출?�이 ?�닌 ?� 번호 ?�서 ?�렬??**
+    // 부서 정렬용 커스텀 배열 (매출이 아닌 팀 번호 순서 정렬). 광고사업1팀이 항상 최우선.
+    // 여기 없는 부서(신설팀 등)는 이 목록 뒤, customDeptTailOrder 앞에 알파벳순으로 붙는다 — compareDeptOrder()(shared-helpers.js) 참고.
     const customDeptOrder = [
-      '광고영업1부', '광고영업2부', '광고영업3부',
-      '공공비즈팀', '영업지원팀', '광고전략팀', '광고사업본부'
+      '광고사업1팀', '광고사업2팀', '광고사업3팀',
+      '공공비즈팀', '뉴미디어광고팀', '디지털영업팀'
     ];
+    // 목록에 있든 없든 이 부서들은 항상 맨 뒤(이 순서대로)
+    const customDeptTailOrder = ['광고전략팀', '광고사업본부'];
 
     const chartColors = {
       blue: '#2563EB', cyan: '#06B6D4', green: '#22C55E', orange: '#F59E0B',

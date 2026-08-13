@@ -27,6 +27,20 @@
       };
     }
 
+    // 부서 정렬 공통 비교자: customDeptOrder 순서 → 목록 밖 부서는 알파벳순 → customDeptTailOrder(광고전략팀/광고사업본부)는 항상 맨 뒤.
+    // upfront.js/kpi.js/ranking.js/filters.js/detail-pivots.js가 공유. 정렬 규칙이 바뀌면 여기 한 곳만 고치면 된다.
+    function compareDeptOrder(a, b) {
+      const tailA = customDeptTailOrder.indexOf(a); const tailB = customDeptTailOrder.indexOf(b);
+      if (tailA !== -1 || tailB !== -1) {
+        if (tailA !== -1 && tailB !== -1) return tailA - tailB;
+        return tailA !== -1 ? 1 : -1;
+      }
+      const idxA = customDeptOrder.indexOf(a); const idxB = customDeptOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1; if (idxB !== -1) return 1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    }
+
     function isNewAdvertiserMonth(advName, currentMonthStr) {
       const arr = advertiserActiveMonthIndex[advName];
       if (!arr || arr.length === 0) return true;

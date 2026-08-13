@@ -11,12 +11,7 @@
       });
 
       // **부서명 커스텀 정렬 적용 (매출순이 아닌 1팀, 2팀.. 순서)**
-      const depts = [...new Set(baseFiltered.map(r => r.dept))].filter(Boolean).sort((a, b) => {
-        let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-        return a.localeCompare(b, undefined, { numeric: true });
-      });
+      const depts = [...new Set(baseFiltered.map(r => r.dept))].filter(Boolean).sort(compareDeptOrder);
       const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
       const channels = [...new Set(baseFiltered.map(r => r.channel))].filter(Boolean).sort((a,b) => {
         let idxA = targetOrder.indexOf(a); let idxB = targetOrder.indexOf(b);

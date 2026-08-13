@@ -45,12 +45,7 @@
       const deptSumMap = {}; filteredData.forEach(r => { deptSumMap[r.dept] = (deptSumMap[r.dept] || 0) + r.amount; });
       
       // **부서 정렬 로직 적용 (매출순이 아닌 팀 순서)**
-      const topDepts = Object.keys(deptSumMap).sort((a, b) => {
-        let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-        return a.localeCompare(b, undefined, { numeric: true });
-      });
+      const topDepts = Object.keys(deptSumMap).sort(compareDeptOrder);
 
       let subKeys = deptMode === 'categoryReclassified' ? [...categoryOrderList] : [...new Set(filteredData.map(r => r[deptMode]))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
       const datasets = subKeys.map((subK, idx) => ({ label: subK, data: topDepts.map(dept => filteredData.filter(r => r.dept === dept && r[deptMode] === subK).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: (deptMode === 'categoryReclassified' && categoryColors[subK]) ? categoryColors[subK] : colorPaletteList[idx % colorPaletteList.length], borderRadius: 0,

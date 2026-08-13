@@ -279,12 +279,7 @@
       });
 
       if (goalBreakdownMode === 'dept') {
-        groups.sort((a, b) => {
-          let idxA = customDeptOrder.indexOf(a); let idxB = customDeptOrder.indexOf(b);
-          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-          if (idxA !== -1) return -1; if (idxB !== -1) return 1;
-          return a.localeCompare(b, undefined, { numeric: true });
-        });
+        groups.sort(compareDeptOrder);
       } else {
         // 담당자 모드: 목표+실적 합산 큰 순 정렬 (목표가 있는 담당자는 전부 포함, 별도 상한 없음)
         const sortKey = {};
