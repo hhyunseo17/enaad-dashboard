@@ -390,7 +390,7 @@
         <div class="card-box clickable" onclick="openAgencyPivotView()">
           <div class="card-box-header">
             <div class="card-box-title">
-              <h2>대행사 TOP10 수주 순위</h2>
+              <h2>대행사 TOP10 매출 순위</h2>
             </div>
             <div class="pills-group" onclick="event.stopPropagation()">
               <button class="pill-btn active" id="btnRankAgencySolo" onclick="setRankAgencyMode('agency')">대행사</button>
@@ -405,7 +405,7 @@
         <div class="card-box clickable" onclick="openAdvertiserPivotView()">
           <div class="card-box-header">
             <div class="card-box-title">
-              <h2>광고주 TOP10 수주 순위</h2>
+              <h2>광고주 TOP10 매출 순위</h2>
             </div>
           </div>
           <div class="chart-container">
@@ -419,7 +419,7 @@
         <div class="card-box clickable" onclick="openDeptPivotView()">
           <div class="card-box-header">
             <div class="card-box-title">
-              <h2>부서별 수주 현황 및 성과</h2>
+              <h2>부서별 매출 현황 및 성과</h2>
             </div>
             <div class="pills-group" onclick="event.stopPropagation()">
               <button class="pill-btn active" id="btnDeptCategory" onclick="setDeptMode('categoryReclassified')">대분류</button>
@@ -434,7 +434,7 @@
         <div class="card-box clickable" onclick="openManagerPivotView()">
           <div class="card-box-header">
             <div class="card-box-title">
-              <h2>담당별 수주 현황 및 성과</h2>
+              <h2>담당별 매출 현황 및 성과</h2>
             </div>
             <div class="pills-group" onclick="event.stopPropagation()">
               <button class="pill-btn active" id="btnManagerCategory" onclick="setManagerMode('categoryReclassified')">대분류</button>
@@ -675,7 +675,7 @@
     <div id="advertiserPivotView" class="view-section">
       <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #1F1538 100%); border-color: var(--accent-purple);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">광고주별 ➔ 대분류 월별 수주 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">광고주별 ➔ 대분류 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
           <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="advertiserPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-purple);">0 백만</div></div>
         </div>
       </section>
@@ -690,7 +690,7 @@
     <div id="agencyPivotView" class="view-section">
       <section class="card-box pivot-hero-card" style="min-height: auto; background: linear-gradient(135deg, #1A1D24 0%, #153835 100%); border-color: var(--accent-cyan);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">대행사그룹 ➔ 대행사 ➔ 광고주 월별 수주 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">대행사그룹 ➔ 대행사 ➔ 광고주 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
           <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="agencyPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-cyan);">0 백만</div></div>
         </div>
       </section>
