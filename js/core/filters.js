@@ -145,10 +145,9 @@
         btn.disabled = !isAvailable;
         btn.classList.toggle('disabled', !isAvailable);
         if (!isAvailable) { btn.classList.remove('active'); return; }
-        // "전체"(미선택) 상태에서는 아직 아무것도 명시 선택된 게 아니므로 개별 월은 강조하지 않는다
-        // — 강제로 강조해두면 클릭 시 "이미 선택된 여러 달 중 하나를 해제"하는 것처럼 보이지만
-        // 실제로는 그 달 하나만 선택되는 상태로 바뀌어 혼동을 준다.
-        btn.classList.toggle('active', isImplicitAll ? false : selectedMonths.includes(m));
+        // "전체" 상태에서는 데이터가 있는 달을 전부 활성으로 보여준다 — 그래야 그중 하나를 클릭했을 때
+        // (아래 setupMonthPills) "여러 달 중 하나를 뺀다"는 동작과 화면이 실제로 맞아떨어진다.
+        btn.classList.toggle('active', isImplicitAll ? true : selectedMonths.includes(m));
       });
 
       const allBtn = container.querySelector('[data-month="all"]');
@@ -165,7 +164,14 @@
           else {
             const m = parseInt(val);
             const wasAllMode = selectedMonths.length === 0;
-            if (wasAllMode) { selectedMonths = [m]; } // 전체 모드에서 특정 월을 누르면 그 달만 선택
+            if (wasAllMode) {
+              // "전체" 상태에서는 데이터 있는 달이 전부 화면에 켜져 보이므로, 하나를 클릭하면
+              // 그 달만 남기는 게 아니라 "전부 선택된 상태에서 그 달만 뺀다"로 구체화한다.
+              const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
+              const availableMonths = new Set();
+              rawData.forEach(r => { if (scopeYears.includes(r.year) && r.amount > 0) availableMonths.add(r.month); });
+              selectedMonths = [...availableMonths].filter(x => x !== m);
+            }
             else if (selectedMonths.includes(m)) { selectedMonths = selectedMonths.filter(x => x !== m); }
             else { selectedMonths = [...selectedMonths, m]; }
           }

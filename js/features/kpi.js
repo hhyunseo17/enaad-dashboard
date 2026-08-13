@@ -156,9 +156,12 @@
       // 본부 총 매출액 카드에 이미 금액이 있으니, 이 카드는 달성률(%)을 크게 보여주는 게 핵심.
       document.getElementById('kpiGoalActual').innerText = targetTotal > 0 ? `${achieveRate.toFixed(1)}%` : '-';
       if (badge) {
-        badge.style.display = targetTotal > 0 ? 'inline-flex' : 'none';
-        badge.className = achieveRate >= 100 ? 'badge-growth up' : 'badge-growth down';
-        badge.innerText = achieveRate >= 100 ? '목표 달성 ▲' : '목표 미달 ▼';
+        // 미달일 때는 굳이 배지로 표 내지 않고, 달성했을 때만 강조 표시
+        if (targetTotal > 0 && achieveRate >= 100) {
+          badge.style.display = 'inline-flex'; badge.className = 'badge-growth up'; badge.innerText = '목표 달성 ▲';
+        } else {
+          badge.style.display = 'none';
+        }
       }
       const targetEok = (targetTotal / 1e8).toFixed(2); const actualEok = (actualTotal / 1e8).toFixed(2);
       document.getElementById('kpiGoalSub').innerText = targetTotal > 0 ? `실적 ${actualEok}억 / 목표 ${targetEok}억원` : `실적 ${actualEok}억 (목표 미등록)`;
