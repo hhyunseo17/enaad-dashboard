@@ -91,11 +91,8 @@
     // 라이트에서만 적용한다. 어두운 배경은 색을 흡수해 같은 채도라도 덜 부담스럽고,
     // 오히려 명도를 올리면 더 튄다.
     //
-    // 폭이 작은 이유: 막대·도넛 채움은 그 위에 그라데이션이 다시 명도를 올린다(ddBarFill).
-    // 여기서 크게 올리면 두 단계가 겹쳐 세그먼트 윗부분이 거의 흰색이 되고, 5단 스택에서는
-    // 차트 전체가 하얘 보인다. 밝히는 일은 그라데이션에 맡기고 여기서는 만채도만 덜어낸다.
     function ddSoften(hex) {
-      return currentTheme === 'light' ? ddLift(hex, 0.05) : hex;
+      return currentTheme === 'light' ? ddLift(hex, 0.14) : hex;
     }
 
     // 5대분류가 아닌 계열(방송/디지털, 채널, 포트폴리오 '기타' 모드 등)에 쓰는 서수 팔레트.
@@ -177,8 +174,8 @@
         // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
         // 밑동이 진하고 끝으로 갈수록 밝아진다 — 반대로 하면 스택 맨 아래에 오는 계열
         // (보통 비중이 가장 큰 일반광고)이 항상 제일 물빠져 보인다.
-        const base = currentTheme === 'light' ? ddLift(hex, -0.13) : ddLift(hex, 0.14);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.14) : ddLift(hex, -0.06);
+        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
 
         // **각 세그먼트 자기 구간을 기준으로** 그린다.
         // 차트 영역 전체를 기준으로 잡으면(특히 대각선) 세그먼트 하나가 그 띠의 아주 얇은 구간만
@@ -243,8 +240,8 @@
         const cut = parseFloat(String(chart.options.cutout || '0')) / 100;
         const inner = outer * (isFinite(cut) && cut > 0 ? cut : 0.6);
         if (!isFinite(outer) || outer <= 0 || outer - inner < 1) return hex;
-        const base = currentTheme === 'light' ? ddLift(hex, -0.13) : ddLift(hex, 0.14);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.14) : ddLift(hex, -0.06);
+        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
         const g = chart.ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
