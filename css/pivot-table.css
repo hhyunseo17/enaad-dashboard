@@ -18,9 +18,14 @@
     .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: #1E40AF !important; z-index: 32; }
     .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: #2563EB !important; z-index: 32; }
 
+    /* Sticky 첫 열 — 위치·레이어는 th/td 공통 */
     .pivot-tree-table td:first-child,
-    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; background: #1E293B !important; color: #F8FAFC !important; font-weight: 700; }
-    .pivot-tree-table th:first-child { z-index: 35 !important; background: #1D4ED8 !important; }
+    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 700; }
+    /* 배경·글자색에는 !important를 쓰지 않는다. 렌더러가 인라인으로 넣는 행 깊이별 색이 이겨야
+       하기 때문이다. 여기 값은 인라인 배경이 없는 피벗(세부데이터 등)을 위한 불투명 fallback이다
+       — sticky 열은 반드시 불투명해야 아래 내용이 비쳐 보이지 않는다. */
+    .pivot-tree-table td:first-child { background: #1E293B; color: #F8FAFC; }
+    .pivot-tree-table th:first-child { z-index: 35 !important; background: #1D4ED8 !important; color: #FFFFFF !important; }
 
     .row-grand-total { font-weight: 900; background: #1E40AF !important; border-top: 3px solid #60A5FA; }
     .row-grand-total td { background: #1E40AF !important; color: #FFFFFF !important; padding: 6px 10px !important; }

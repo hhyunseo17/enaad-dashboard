@@ -70,6 +70,16 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 - **`<tbody>`뿐 아니라 `<thead>`도 반드시 통과시켜야 한다.** 헤더에도 `#1E3A8A`/`#1E40AF`가 인라인으로 박혀 있다.
 - 행 깊이 램프는 다크·라이트가 **같은 방향**(깊어질수록 페이지 바닥에서 멀어짐)을 유지해야 한다. 여러 깊이를 같은 값으로 접으면 라이트 모드에서 트리 계층이 사라진다.
 
+## Sticky 첫 열과 행 깊이 색 — `!important` 금지
+피벗의 행 깊이 배경은 렌더러가 **첫 번째 `<td>`에 인라인으로** 넣는다. 그런데 그 셀은 동시에
+sticky 첫 열이기도 하다. 따라서 `.pivot-tree-table td:first-child`의 `background`/`color`에
+`!important`를 붙이면 **인라인 깊이 색을 덮어써서 램프가 통째로 죽는다.**
+
+- `pivot-table.css`의 `td:first-child` 배경/글자색은 `!important` 없이 둔다 — 인라인 배경이 없는
+  피벗(세부데이터 등)을 위한 **불투명 fallback** 역할만 한다. sticky 열은 반드시 불투명해야 한다.
+- `th:first-child`와 `.row-grand-total td:first-child`는 깊이 색과 무관하므로 `!important`를 유지한다.
+- `theme.css`의 라이트 오버라이드도 같은 규칙을 따른다.
+
 > 장기적으로는 피벗 렌더러가 인라인 hex 대신 클래스를 출력하도록 바꿔 `mapPivotHtml`과 `CH`를 함께 폐기하는 것이 목표다.
 
 

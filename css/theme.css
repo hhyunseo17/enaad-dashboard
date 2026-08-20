@@ -120,8 +120,8 @@
     html[data-theme="light"] .pivot-tree-table th { background: #0064FF !important; box-shadow: 0 1px 0 #4795FF; }
     html[data-theme="light"] .pivot-tree-table thead tr:nth-child(1) th { background: #0050D9 !important; }
     html[data-theme="light"] .pivot-tree-table thead tr:nth-child(2) th { background: #1F7CFF !important; }
-    html[data-theme="light"] .pivot-tree-table td:first-child,
-    html[data-theme="light"] .pivot-tree-table th:first-child { background: #F2F4F6 !important; color: #191F28 !important; }
+    /* td는 !important 없이 — 렌더러 인라인의 깊이별 색이 이겨야 한다(pivot-table.css 주석 참고) */
+    html[data-theme="light"] .pivot-tree-table td:first-child { background: #F2F4F6; color: #191F28; }
     html[data-theme="light"] .pivot-tree-table th:first-child { background: #0064FF !important; color: #FFFFFF !important; }
     html[data-theme="light"] .row-grand-total { background: #0050D9 !important; border-top-color: #4795FF; }
     html[data-theme="light"] .row-grand-total td { background: #0050D9 !important; }
