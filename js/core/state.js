@@ -38,6 +38,20 @@
     let expandedDeptPivot = {};
     let expandedMgrPivot = {};
 
+    // 세부데이터 탐색 탭(자유 피벗 빌더): 전역 필터바와 무관한 독립 상태.
+    // 본부매출 기준·취급고/회계 매출기준은 이 탭에서도 고정 전제/상시 토글이라 드래그앤드롭 필터 필드 목록에 노출하지 않는다.
+    // (본부매출: getDetailDataBaseRows()에서 항상 적용 / 매출기준: detailDataRevenueBasisMode 토글 버튼으로 별도 제공)
+    let detailDataConfig = {
+      filters: [],
+      rows: [],
+      columns: [],
+      values: [{ field: 'amount', agg: 'sum' }]
+    };
+    let expandedDetailDataPivot = {};
+    let detailDataDragField = null;
+    let detailDataOpenFilterField = null;
+    let detailDataRevenueBasisMode = 'performance';
+
     let advertiserActiveMonthIndex = {}; // ?�규광고�??�별 ?�능개선?? advertiser -> [{monthStr, time}] ?�렬??배열
     let expandedMoMCategories = {}; // ?�월?��?증감 ?�벗: 카테고리�??�침 ?�태 (기본 ?��? ?�힘)
     let agencyCompMetricMode = 'revenue'; // 주요 ?�?�사 ?�년·?�월 비교 차트: 매출/광고주수 ?��?

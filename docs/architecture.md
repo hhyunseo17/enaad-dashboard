@@ -13,12 +13,12 @@ README.md                  설치/실행/배포 안내
 docs/                      문서 (js/features와 1:1 매칭)
   data-rules.md  architecture.md
   features/  (mom, agency-comp, bucket, new-advertiser, upfront,
-              ranking, trend-portfolio-channel, detail-pivots, kpi)
+              ranking, trend-portfolio-channel, detail-pivots, detail-data, kpi)
 css/                       theme / layout / pivot-table
 js/core/                   state, theme-system, data-loader, filters, view-router, init
 js/features/               shared-helpers, detail-pivots, kpi,
                            trend-portfolio-channel, mom, agency-comp,
-                           new-advertiser, upfront, ranking, bucket
+                           new-advertiser, upfront, ranking, bucket, detail-data
 functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
   addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js  api/targets.js
 shared/supabase-proxy.mjs  Supabase 프록시 공용 로직 (functions/api/*.js + worker.js가 공유)
@@ -49,6 +49,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/features/upfront.js
   js/features/ranking.js
   js/features/bucket.js
+  js/features/detail-data.js       세부데이터 탐색(자유 피벗 빌더) — 전역 필터바 무관, rawData 직접 읽음
   js/core/view-router.js           VIEW_CONFIG/switchView (features 참조 → features 이후)
   js/core/init.js                  DOMContentLoaded 부트스트랩 (반드시 마지막)
 ```

@@ -28,7 +28,8 @@
       momPivot: { containerId: 'momPivotView', title: '전월대비 광고주 증감 상세', showBreadcrumb: true, render: () => renderMoMPivotTable() },
       agencyCompPivot: { containerId: 'agencyCompPivotView', title: '주요 대행사 전년·전월 비교 상세', showBreadcrumb: true, render: () => renderAgencyCompPivotTable() },
       newAdvPivot: { containerId: 'newAdvPivotView', title: '신규 광고주 상세', showBreadcrumb: true, render: () => renderNewAdvPivotTable() },
-      upfrontPivot: { containerId: 'upfrontPivotView', title: '업프론트 실적 현황', showBreadcrumb: true, render: () => renderUpfrontPivotTable() }
+      upfrontPivot: { containerId: 'upfrontPivotView', title: '업프론트 실적 현황', showBreadcrumb: true, render: () => renderUpfrontPivotTable() },
+      detailData: { containerId: 'detailDataView', title: '세부데이터 탐색', showBreadcrumb: true, render: () => renderDetailDataPivot() }
     };
 
     function switchView(viewKey, pushHistory) {
@@ -50,6 +51,7 @@
     function openBucketPivotView() { switchView('bucket'); }
     function openAdvertiserPivotView() { switchView('advertiser'); }
     function openAgencyPivotView() { switchView('agency'); }
+    function openDetailDataView() { switchView('detailData'); }
 
     function toggleYearColumn(viewType, yr) {
       if (viewType === 'channel') { expandedYearColumns[yr] = !expandedYearColumns[yr]; renderChannelPivotTable(); }
@@ -77,6 +79,7 @@
     function toggleCatPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedCatPivot[k] = !expandedCatPivot[k]; renderCategoryPivotTable(); }
     function toggleDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedDeptPivot[k] = !expandedDeptPivot[k]; renderDeptPivotTable(); }
     function toggleMgrPivotNode(l1, l2, l3, l4) { let k = l1; if(l2) k += `||${l2}`; if(l3) k += `||${l3}`; if(l4) k += `||${l4}`; expandedMgrPivot[k] = !expandedMgrPivot[k]; renderManagerPivotTable(); }
+    function toggleDetailDataNode(path) { expandedDetailDataPivot[path] = !expandedDetailDataPivot[path]; renderDetailDataPivot(); }
 
     function toggleChannelNode(chName) { expandedChannels[chName] = !expandedChannels[chName]; renderChannelPivotTable(); }
     function toggleCategoryNode(chName, catName) { expandedCategories[`${chName}||${catName}`] = !expandedCategories[`${chName}||${catName}`]; renderChannelPivotTable(); }

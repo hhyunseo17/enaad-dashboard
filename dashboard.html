@@ -63,6 +63,7 @@
         </div>
         <span id="fileLastModified" class="sync-time">원본 수정: -</span>
         <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
+        <button class="btn btn-sm" onclick="openDetailDataView()">🔍 세부데이터</button>
         <button id="themeToggleBtn" class="btn btn-sm" onclick="toggleTheme()">☀️ 라이트</button>
       </div>
     </header>
@@ -814,6 +815,59 @@
         </div>
       </section>
     </div>
+
+    <div id="detailDataView" class="view-section">
+      <section class="card-box pivot-hero-card" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">세부데이터 탐색</h2>
+            <span style="font-size: 12px; color: var(--text-tertiary);">전역 필터바와 무관한 독립 탐색 탭(본부매출 기준 원본 데이터) · 필드를 끌어 배치를 바꾸면 즉시 재집계</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:20px;">
+            <div class="revenue-basis-toggle">
+              <button class="revenue-basis-btn active" id="ddBtnBasisPerformance" onclick="setDetailDataRevenueBasisMode('performance')">취급고</button>
+              <button class="revenue-basis-btn" id="ddBtnBasisAccounting" onclick="setDetailDataRevenueBasisMode('accounting')">회계</button>
+            </div>
+            <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 합계</div><div id="detailDataTotalAmount" style="font-size: 24px; font-weight: 800;">0.0 백만</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dd-layout">
+        <div class="dd-main">
+          <div class="dd-filter-bar" id="ddFilterBar"></div>
+          <div class="table-container" style="margin:0;">
+            <div class="table-wrapper" style="max-height: 700px;">
+              <table class="data-table pivot-tree-table" id="detailDataTreeTable">
+                <thead id="detailDataTableHead"></thead>
+                <tbody id="detailDataTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <aside class="dd-sidebar">
+          <div class="dd-field-list" id="ddFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+          <div class="dd-wells">
+            <div class="dd-well" id="ddWellFilter" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+              <div class="dd-well-title">🏷 필터</div>
+              <div class="dd-well-body" id="ddWellFilterBody"></div>
+            </div>
+            <div class="dd-well" id="ddWellColumns" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+              <div class="dd-well-title">▤ 열</div>
+              <div class="dd-well-body" id="ddWellColumnsBody"></div>
+            </div>
+            <div class="dd-well" id="ddWellRows" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+              <div class="dd-well-title">☰ 행</div>
+              <div class="dd-well-body" id="ddWellRowsBody"></div>
+            </div>
+            <div class="dd-well" id="ddWellValues" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+              <div class="dd-well-title">Σ 값</div>
+              <div class="dd-well-body" id="ddWellValuesBody"></div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </div>
   </div>
   <!-- App modules — 로드 순서가 곧 의존성 (architecture.md 참조) -->
   <script src="js/core/state.js"></script>
@@ -830,6 +884,7 @@
   <script src="js/features/upfront.js"></script>
   <script src="js/features/ranking.js"></script>
   <script src="js/features/bucket.js"></script>
+  <script src="js/features/detail-data.js"></script>
   <script src="js/core/view-router.js"></script>
   <script src="js/core/init.js"></script>
 </body>
