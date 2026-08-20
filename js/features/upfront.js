@@ -89,7 +89,7 @@
       let headerHtml = `<th style="text-align: left; min-width: 260px;">부서 / 광고주(업프론트용) / 대행사</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
       months.forEach(m => { headerHtml += `<th style="text-align: right;">${m}월</th>`; });
       headerHtml += `<th style="text-align: right;">총합계</th>`;
-      document.getElementById('upfrontPivotHeaderRow').innerHTML = headerHtml;
+      document.getElementById('upfrontPivotHeaderRow').innerHTML = mapPivotHtml(headerHtml);
 
       const fmtEok = (won) => { const v = won / 1e8; if (!v) return '-'; return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
 

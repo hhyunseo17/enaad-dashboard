@@ -86,7 +86,6 @@
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-left: 3px solid var(--primary-blue); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; position: relative; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
-    .kpi-card.clickable:hover { border-color: var(--primary-blue); transform: translateY(-2px); box-shadow: 0 0 0 1px var(--primary-blue); }
     .kpi-card.kpi-accent-purple.clickable:hover { border-color: var(--accent-purple); box-shadow: 0 0 0 1px var(--accent-purple); }
     .kpi-card.kpi-accent-orange.clickable:hover { border-color: var(--accent-orange); box-shadow: 0 0 0 1px var(--accent-orange); }
     .kpi-card.kpi-accent-pink.clickable:hover { border-color: var(--accent-pink); box-shadow: 0 0 0 1px var(--accent-pink); }
@@ -128,7 +127,10 @@
     .amount-cell { font-weight: 700; color: var(--primary-blue); text-align: right; }
     .tag-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; background: var(--bg-subtle); border: 1px solid var(--border-default); color: var(--text-secondary); }
 
-       모바일 반응형 (768px 이하) - 캐스케이드 우선순위 확보를 위해 스타일 맨 끝에 배치
+    /* ========================================================================
+       모바일 반응형 - 캐스케이드 우선순위 확보를 위해 스타일 맨 끝에 배치.
+       max-width 쿼리는 좁은 화면 쪽이 이겨야 하므로 900 → 768 → 640 순으로 선언한다.
+       (이 주석의 여는 문자가 빠져 있어 900px 블록 전체가 파서에 폐기되던 버그를 수정)
        ======================================================================== */
     @media (max-width: 900px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -136,16 +138,6 @@
       .kpi-value { font-size: 19px !important; }
       .kpi-title { font-size: 11px !important; }
       .kpi-sub { font-size: 10px; gap: 6px; }
-    }
-
-    @media (max-width: 640px) {
-      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-      .kpi-card { padding: 10px; min-width: 0; }
-      .kpi-header { align-items: flex-start; }
-      .kpi-title { font-size: 10.5px !important; line-height: 1.25; }
-      .kpi-value { font-size: 17px !important; white-space: normal; line-height: 1.15; }
-      .kpi-sub { font-size: 9.5px; gap: 4px; }
-      .badge-growth { font-size: 9px; padding: 2px 6px; }
     }
 
     @media (max-width: 768px) {
@@ -217,4 +209,14 @@
         background-size: 24px 100%, 24px 100%, 16px 100%, 16px 100%, 100% 100% !important;
         background-attachment: local, local, scroll, scroll, scroll !important;
       }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .kpi-card { padding: 10px; min-width: 0; }
+      .kpi-header { align-items: flex-start; }
+      .kpi-title { font-size: 10.5px !important; line-height: 1.25; }
+      .kpi-value { font-size: 17px !important; white-space: normal; line-height: 1.15; }
+      .kpi-sub { font-size: 9.5px; gap: 4px; }
+      .badge-growth { font-size: 9px; padding: 2px 6px; }
     }

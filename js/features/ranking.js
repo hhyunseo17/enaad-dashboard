@@ -33,7 +33,7 @@
       const ctx = document.getElementById('chartRankAdvertiser').getContext('2d'); if (chartInstances.rankAdvertiser) chartInstances.rankAdvertiser.destroy();
       const targetData = filteredData.filter(r => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC'); const groupMap = {}; targetData.forEach(r => { groupMap[r.advertiser || '기타'] = (groupMap[r.advertiser || '기타'] || 0) + r.amount; });
       const sortedAdvertisers = Object.entries(groupMap).sort((a,b) => b[1] - a[1]).slice(0, 10).map(s => s[0]); const subCats = ['일반광고', 'IMC'];
-      const datasets = subCats.map(cat => ({ label: cat, data: sortedAdvertisers.map(adv => targetData.filter(r => r.advertiser === adv && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: categoryColors[cat] || chartColors.purple, borderRadius: 0,
+      const datasets = subCats.map(cat => ({ label: cat, data: sortedAdvertisers.map(adv => targetData.filter(r => r.advertiser === adv && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: categoryColors[cat] || chartColors.slate, borderRadius: 0,
         datalabels: { display: (ctx) => cat === subCats[subCats.length - 1], anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
       }));

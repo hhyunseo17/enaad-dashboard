@@ -49,11 +49,28 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/features/upfront.js
   js/features/ranking.js
   js/features/bucket.js
-  js/features/detail-data.js       세부데이터 탐색(자유 피벗 빌더) — 전역 필터바 무관, rawData 직접 읽음
+  js/features/detail-data.js       세부데이터 탐색(자유 피벗 빌더) — 상단 전역 필터바(filteredData) 기준
   js/core/view-router.js           VIEW_CONFIG/switchView (features 참조 → features 이후)
   js/core/init.js                  DOMContentLoaded 부트스트랩 (반드시 마지막)
 ```
 > reviewer는 이 순서를 어긴 로드(features가 core보다 먼저 등)를 오류로 잡는다.
+
+## 테마 전환 — 세 갈래 경로 (정리 대상)
+라이트/다크 전환이 한 곳이 아니라 **세 경로**로 나뉘어 있다. 색을 건드릴 때 세 곳을 모두 봐야 한다.
+
+| 경로 | 위치 | 대상 |
+|---|---|---|
+| CSS 변수 | `css/theme.css` | `var(--…)`를 쓰는 모든 스타일 |
+| `CH(hex)` | `theme-system.js`의 `CHART_COLOR_MAP` | Chart.js 옵션 객체 (차트 생성 시점에 평가) |
+| `mapPivotHtml(html)` | `theme-system.js`의 `PIVOT_COLOR_MAP` | 피벗 렌더러가 만든 HTML **문자열**을 `innerHTML` 직전에 일괄 치환 |
+
+**`mapPivotHtml` 주의사항**
+- HTML을 인식하지 않는 단순 `split().join()`이다. 셀 *텍스트*에 같은 문자열이 있어도 치환된다.
+- 키는 **대문자 6자리 hex 또는 rgba 문자열 전체**와 정확히 일치해야 한다. 같은 색이라도 표기법이 다르면 치환되지 않는다(과거 `rgba(30,58,138,0.1)`이 `#1E3A8A`와 같은 색인데 누락되던 버그의 원인).
+- **`<tbody>`뿐 아니라 `<thead>`도 반드시 통과시켜야 한다.** 헤더에도 `#1E3A8A`/`#1E40AF`가 인라인으로 박혀 있다.
+- 행 깊이 램프는 다크·라이트가 **같은 방향**(깊어질수록 페이지 바닥에서 멀어짐)을 유지해야 한다. 여러 깊이를 같은 값으로 접으면 라이트 모드에서 트리 계층이 사라진다.
+
+> 장기적으로는 피벗 렌더러가 인라인 hex 대신 클래스를 출력하도록 바꿔 `mapPivotHtml`과 `CH`를 함께 폐기하는 것이 목표다.
 
 
 ## 데이터 흐름

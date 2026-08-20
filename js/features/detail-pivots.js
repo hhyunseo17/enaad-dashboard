@@ -15,7 +15,7 @@
         else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
       });
       h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
-      document.getElementById('catPivotHeaderRow1').innerHTML = h1; document.getElementById('catPivotHeaderRow2').innerHTML = h2;
+      document.getElementById('catPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('catPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
       const tree = {};
@@ -86,7 +86,7 @@
         else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
       });
       h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
-      document.getElementById('deptPivotHeaderRow1').innerHTML = h1; document.getElementById('deptPivotHeaderRow2').innerHTML = h2;
+      document.getElementById('deptPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('deptPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
       const tree = {};
@@ -159,7 +159,7 @@
         else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
       });
       h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
-      document.getElementById('mgrPivotHeaderRow1').innerHTML = h1; document.getElementById('mgrPivotHeaderRow2').innerHTML = h2;
+      document.getElementById('mgrPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('mgrPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
       const tree = {};
@@ -250,7 +250,7 @@
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('channel', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
       headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
-      document.getElementById('pivotTableHeaderRow1').innerHTML = headerRow1; document.getElementById('pivotTableHeaderRow2').innerHTML = headerRow2;
+      document.getElementById('pivotTableHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('pivotTableHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const channelTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};    
       years.forEach(yr => { grandTotalByYear[yr] = 0; const activeMonths = yearMonthsMap[yr] || []; activeMonths.forEach(m => { grandTotalByYearMonth[`${yr}-${m}`] = 0; }); });
@@ -337,7 +337,7 @@
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('advertiser', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
       headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
-      document.getElementById('advertiserPivotHeaderRow1').innerHTML = headerRow1; document.getElementById('advertiserPivotHeaderRow2').innerHTML = headerRow2;
+      document.getElementById('advertiserPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('advertiserPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const advTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};
       years.forEach(yr => { grandTotalByYear[yr] = 0; const activeMonths = yearMonthsMap[yr] || []; activeMonths.forEach(m => { grandTotalByYearMonth[`${yr}-${m}`] = 0; }); });
@@ -408,7 +408,7 @@
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('agency', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
       headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
-      document.getElementById('agencyPivotHeaderRow1').innerHTML = headerRow1; document.getElementById('agencyPivotHeaderRow2').innerHTML = headerRow2;
+      document.getElementById('agencyPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('agencyPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const grpTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};
       years.forEach(yr => { grandTotalByYear[yr] = 0; const activeMonths = yearMonthsMap[yr] || []; activeMonths.forEach(m => { grandTotalByYearMonth[`${yr}-${m}`] = 0; }); });

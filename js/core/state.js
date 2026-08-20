@@ -116,7 +116,9 @@
     const chartColors = {
       blue: '#2563EB', cyan: '#06B6D4', green: '#22C55E', orange: '#F59E0B',
       purple: '#8B5CF6', pink: '#EC4899', red: '#EF4444', yellow: '#FACC15',
-      indigo: '#4F46E5', teal: '#0EA5A4'
+      indigo: '#4F46E5', teal: '#0EA5A4',
+      // 분류를 알 수 없을 때 쓰는 중립색. 계열색과 겹치지 않아야 하므로 fallback 전용으로만 쓴다.
+      slate: '#64748B'
     };
     const colorPaletteList = [
       '#2563EB', '#06B6D4', '#22C55E', '#F59E0B', '#8B5CF6',

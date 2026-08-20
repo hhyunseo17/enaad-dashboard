@@ -31,7 +31,7 @@
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('bucket', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
       headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle;">총합계</th>`;
-      document.getElementById('bucketPivotHeaderRow1').innerHTML = headerRow1; document.getElementById('bucketPivotHeaderRow2').innerHTML = headerRow2;
+      document.getElementById('bucketPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('bucketPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       // 월단위 광고주별 합산금액 → 구간 배정
       const advMonthMap = {};
