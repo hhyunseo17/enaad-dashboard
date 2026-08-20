@@ -80,6 +80,7 @@
     function toggleDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedDeptPivot[k] = !expandedDeptPivot[k]; renderDeptPivotTable(); }
     function toggleMgrPivotNode(l1, l2, l3, l4) { let k = l1; if(l2) k += `||${l2}`; if(l3) k += `||${l3}`; if(l4) k += `||${l4}`; expandedMgrPivot[k] = !expandedMgrPivot[k]; renderManagerPivotTable(); }
     function toggleDetailDataNode(path) { expandedDetailDataPivot[path] = !expandedDetailDataPivot[path]; renderDetailDataPivot(); }
+    function toggleDetailDataColNode(path) { expandedDetailDataColPivot[path] = !expandedDetailDataColPivot[path]; renderDetailDataPivot(); }
 
     function toggleChannelNode(chName) { expandedChannels[chName] = !expandedChannels[chName]; renderChannelPivotTable(); }
     function toggleCategoryNode(chName, catName) { expandedCategories[`${chName}||${catName}`] = !expandedCategories[`${chName}||${catName}`]; renderChannelPivotTable(); }

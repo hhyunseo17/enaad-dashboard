@@ -50,6 +50,7 @@
     };
     let detailDataValueIdCounter = 1; // 다음에 추가될 값(values) 항목의 id — 같은 필드를 여러 번 넣어도 개별 항목으로 구분하기 위함
     let expandedDetailDataPivot = {};
+    let expandedDetailDataColPivot = {}; // 열 필드 트리 접기/펼치기 상태(행과 동일한 방식) — 키는 열 경로를 '||'로 join.
     let detailDataDragPayload = null; // 드래그 중인 { field, valueId } 임시 보관 (valueId: 값 영역 내 기존 항목을 재정렬하는 경우만 채워짐)
     let detailDataOpenFilterField = null;
 

@@ -119,24 +119,100 @@
 
     function ddArraysEqual(a, b) { return a.length === b.length && a.every((v, i) => v === b[i]); }
 
-    // colFieldDefs 깊이만큼의 그룹핑 헤더 행들을 <th> 배열(행별)로 반환. valuesPerCol만큼 각 그룹의 colspan을 곱한다.
-    function renderDetailDataColumnHeaderRows(colCombos, colFieldDefs, valuesPerCol) {
+    // colCombos(정렬된 leaf 조합 목록)를 depth별 값 트리로 재구성. 각 노드는 그 아래 모든 leaf 조합의 join key 목록(leafKeys)을 들고 있다
+    // — 열이 접혔을 때 그 leafKeys를 모두 합산해서 하나의 병합 열로 보여주기 위함.
+    function buildDetailDataColumnValueTree(colCombos) {
+      const root = { children: new Map(), leafKeys: [] };
+      colCombos.forEach(combo => {
+        let node = root;
+        combo.forEach(val => {
+          if (!node.children.has(val)) node.children.set(val, { children: new Map(), leafKeys: [] });
+          node = node.children.get(val);
+        });
+        node.leafKeys.push(combo.length ? combo.join('||') : '__TOTAL__');
+      });
+      (function propagate(node) {
+        if (node.children.size === 0) return node.leafKeys;
+        let all = [];
+        node.children.forEach(c => { all = all.concat(propagate(c)); });
+        node.leafKeys = all;
+        return all;
+      })(root);
+      return root;
+    }
+
+    // 행과 동일한 "기본 접힘" 규칙: 열 필드의 1레벨(값) 자체는 항상 보이고, 그 하위 레벨은 expandedDetailDataColPivot에
+    // 펼쳐진 경로만 재귀 진입 — 접힌 그룹은 leafKeys를 그대로 들고 있는 병합 열 1개로 축약된다.
+    function walkDetailDataColumnNode(node, depth, path, colFieldDefsLen, visibleColumns) {
+      const isLastDepth = depth === colFieldDefsLen;
+      if (isLastDepth) {
+        visibleColumns.push({ path: path.slice(), leafKeys: node.leafKeys, canToggle: false, isExpanded: false, pathKey: path.join('||') });
+        return;
+      }
+      const pathKey = path.join('||');
+      const isExpanded = !!expandedDetailDataColPivot[pathKey];
+      if (!isExpanded) {
+        visibleColumns.push({ path: path.slice(), leafKeys: node.leafKeys, canToggle: true, isExpanded: false, pathKey });
+        return;
+      }
+      const childVals = [...node.children.keys()].sort((a, b) => String(a).localeCompare(String(b), 'ko'));
+      childVals.forEach(v => walkDetailDataColumnNode(node.children.get(v), depth + 1, path.concat(v), colFieldDefsLen, visibleColumns));
+    }
+
+    // 실제로 렌더링될 열(펼쳐진 leaf 또는 접힌 병합 그룹) 목록을 반환.
+    function buildDetailDataVisibleColumns(colCombos, colFieldDefsLen) {
+      if (colFieldDefsLen === 0) return [{ path: [], leafKeys: ['__TOTAL__'], canToggle: false, isExpanded: false, pathKey: '' }];
+      const tree = buildDetailDataColumnValueTree(colCombos);
+      const visibleColumns = [];
+      const topVals = [...tree.children.keys()].sort((a, b) => String(a).localeCompare(String(b), 'ko'));
+      topVals.forEach(v => walkDetailDataColumnNode(tree.children.get(v), 1, [v], colFieldDefsLen, visibleColumns));
+      return visibleColumns;
+    }
+
+    // visibleColumns 기준 depth별 그룹핑 헤더 행 <th> 배열 반환. 접힌 그룹은 자기 depth에서 남은 헤더 행 전부를 rowspan으로 덮고 토글 아이콘을 붙인다.
+    function renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefsLen, valuesPerCol) {
       const rowsHtml = [];
-      for (let depth = 0; depth < colFieldDefs.length; depth++) {
+      for (let depth = 0; depth < colFieldDefsLen; depth++) {
         const cells = []; let i = 0;
-        while (i < colCombos.length) {
-          const prefix = colCombos[i].slice(0, depth + 1);
-          let span = 1;
-          while (i + span < colCombos.length && ddArraysEqual(colCombos[i + span].slice(0, depth + 1), prefix)) span++;
-          cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;">${prefix[depth]}</th>`);
-          i += span;
+        while (i < visibleColumns.length) {
+          const col = visibleColumns[i];
+          if (col.path.length <= depth) { i++; continue; } // 앞선 depth에서 이미 rowspan으로 덮인 열 — 건너뜀
+          if (col.path.length - 1 === depth) {
+            const rowspan = colFieldDefsLen - depth;
+            const toggle = col.canToggle ? `<span class="toggle-icon" onclick="toggleDetailDataColNode('${ddEsc(col.pathKey)}')">${col.isExpanded ? '-' : '+'}</span>` : '';
+            cells.push(`<th colspan="${valuesPerCol}" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${toggle}${col.path[col.path.length - 1]}</th>`);
+            i++;
+          } else {
+            const prefix = col.path.slice(0, depth + 1);
+            let span = 0; let j = i;
+            while (j < visibleColumns.length && visibleColumns[j].path.length > depth && ddArraysEqual(visibleColumns[j].path.slice(0, depth + 1), prefix)) { span++; j++; }
+            cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;">${prefix[depth]}</th>`);
+            i = j;
+          }
         }
         rowsHtml.push(cells);
       }
       return rowsHtml;
     }
 
-    function renderDetailDataNodeRows(node, rowFieldDefs, depth, ancestorPath, colKeys, valueDefs, out) {
+    // 한 행 노드에서 여러 leafKey(접힌 열 그룹)의 metrics를 합산 — leafKeys가 1개면 그대로 반환.
+    function mergeDetailDataMetrics(node, leafKeys) {
+      if (leafKeys.length === 1) return node.metrics[leafKeys[0]];
+      const merged = { rowCount: 0, sums: {}, distinctSets: {} };
+      leafKeys.forEach(k => {
+        const m = node.metrics[k];
+        if (!m) return;
+        merged.rowCount += m.rowCount;
+        Object.keys(m.sums).forEach(f => { merged.sums[f] = (merged.sums[f] || 0) + m.sums[f]; });
+        Object.keys(m.distinctSets).forEach(f => {
+          if (!merged.distinctSets[f]) merged.distinctSets[f] = new Set();
+          m.distinctSets[f].forEach(val => merged.distinctSets[f].add(val));
+        });
+      });
+      return merged;
+    }
+
+    function renderDetailDataNodeRows(node, rowFieldDefs, depth, ancestorPath, visibleColumns, valueDefs, out) {
       const hasMore = depth + 1 < rowFieldDefs.length;
       const sortMetric = (childNode) => computeDetailDataMetric(childNode.metrics.__ROWTOTAL__, valueDefs[0]);
       const keys = Object.keys(node.children).sort((a, b) => sortMetric(node.children[b]) - sortMetric(node.children[a]));
@@ -148,15 +224,15 @@
         const indentClass = `indent-step-${Math.min(depth + 1, 5)}`;
         const toggle = hasMore ? `<span class="toggle-icon" onclick="toggleDetailDataNode('${ddEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
         let html = `<tr><td class="${indentClass}">${toggle}${k}</td>`;
-        colKeys.forEach(ck => {
-          const m = child.metrics[ck];
+        visibleColumns.forEach(col => {
+          const m = mergeDetailDataMetrics(child, col.leafKeys);
           valueDefs.forEach(v => { html += `<td style="text-align:right;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
         });
         const rt = child.metrics.__ROWTOTAL__;
         valueDefs.forEach(v => { html += `<td style="text-align:right; font-weight:800;">${fmtDetailDataMetricCell(computeDetailDataMetric(rt, v), v.agg)}</td>`; });
         html += `</tr>`;
         out.push(html);
-        if (hasMore && isExpanded) renderDetailDataNodeRows(child, rowFieldDefs, depth + 1, path, colKeys, valueDefs, out);
+        if (hasMore && isExpanded) renderDetailDataNodeRows(child, rowFieldDefs, depth + 1, path, visibleColumns, valueDefs, out);
       });
     }
 
@@ -402,22 +478,23 @@
       const colFieldDefs = detailDataConfig.columns.map(k => DETAIL_DATA_FIELDS.find(f => f.key === k)).filter(Boolean);
 
       const baseRows = getDetailDataBaseRows();
-      const { root, colCombos, colKeys } = buildDetailDataTree(baseRows, rowFieldDefs, colFieldDefs, valueDefs);
+      const { root, colCombos } = buildDetailDataTree(baseRows, rowFieldDefs, colFieldDefs, valueDefs);
+      const visibleColumns = buildDetailDataVisibleColumns(colCombos, colFieldDefs.length);
 
       const multiValue = valueDefs.length > 1;
       const valuesPerCol = multiValue ? valueDefs.length : 1;
       const rowLabel = rowFieldDefs.length ? rowFieldDefs.map(f => f.label).join(' / ') : '구분';
 
-      // 그룹핑 행: 열 필드가 있으면 필드별 colspan 그룹, 없으면 (단일값일 때만) "합계" 한 칸.
+      // 그룹핑 행: 열 필드가 있으면 필드별 colspan 그룹(접힌 그룹은 병합 1칸 + 토글), 없으면 (단일값일 때만) "합계" 한 칸.
       let groupRows = colFieldDefs.length > 0
-        ? renderDetailDataColumnHeaderRows(colCombos, colFieldDefs, valuesPerCol)
+        ? renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefs.length, valuesPerCol)
         : (multiValue ? [] : [[`<th colspan="1" style="text-align:center;">합계</th>`]]);
       const rows = groupRows.map(r => r.slice());
 
       // 값이 2개 이상이면 맨 아래에 "합계 : 금액" 식 값 라벨 행을 추가로 붙인다(엑셀의 Σ값 다중 표시와 동일).
       if (multiValue) {
         const valueRowCells = [];
-        colKeys.forEach(() => { valueDefs.forEach(v => valueRowCells.push(`<th style="text-align:center; font-size:11px; font-weight:700;">${getDetailDataValueLabel(v)}</th>`)); });
+        visibleColumns.forEach(() => { valueDefs.forEach(v => valueRowCells.push(`<th style="text-align:center; font-size:11px; font-weight:700;">${getDetailDataValueLabel(v)}</th>`)); });
         rows.push(valueRowCells);
         const lastIdx = rows.length - 1;
         valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:11px; font-weight:800; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
@@ -438,16 +515,16 @@
 
       let bodyHtml = '';
       if (rowFieldDefs.length === 0 && colFieldDefs.length === 0) {
-        const totalCols = 1 + colKeys.length * valueDefs.length + valueDefs.length;
+        const totalCols = 1 + visibleColumns.length * valueDefs.length + valueDefs.length;
         bodyHtml += `<tr><td colspan="${totalCols}" style="text-align:center; color:var(--text-tertiary); padding:16px;">행 또는 열 영역에 필드를 놓으세요</td></tr>`;
       } else if (rowFieldDefs.length > 0) {
         const out = [];
-        renderDetailDataNodeRows(root, rowFieldDefs, 0, [], colKeys, valueDefs, out);
+        renderDetailDataNodeRows(root, rowFieldDefs, 0, [], visibleColumns, valueDefs, out);
         bodyHtml += out.join('');
       }
       bodyHtml += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
-      colKeys.forEach(ck => {
-        const m = root.metrics[ck];
+      visibleColumns.forEach(col => {
+        const m = mergeDetailDataMetrics(root, col.leafKeys);
         valueDefs.forEach(v => { bodyHtml += `<td style="text-align:right; font-weight:900;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
       });
       const rootTotal = root.metrics.__ROWTOTAL__;

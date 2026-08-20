@@ -39,9 +39,9 @@ detailDataOpenFilterField   // 값 선택 팝오버가 열려있는 필터 필�
 
 ## 집계 로직
 - `getDetailDataBaseRows()` — `filteredData`(상단 전역 필터바 적용 결과)에서 시작해, `detailDataConfig.filters`를 순회하며 그 위에 얹는 추가 드래그앤드롭 필터를 적용한다. `selected`가 비어있으면 그 필드는 통과.
-- `buildDetailDataTree(rows, rowFieldDefs, colFieldDefs, valueDefs)` — 행 필드 깊이만큼 재귀 그룹핑. 각 노드는 `metrics[colKey] = { rowCount, sums, distinctSets }`를 열 조합별로 쌓고, 열과 무관한 노드 전체 합/고유개수용으로 `metrics['__ROWTOTAL__']`도 별도 누적한다(행 총합 열이 "각 열의 평균의 합"이 아니라 올바르게 재계산되도록). `computeDetailDataMetric(metrics, {field, agg})`가 이 raw 누적치에서 sum/avg/count/distinct 값을 뽑아낸다.
-- `renderDetailDataColumnHeaderRows(colCombos, colFieldDefs, valuesPerCol)` — 정렬된 열 조합 목록에서 depth별로 동일 접두사를 묶어 colspan(× valuesPerCol)을 계산.
-- `renderDetailDataNodeRows()` — 행 트리를 재귀 렌더링, 첫 번째 값 필드 기준 내림차순 정렬. 조상 경로를 `||`로 join한 키로 `expandedDetailDataPivot`을 조회(펼침 시에만 하위 재귀).
+- `buildDetailDataTree(rows, rowFieldDefs, colFieldDefs, valueDefs)` — 행 필드 깊이만큼 재귀 그룹핑. 각 노드는 `metrics[colKey] = { rowCount, sums, distinctSets }`를 **leaf 열 조합**(colFieldDefs 전체 깊이까지 내려간 join key) 별로 쌓고, 열과 무관한 노드 전체 합/고유개수용으로 `metrics['__ROWTOTAL__']`도 별도 누적한다(행 총합 열이 "각 열의 평균의 합"이 아니라 올바르게 재계산되도록). `computeDetailDataMetric(metrics, {field, agg})`가 이 raw 누적치에서 sum/avg/count/distinct 값을 뽑아낸다.
+- `computeDetailDataMetric`에 넘기는 `metrics`는 항상 leaf 1개짜리일 필요가 없다 — 열이 접혀 있으면 그 아래 여러 leaf를 `mergeDetailDataMetrics(node, leafKeys)`로 먼저 합산(rowCount/sums 합, distinctSets 합집합)한 뒤 넘긴다.
+- `renderDetailDataNodeRows()` — 행 트리를 재귀 렌더링, 첫 번째 값 필드 기준 내림차순 정렬. 조상 경로를 `||`로 join한 키로 `expandedDetailDataPivot`을 조회(펼침 시에만 하위 재귀). 각 행의 셀은 `visibleColumns`(아래 "열 접기/펼치기" 참고)를 순회하며 `mergeDetailDataMetrics()`로 계산.
 
 ## 드래그앤드롭
 - **필드 목록은 절대 항목이 사라지지 않는다** — 배치 여부와 무관하게 `DETAIL_DATA_FIELDS` 전체를 항상 보여준다(`renderDetailDataFieldListHtml()`). 어딘가에 배치된 필드는 `dd-field-chip-active` 클래스로 테두리만 강조.
@@ -52,6 +52,12 @@ detailDataOpenFilterField   // 값 선택 팝오버가 열려있는 필터 필�
 - well 안 칩도 draggable — 같은 well 내 드롭으로 순서 변경(`onDetailDataChipDrop`), 다른 well로 드롭 시 이동(필터/행/열 한정) 또는 추가(값).
 - 필드 목록(`#ddFieldList`)에 되돌리기(드래그백)하면 `removeDetailDataFieldEverywhere()`로 필터/행/열/값 전부에서 제거.
 - 필터 칩(표 위 `#ddFilterBar` 쪽) 클릭 → 팝오버(`.dd-filter-popover`)에서 `rawData` 고유값 체크박스 선택.
+
+## 열 접기/펼치기 (행과 동일한 방식)
+- 행 트리(`expandedDetailDataPivot`)와 대칭되는 `expandedDetailDataColPivot`(state.js) — 키는 열 경로를 `||`로 join. `toggleDetailDataColNode(pathKey)`(view-router.js)가 토글 후 `renderDetailDataPivot()` 재호출.
+- `buildDetailDataVisibleColumns(colCombos, colFieldDefsLen)` — `buildDetailDataColumnValueTree()`로 열 조합을 depth별 값 트리로 재구성한 뒤, `walkDetailDataColumnNode()`가 재귀 진입한다. **열 1레벨(첫 번째 열 필드의 값)은 행의 1레벨과 마찬가지로 항상 보이고**, 그 하위 레벨은 해당 그룹의 `expandedDetailDataColPivot[pathKey]`가 true일 때만 재귀 진입 — 접힌 그룹은 leaf 전체를 합친 병합 열 1개(`{ path, leafKeys, canToggle:true }`)로 축약된다. 반환값 `visibleColumns`가 실제로 렌더링되는 열 목록(펼쳐진 leaf + 접힌 병합 그룹 혼재 가능).
+- `renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefsLen, valuesPerCol)` — depth별로 동일 접두사를 묶어 colspan(× valuesPerCol)을 계산하는 것은 기존과 같지만, 각 `visibleColumn`이 **자기 depth에서 끝나는 지점**(`path.length - 1 === depth`)에 도달하면 `rowspan = colFieldDefsLen - depth`로 남은 헤더 행 전부를 덮고 `canToggle`이면 토글 아이콘(`toggleDetailDataColNode`)을 붙인다 — 그 아래 depth에서는 이미 rowspan으로 덮인 열이라 건너뛴다(`path.length <= depth` 체크).
+- 값(values)이 2개 이상일 때 붙는 "합계 : 금액" 라벨 행이나 총합계 열도 `colKeys` 대신 `visibleColumns`(개수 = 실제 렌더링되는 열 수) 기준으로 계산.
 
 ## 표기 규칙
 - `sum`/`avg` 값은 백만원 단위 **소수 1자리**(CLAUDE.md 절대원칙 8), `count`/`distinct` 값은 정수(천단위 콤마). 0/빈값은 공통으로 '-'.
