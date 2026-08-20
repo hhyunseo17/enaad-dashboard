@@ -35,6 +35,26 @@
     Chart.defaults.set('plugins.datalabels', { display: false });
     function dataLabelTextColor() { return currentTheme === 'light' ? '#191F28' : '#F2F4F6'; }
 
+    // 5대분류 계열색을 현재 테마에 맞춰 돌려준다. 색상(hue)은 두 테마 동일, 명도만 다르다.
+    function catColor(name) {
+      return (currentTheme === 'light' ? categoryColorsLight : categoryColorsDark)[name];
+    }
+
+    // 값축 그리드 — 아주 흐리게. 막대마다 합계 라벨이 이미 붙어 있어 촘촘한 눈금은 대부분 중복이고,
+    // 줄이 많을수록 정작 읽어야 할 숫자가 뒤로 밀린다. 눈금 개수도 5개로 제한한다(기본은 8~11개).
+    function ddGridColor() {
+      return currentTheme === 'light' ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.07)';
+    }
+    // 값축 공통 설정 — grid/눈금개수/축선을 한 곳에서 정한다.
+    function ddValueAxis(extra) {
+      return Object.assign({
+        grace: '15%',
+        ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6 },
+        border: { display: false },
+        grid: { color: ddGridColor(), drawTicks: false }
+      }, extra || {});
+    }
+
     // ==========================================================================
     // 차트 표면 질감 — 막대/영역에 아주 옅은 그라데이션을 입혀 깊이를 준다.
     //

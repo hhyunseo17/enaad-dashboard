@@ -243,7 +243,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -321,7 +321,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }

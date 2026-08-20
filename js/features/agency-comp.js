@@ -74,7 +74,7 @@
             legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
             tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unitLabel}` } }
           },
-          scales: { y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + (agencyCompMetricMode === 'revenue' ? '억' : '') }, grid: { color: CH('#21232A') } }, x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '600' } }, grid: { display: false } } }
+          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + (agencyCompMetricMode === 'revenue' ? '억' : '') } }), x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '600' } }, grid: { display: false } } }
         }
       });
     }

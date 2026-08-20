@@ -502,7 +502,7 @@
       const ws = XLSX.utils.json_to_sheet(exportRows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'KT_ENA_본부매출내역'); XLSX.writeFile(wb, `KT_ENA_광고매출내역_${revenueBasisMode}_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 
-    function getCategoryBadgeStyle(cat) { const color = categoryColors[cat] || '#4795FF'; let r = parseInt(color.slice(1, 3), 16); let g = parseInt(color.slice(3, 5), 16); let b = parseInt(color.slice(5, 7), 16); return `background: rgba(${r}, ${g}, ${b}, 0.15); color: ${color}; border-color: rgba(${r}, ${g}, ${b}, 0.3);`; }
+    function getCategoryBadgeStyle(cat) { const color = catColor(cat) || '#4795FF'; let r = parseInt(color.slice(1, 3), 16); let g = parseInt(color.slice(3, 5), 16); let b = parseInt(color.slice(5, 7), 16); return `background: rgba(${r}, ${g}, ${b}, 0.15); color: ${color}; border-color: rgba(${r}, ${g}, ${b}, 0.3);`; }
     function formatCurrencyKorean(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toFixed(2) + ' 억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' 만원'; return val.toLocaleString() + ' 원'; }
     function formatCurrencyKoreanShort(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toFixed(1) + '억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toFixed(0) + '만원'; return val.toLocaleString() + '원'; }
 
