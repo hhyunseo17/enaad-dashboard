@@ -77,7 +77,10 @@
             { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
-            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: orderedKeys.map(k => ddBarFill(momColors[k])), borderRadius: 5, ...ddGroupSeparator(),
+            // ddBarFill()은 색 문자열이 아니라 스크립터블 '함수'를 돌려준다. 함수 배열을 넘기면
+            // Chart.js가 인덱싱만 하고 호출하지 않아 색 자리에 함수 객체가 들어가고 막대가 비어 보인다.
+            // 막대마다 색이 다를 때는 배열이 아니라 스크립터블 하나로 감싸서 직접 호출해야 한다.
+            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: (c) => ddBarFill(momColors[orderedKeys[c.dataIndex]])(c), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             }
           ]
