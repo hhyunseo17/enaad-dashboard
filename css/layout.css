@@ -51,7 +51,7 @@
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
     .sync-time { font-size: 11px; color: var(--text-tertiary); }
 
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 500; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 400; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
     .btn:hover { background: var(--border-default); border-color: var(--border-strong); }
     .btn-primary { background: var(--primary-blue); color: var(--text-on-primary); border: none; box-shadow: var(--shadow-blue-glow); }
     .btn-primary:hover { background: var(--primary-blue-hover); }
@@ -73,7 +73,7 @@
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
     .checkbox-item-all { font-weight: 600; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
-    .filter-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
+    .filter-label { font-size: 12px; font-weight: 400; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
 
     .multi-dropdown { position: relative; display: inline-block; }
     .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
@@ -88,7 +88,7 @@
     .revenue-basis-toggle { display: flex; align-items: center; background: var(--control-bg); border: 1px solid var(--control-border); padding: 4px; border-radius: var(--radius-md); }
     .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
     .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
-    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 600; }
+    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 500; }
 
     /* 월/연도 pill — 여러 개가 동시에 켜지는 컨트롤이다. '전체' 상태에서 12개가 전부
        진한 파랑으로 차면 아무것도 걸러지지 않은 기본 상태가 화면에서 가장 시끄러워진다.
@@ -98,7 +98,7 @@
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
     .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
     .pill-btn:hover { color: var(--primary-blue); background: var(--primary-blue-glow); }
-    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 600; }
+    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 500; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; background: transparent; color: var(--text-disabled); }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
@@ -117,18 +117,18 @@
     .kpi-card.clickable { cursor: pointer; }
     .kpi-card.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .kpi-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .kpi-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; overflow-wrap: anywhere; }
+    .kpi-title { font-size: 13px; font-weight: 400; color: var(--text-secondary); line-height: 1.3; overflow-wrap: anywhere; }
     /* 아이콘은 이모지 대신 단색 SVG. 이모지는 OS마다 다르게 렌더되고 색을 물려받지 못한다. */
     /* 아이콘 칩: --bg-subtle은 흰 카드에서 회색 얼룩으로, 다크 카드에서는 아예 안 보였다.
        강조색을 옅게 깐 원으로 바꿔 두 테마 모두에서 '의도한 요소'로 읽히게 한다. */
     .kpi-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue-glow); display: grid; place-items: center; color: var(--primary-blue); flex-shrink: 0; }
     .kpi-icon svg { width: 15px; height: 15px; display: block; }
     .kpi-value-box { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-    .kpi-value { font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
+    .kpi-value { font-size: 24px; font-weight: 500; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
     .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
     .kpi-annual-progress { font-size: 10px; color: var(--text-tertiary); }
 
-    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
     .badge-growth.up { background: var(--accent-green-bg); color: var(--accent-green); }
     .badge-growth.down { background: var(--accent-red-bg); color: var(--accent-red); }
 
@@ -170,7 +170,7 @@
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
     .card-box-title { display: flex; align-items: center; gap: 8px; }
-    .card-box-title h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
+    .card-box-title h2 { font-size: 16px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.015em; }
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
     .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-tertiary); }
 

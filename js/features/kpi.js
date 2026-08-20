@@ -227,13 +227,13 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '600' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '500' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '400' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
                 afterBody: (t) => {
                   const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];
@@ -305,13 +305,13 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '600' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '500' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '400' } } },
             tooltip: { callbacks: { title: (t) => `${groupLabelText}: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
                 afterBody: (t) => {
                   const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];
