@@ -104,20 +104,21 @@
     // 배경에 맞춰 명도만 달라진다.
     //
     //   일반광고  System Blue    가장 큰 비중이라 기준점
-    //   IMC       System Indigo  파랑과 이웃하되 확실히 갈리는 보라
+    //   IMC       System Purple  Indigo(#5856D6)는 파랑에 보라를 섞은 톤이라 채도가 낮고
+    //                            System Blue와 색상도 가까워 둘 다 손해였다. Purple로 분리.
     //   인포머셜  System Green
     //   큐톤광고  System Orange
     //   기타광고  System Gray    어드레서블·콘텐츠편성 등을 흡수한 '잔여' 버킷이라 무채색이 맞다
     const categoryColorsLight = {
       '일반광고': '#007AFF',
-      'IMC': '#5856D6',
+      'IMC': '#AF52DE',
       '인포머셜': '#34C759',
       '큐톤광고': '#FF9500',
       '기타광고': '#8E8E93'
     };
     const categoryColorsDark = {
       '일반광고': '#0A84FF',
-      'IMC': '#5E5CE6',
+      'IMC': '#BF5AF2',
       '인포머셜': '#30D158',
       '큐톤광고': '#FF9F0A',
       '기타광고': '#98989D'
