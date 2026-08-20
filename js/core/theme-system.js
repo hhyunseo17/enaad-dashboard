@@ -117,7 +117,29 @@
     function ddStackSeparator(horizontal) {
       return {
         borderColor: ddSurfaceColor(),
-        borderWidth: horizontal ? { right: 1 } : { top: 1 }
+        borderWidth: horizontal ? { right: 0.3 } : { top: 0.3 }
+      };
+    }
+
+    // 스택 바깥 끝만 둥글게 — 목표/실적 차트(단일 막대)의 둥근 느낌을 스택 차트에도 준다.
+    //
+    // 세그먼트마다 라운드를 주면 알약을 쌓아놓은 것처럼 보이고 '하나의 기둥'이라는 읽기가 깨진다.
+    // 그래서 각 막대에서 **값이 있는 마지막 계열**에만 바깥쪽 두 모서리를 준다.
+    // '마지막'이 고정이 아닌 게 핵심이다 — 어떤 달에 기타광고가 0이면 큐톤광고가 맨 위가 되므로
+    // 데이터 포인트마다 다시 판단해야 한다.
+    function ddStackTopRadius(horizontal, r) {
+      const radius = r === undefined ? 5 : r;
+      return (ctx) => {
+        const i = ctx.dataIndex, sets = ctx.chart.data.datasets;
+        let last = -1;
+        for (let d = 0; d < sets.length; d++) {
+          const v = sets[d].data[i];
+          if (typeof v === 'number' && v > 0) last = d;
+        }
+        if (ctx.datasetIndex !== last) return 0;
+        return horizontal
+          ? { topRight: radius, bottomRight: radius }
+          : { topLeft: radius, topRight: radius };
       };
     }
 
