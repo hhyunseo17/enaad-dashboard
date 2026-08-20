@@ -173,8 +173,8 @@
         // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
         // 밑동이 진하고 끝으로 갈수록 밝아진다 — 반대로 하면 스택 맨 아래에 오는 계열
         // (보통 비중이 가장 큰 일반광고)이 항상 제일 물빠져 보인다.
-        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+        const base = currentTheme === 'light' ? ddLift(hex, -0.13) : ddLift(hex, 0.14);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.14) : ddLift(hex, -0.06);
 
         // **각 세그먼트 자기 구간을 기준으로** 그린다.
         // 차트 영역 전체를 기준으로 잡으면(특히 대각선) 세그먼트 하나가 그 띠의 아주 얇은 구간만
@@ -239,8 +239,8 @@
         const cut = parseFloat(String(chart.options.cutout || '0')) / 100;
         const inner = outer * (isFinite(cut) && cut > 0 ? cut : 0.6);
         if (!isFinite(outer) || outer <= 0 || outer - inner < 1) return hex;
-        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+        const base = currentTheme === 'light' ? ddLift(hex, -0.13) : ddLift(hex, 0.14);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.14) : ddLift(hex, -0.06);
         const g = chart.ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
