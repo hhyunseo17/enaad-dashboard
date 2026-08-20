@@ -91,9 +91,12 @@
       <!-- 1행: 기간(연도+월). 가장 자주 쓰는 필터라 접어도 남는다.
            연도와 월은 하나의 개념이므로 두 줄로 나누지 않고 한 줄에 둔다. -->
       <div class="filter-row filter-row-primary">
-        <div class="filter-group filter-group-period">
-          <span class="filter-label">기간</span>
+        <div class="filter-group">
+          <span class="filter-label">연도</span>
           <div id="yearPills" class="pills-group"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label filter-label-sm">월</span>
           <div id="monthPills" class="pills-group">
             <button class="pill-btn active" data-month="all">전체</button>
             <button class="pill-btn" data-month="1">1월</button>
@@ -111,13 +114,18 @@
           </div>
         </div>
 
-        <!-- 화면 전체에 걸리는 컨트롤은 오른쪽에 모은다 -->
-        <div class="filter-actions">
-          <div class="revenue-basis-toggle" title="매출 기준">
+        <!-- 매출기준은 '필터'라 라벨을 달아 왼쪽 묶음의 연장으로 두고,
+             초기화·상세조건은 '동작'이라 구분선 뒤 오른쪽 끝에 모은다. -->
+        <div class="filter-group filter-group-basis">
+          <span class="filter-label filter-label-sm">매출기준</span>
+          <div class="revenue-basis-toggle">
             <button class="revenue-basis-btn active" id="btnBasisPerformance" onclick="setRevenueBasis('performance')">취급고</button>
             <button class="revenue-basis-btn" id="btnBasisAccounting" onclick="setRevenueBasis('accounting')">회계</button>
           </div>
-          <button class="btn btn-sm" onclick="resetFilters()" title="필터 초기화">초기화</button>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn btn-sm" onclick="resetFilters()" title="모든 필터를 기본값으로">초기화</button>
           <button id="filterBarToggleBtn" class="btn btn-sm" onclick="toggleFilterBar()">▲ 상세조건</button>
         </div>
       </div>
