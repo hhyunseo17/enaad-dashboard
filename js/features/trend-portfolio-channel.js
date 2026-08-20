@@ -11,9 +11,7 @@
           const monthlyCatSum = filteredData.filter(r => r.monthStr === m && r.categoryReclassified === cat).reduce((sum, r) => sum + r.amount, 0) / 1e8;
           if (trendChartMode === 'cumulative') { cumulativeSum += monthlyCatSum; return cumulativeSum; } return monthlyCatSum;
         });
-        // [시범] 이 차트만 파랑 단색 계조(catColorMono)를 쓴다. 나머지 차트는 기존 계열색(catColor) 그대로다.
-        // 계조에서는 세그먼트 사이 명도 차이가 곧 분류 구분이므로 그라데이션을 40%로 줄인다(ddBarFill 주석 참고).
-        return { label: cat, data: data, backgroundColor: ddBarFill(catColorMono(cat) || chartColors.blue, false, 0.4), borderRadius: 0, ...ddStackSeparator(),
+        return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categories[categories.length - 1],
             anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 12, weight: '400' },
