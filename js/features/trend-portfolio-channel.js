@@ -42,7 +42,7 @@
       let sorted = Object.entries(groupMap);
       if (portfolioMode === 'broadDigital') sorted.sort((a, b) => (broadOrderMap[a[0]] || 99) - (broadOrderMap[b[0]] || 99)); else if (portfolioMode === 'categoryReclassified') sorted.sort((a, b) => categoryOrderList.indexOf(a[0]) - categoryOrderList.indexOf(b[0])); else { sorted.sort((a, b) => b[1] - a[1]); sorted = sorted.slice(0, 8); }
       const labels = sorted.map(s => s[0]); const dataVals = sorted.map(s => s[1] / 1e8);
-      const bgColors = labels.map((k, i) => (portfolioMode === 'categoryReclassified' && catColor(k)) ? catColor(k) : colorPaletteList[i % colorPaletteList.length]);
+      const bgColors = labels.map((k, i) => (portfolioMode === 'categoryReclassified' && catColor(k)) ? catColor(k) : seriesColor(i));
 
       const totalSum = dataVals.reduce((a,b) => a+b, 0) || 1;
       chartInstances.portfolio = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ // 세그먼트 분리는 라운드/spacing이 아니라 '카드 배경색 테두리'로 낸다.
@@ -92,7 +92,7 @@
 
       chartInstances.advBucket = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill('#4795FF', '#7B6BF0'), yAxisID: 'y', borderRadius: 6, order: 2,
+        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), yAxisID: 'y', borderRadius: 6, order: 2,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v + '개' : '' }
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: CH('#FFB547'), backgroundColor: ddAreaFill('#FFB547'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: CH('#FFB547'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }

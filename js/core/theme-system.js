@@ -49,9 +49,65 @@
     Chart.defaults.set('plugins.datalabels', { display: false });
     function dataLabelTextColor() { return currentTheme === 'light' ? '#191F28' : '#F2F4F6'; }
 
+    // 차트 채움용 톤 조정 — **채도는 그대로 두고 명도만 올린다.**
+    //
+    // HIG 시스템 컬러는 버튼·아이콘 같은 '작은 강조'를 전제로 만든 값이라, 그대로 차트에 쓰면
+    // 화면의 30~40%가 만채도로 덮여 눈이 피로하다.
+    //
+    // 흰색을 섞으면(tint) 채도까지 같이 떨어져 탁해진다. 실제로 편하게 읽히는 톤을 뜯어보면
+    // 채도는 그대로이고 명도만 높다 — 예: #007AFF(S100 L50) → #4795FF(S100 L64).
+    // 그래서 HSL에서 L만 올린다. 색이 연해지는 게 아니라 밝아진다.
+    function ddLift(hex, dL) {
+      const h = String(hex).replace('#', '');
+      const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+      let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let hue = 0, sat = 0; const lum = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        sat = lum > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0));
+        else if (max === g) hue = (b - r) / d + 2;
+        else hue = (r - g) / d + 4;
+        hue /= 6;
+      }
+      const L = Math.min(0.92, lum + dL);
+      const hk = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p; };
+      let R, G, B;
+      if (sat === 0) { R = G = B = L; }
+      else {
+        const q = L < 0.5 ? L * (1 + sat) : L + sat - L * sat, pp = 2 * L - q;
+        R = hk(pp, q, hue + 1/3); G = hk(pp, q, hue); B = hk(pp, q, hue - 1/3);
+      }
+      // **hex로 돌려줘야 한다.** ddMixHex/ddHexAlpha가 hex만 파싱하므로 rgb() 문자열을 주면
+      // parseInt가 NaN을 내고 막대가 검게 칠해진다.
+      const to = (v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
+      return `#${to(R)}${to(G)}${to(B)}`.toUpperCase();
+    }
+    // 라이트에서만 적용한다. 어두운 배경은 색을 흡수해 같은 채도라도 덜 부담스럽고,
+    // 오히려 명도를 올리면 더 튄다.
+    function ddSoften(hex) {
+      return currentTheme === 'light' ? ddLift(hex, 0.14) : hex;
+    }
+
+    // 5대분류가 아닌 계열(방송/디지털, 채널, 포트폴리오 '기타' 모드 등)에 쓰는 서수 팔레트.
+    // 예전에는 Tailwind 10색이라 화면 안에서 혼자 다른 팔레트였다. HIG 시스템 컬러로 통일하고,
+    // 계열색과 마찬가지로 테마별 변형을 쓴다.
+    const SERIES_PALETTE_LIGHT = ['#007AFF','#FF9500','#34C759','#9450D8','#30B0C7','#FF2D55','#5856D6','#FFCC00','#A2845E','#8E8E93'];
+    const SERIES_PALETTE_DARK  = ['#0A84FF','#FF9F0A','#30D158','#A970E8','#40C8E0','#FF375F','#5E5CE6','#FFD60A','#AC8E68','#98989D'];
+    function seriesColor(i) {
+      const pal = currentTheme === 'light' ? SERIES_PALETTE_LIGHT : SERIES_PALETTE_DARK;
+      return ddSoften(pal[i % pal.length]);
+    }
+
     // 5대분류 계열색을 현재 테마에 맞춰 돌려준다. 색상(hue)은 두 테마 동일, 명도만 다르다.
     function catColor(name) {
-      return (currentTheme === 'light' ? categoryColorsLight : categoryColorsDark)[name];
+      const hex = (currentTheme === 'light' ? categoryColorsLight : categoryColorsDark)[name];
+      return hex && ddSoften(hex);
     }
 
     // 값축 그리드 — 아주 흐리게. 막대마다 합계 라벨이 이미 붙어 있어 촘촘한 눈금은 대부분 중복이고,
@@ -153,12 +209,20 @@
     function ddStackTopRadius(horizontal, r) {
       const radius = r === undefined ? 5 : r;
       return (ctx) => {
-        const i = ctx.dataIndex, sets = ctx.chart.data.datasets;
+        const i = ctx.dataIndex, chart = ctx.chart, sets = chart.data.datasets;
+        // '값이 0보다 큰 마지막 계열'로 판정하면 안 된다. 기타광고처럼 전체의 0.1% 수준인 계열은
+        // 0은 아니지만 1px도 안 되는 조각이라, 보이지 않는 그 조각이 라운드를 가져가고
+        // 정작 눈에 보이는 맨 위 계열(예: 인포머셜)은 각진 채로 남는다.
+        // 그래서 '라운드가 실제로 그려질 만큼 두꺼운 마지막 계열'을 찾는다.
+        const meta = chart.getDatasetMeta(ctx.datasetIndex);
+        const scale = meta && (horizontal ? chart.scales[meta.xAxisID] : chart.scales[meta.yAxisID]);
+        const thickEnough = (v) => {
+          if (typeof v !== 'number' || v <= 0) return false;
+          if (!scale) return true; // 스케일 준비 전에는 값 기준으로 폴백
+          return Math.abs(scale.getPixelForValue(v) - scale.getPixelForValue(0)) >= radius;
+        };
         let last = -1;
-        for (let d = 0; d < sets.length; d++) {
-          const v = sets[d].data[i];
-          if (typeof v === 'number' && v > 0) last = d;
-        }
+        for (let d = 0; d < sets.length; d++) if (thickEnough(sets[d].data[i])) last = d;
         if (ctx.datasetIndex !== last) return 0;
         return horizontal
           ? { topRight: radius, bottomRight: radius }
