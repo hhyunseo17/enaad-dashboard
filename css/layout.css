@@ -33,7 +33,9 @@
     }
 
     .brand-group { display: flex; align-items: center; gap: 14px; }
-    .brand-logo img { height: 26px; object-fit: contain; }
+    /* 로고는 테마별 파일을 쓴다(반전 금지 — CI 규정). 기본은 다크용 화이트. */
+    .brand-logo img { height: 26px; object-fit: contain; display: block; }
+    .brand-logo .logo-on-light { display: none; }
     .brand-title h1.title-pill { font-size: 15px; font-weight: 600; color: var(--chip-fg); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; background: var(--chip-bg); border: 1px solid var(--chip-border); border-radius: var(--radius-full); padding: 7px 16px; }
     .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
@@ -57,7 +59,14 @@
 
     .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    /* 1행(기간)은 좌: 기간 / 우: 전역 컨트롤로 나눈다 */
+    .filter-row-primary { justify-content: space-between; }
+    .filter-group-period { flex-wrap: wrap; row-gap: 8px; }
+    .filter-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    /* 2행(상세 조건)은 접히는 영역이라 위에 경계선 하나로 구분 */
+    .filter-row-conditions { padding-top: 10px; border-top: 1px solid var(--border-default); row-gap: 10px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
+    .checkbox-item-all { font-weight: 600; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
     .filter-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
 
@@ -91,6 +100,7 @@
        '의미 있는 색'과 '장식적인 색'이 경쟁하면 읽는 사람이 초록 카드를 기타광고와 연결짓게 된다.
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
+    .text-input { width: 150px; }
     .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 

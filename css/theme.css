@@ -222,8 +222,8 @@
     /* 라이트에서 남는 예외 두 가지.
        (1) 로고 파일이 흰색 하나뿐이라 밝은 헤더에서 사라진다 — 단색 워드마크라 검게 반전한다.
        (2) 히어로 카드의 진한 그라데이션 위 글자는 항상 흰색이어야 한다. */
-    html[data-theme="light"] .brand-logo img { filter: brightness(0); }
-    html[data-theme="light"] .brand-logo span { color: var(--text-primary) !important; }
+    html[data-theme="light"] .logo-on-dark { display: none; }
+    html[data-theme="light"] .logo-on-light { display: block; }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 

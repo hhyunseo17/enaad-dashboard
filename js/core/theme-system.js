@@ -178,7 +178,7 @@
       const btn = document.getElementById('filterBarToggleBtn');
       const isHidden = el.style.display === 'none';
       el.style.display = isHidden ? '' : 'none';
-      btn.innerText = isHidden ? '▲ 조회영역 접기' : '▼ 조회영역 펼치기';
+      btn.innerText = isHidden ? '▲ 상세조건' : '▼ 상세조건';
     }
 
     function toggleTheme() {

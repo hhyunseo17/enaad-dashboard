@@ -45,8 +45,10 @@
     <header class="header-bar">
       <div class="brand-group">
         <div class="brand-logo" onclick="returnToMainDashboard()" style="cursor: pointer;" title="메인으로 이동">
-          <img id="logoHeader" src="logo-white.png" alt="KT ENA" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <span style="display: none; font-weight: 800; font-size: 16px; color: #FFFFFF; letter-spacing: -0.02em;">KT ENA</span>
+          <!-- CI는 배경 밝기에 따라 정해진 파일을 쓴다. CSS filter로 반전하면 브랜드 규정 위반이다.
+               라이트=검정 kt + 빨강 ENA(정식 컬러), 다크=화이트 단색. -->
+          <img class="logo-on-light" src="logo-color.png" alt="KT ENA" onerror="this.style.display='none';">
+          <img class="logo-on-dark" src="logo-white.png" alt="KT ENA" onerror="this.style.display='none';">
         </div>
         <div class="brand-title">
           <h1 id="headerMainTitle" class="title-pill">광고사업본부 매출 분석 대시보드</h1>
@@ -86,28 +88,12 @@
 
     <!-- Zone 1: Global Filters Bar -->
     <section class="filter-bar">
-      <div class="filter-row" style="justify-content: space-between;">
-        <div class="filter-group">
-          <span class="filter-label">매출 기준</span>
-          <div class="revenue-basis-toggle">
-            <button class="revenue-basis-btn active" id="btnBasisPerformance" onclick="setRevenueBasis('performance')">취급고</button>
-            <button class="revenue-basis-btn" id="btnBasisAccounting" onclick="setRevenueBasis('accounting')">회계</button>
-          </div>
-        </div>
-        <button class="btn btn-sm" onclick="resetFilters()">🔄 필터 초기화</button>
-      </div>
-
-      <div id="filterBarCollapsible" style="display: flex; flex-direction: column; gap: 12px;">
-      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
-        <div class="filter-group">
-          <span class="filter-label">연도 선택</span>
+      <!-- 1행: 기간(연도+월). 가장 자주 쓰는 필터라 접어도 남는다.
+           연도와 월은 하나의 개념이므로 두 줄로 나누지 않고 한 줄에 둔다. -->
+      <div class="filter-row filter-row-primary">
+        <div class="filter-group filter-group-period">
+          <span class="filter-label">기간</span>
           <div id="yearPills" class="pills-group"></div>
-        </div>
-      </div>
-
-      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
-        <div class="filter-group">
-          <span class="filter-label">월 선택</span>
           <div id="monthPills" class="pills-group">
             <button class="pill-btn active" data-month="all">전체</button>
             <button class="pill-btn" data-month="1">1월</button>
@@ -124,9 +110,20 @@
             <button class="pill-btn" data-month="12">12월</button>
           </div>
         </div>
+
+        <!-- 화면 전체에 걸리는 컨트롤은 오른쪽에 모은다 -->
+        <div class="filter-actions">
+          <div class="revenue-basis-toggle" title="매출 기준">
+            <button class="revenue-basis-btn active" id="btnBasisPerformance" onclick="setRevenueBasis('performance')">취급고</button>
+            <button class="revenue-basis-btn" id="btnBasisAccounting" onclick="setRevenueBasis('accounting')">회계</button>
+          </div>
+          <button class="btn btn-sm" onclick="resetFilters()" title="필터 초기화">초기화</button>
+          <button id="filterBarToggleBtn" class="btn btn-sm" onclick="toggleFilterBar()">▲ 상세조건</button>
+        </div>
       </div>
 
-      <div class="filter-row" style="padding-top: 6px; border-top: 1px solid var(--border-strong);">
+      <!-- 2행: 상세 조건. 자주 바꾸지 않으므로 접을 수 있다. -->
+      <div id="filterBarCollapsible" class="filter-row filter-row-conditions">
         <div class="filter-group">
           <span class="filter-label">부서</span>
           <div class="multi-dropdown" id="dropdownDept">
@@ -134,7 +131,7 @@
               <span id="labelDept">전체 부서</span> ▾
             </button>
             <div class="multi-dropdown-panel" id="panelDept">
-              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+              <label class="checkbox-item checkbox-item-all">
                 <input type="checkbox" id="checkAllDept" onchange="toggleAllCheckboxes('Dept', this)">전체선택
               </label>
               <div id="listDeptCheckboxes" class="checkbox-list"></div>
@@ -149,7 +146,7 @@
               <span id="labelChannel">전체 채널</span> ▾
             </button>
             <div class="multi-dropdown-panel" id="panelChannel">
-              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+              <label class="checkbox-item checkbox-item-all">
                 <input type="checkbox" id="checkAllChannel" onchange="toggleAllCheckboxes('Channel', this)">전체선택
               </label>
               <div id="listChannelCheckboxes" class="checkbox-list"></div>
@@ -164,7 +161,7 @@
               <span id="labelBroad">전체 구분</span> ▾
             </button>
             <div class="multi-dropdown-panel" id="panelBroad">
-              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+              <label class="checkbox-item checkbox-item-all">
                 <input type="checkbox" id="checkAllBroad" onchange="toggleAllCheckboxes('Broad', this)">전체선택
               </label>
               <div id="listBroadCheckboxes" class="checkbox-list"></div>
@@ -173,13 +170,13 @@
         </div>
 
         <div class="filter-group">
-          <span class="filter-label">매출 대분류</span>
+          <span class="filter-label">대분류</span>
           <div class="multi-dropdown" id="dropdownCategory">
             <button class="multi-dropdown-btn" onclick="toggleMultiDropdown('Category')">
               <span id="labelCategory">전체 대분류</span> ▾
             </button>
             <div class="multi-dropdown-panel" id="panelCategory">
-              <label class="checkbox-item" style="font-weight: 700; border-bottom: 1px solid var(--border-strong); padding-bottom: 6px;">
+              <label class="checkbox-item checkbox-item-all">
                 <input type="checkbox" id="checkAllCategory" onchange="toggleAllCheckboxes('Category', this)">전체선택
               </label>
               <div id="listCategoryCheckboxes" class="checkbox-list"></div>
@@ -188,19 +185,14 @@
         </div>
 
         <div class="filter-group">
-          <span class="filter-label">대행사 검색</span>
-          <input type="text" id="inputAgency" class="text-input" placeholder="대행사명..." style="width: 120px;">
+          <span class="filter-label">대행사</span>
+          <input type="text" id="inputAgency" class="text-input" placeholder="대행사명 검색">
         </div>
 
         <div class="filter-group">
-          <span class="filter-label">광고주 검색</span>
-          <input type="text" id="inputAdvertiser" class="text-input" placeholder="광고주명..." style="width: 120px;">
+          <span class="filter-label">광고주</span>
+          <input type="text" id="inputAdvertiser" class="text-input" placeholder="광고주명 검색">
         </div>
-      </div>
-      </div>
-
-      <div style="display: flex; justify-content: center; padding-top: 4px; border-top: 1px solid var(--border-strong);">
-        <button id="filterBarToggleBtn" class="btn btn-sm" onclick="toggleFilterBar()" style="width: 100%;">▲ 조회영역 접기</button>
       </div>
     </section>
 
