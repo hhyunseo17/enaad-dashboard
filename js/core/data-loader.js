@@ -38,6 +38,7 @@
       revenueBasisMode = mode;
       document.getElementById('btnBasisPerformance').classList.toggle('active', mode === 'performance');
       document.getElementById('btnBasisAccounting').classList.toggle('active', mode === 'accounting');
+      updateMonthPillAvailability(); // 월 pill의 활성 판정은 매출기준에 따라 달라진다 (filters.js 참고)
       applyFilters();
     }
     function setChannelScale(mode) {

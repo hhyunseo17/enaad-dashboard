@@ -131,19 +131,14 @@
         selectedYears = defaultYear === 'all' ? [] : [defaultYear];
       }
 
-      if (selectedYears.length === 0) container.querySelector('[data-year="all"]').classList.add('active');
-      else { selectedYears.forEach(y => { const btn = container.querySelector(`[data-year="${y}"]`); if (btn) btn.classList.add('active'); }); }
+      syncYearPillActive();
 
       container.querySelectorAll('.pill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const val = e.target.getAttribute('data-year');
-          if (val === 'all') { container.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); selectedYears = []; } 
-          else {
-            container.querySelector('[data-year="all"]').classList.remove('active'); e.target.classList.toggle('active');
-            const activeBtns = container.querySelectorAll('.pill-btn:not([data-year="all"]).active');
-            if (activeBtns.length === 0) { container.querySelector('[data-year="all"]').classList.add('active'); selectedYears = []; } 
-            else { selectedYears = Array.from(activeBtns).map(b => parseInt(b.getAttribute('data-year'))); }
-          }
+          const val = e.currentTarget.getAttribute('data-year');
+          if (val === 'all') selectedYears = [];
+          else selectedYears = nextPillSelection(selectedYears, parseInt(val), isAdditiveClick(e));
+          syncYearPillActive();
           updateMonthPillAvailability();
           updateFilterCheckboxes(false); applyFilters();
         });
@@ -151,18 +146,50 @@
       updateMonthPillAvailability();
     }
 
+    // 연/월 pill의 선택 규칙 — **클릭은 교체, 재클릭은 해제, Ctrl(⌘)/Shift+클릭은 가감**.
+    //
+    // 예전에는 가산식이었다. 기본값이 당해 연도 단독 선택인데 다른 연도를 누르면 교체가 아니라
+    // 합산이라(2026 → 2026+2025), 연도를 '바꾸려던' 조작이 매번 두 해를 더한 결과를 냈다.
+    // 게다가 이 대시보드의 간판 기능은 모두 단일 연·월을 전제로 한다 — 업프론트 피벗, 전월대비
+    // 증감(MoM), 대행사 전년·전월 비교, KPI 전년 동기 대비가 전부 selectedYears.length === 1을
+    // 요구하므로, 연도를 하나 더 누른 순간 아무 경고 없이 사라졌다. 규칙을 기능에 맞춘다.
+    //
+    // 복수 선택이 사라지는 것은 아니다. Ctrl/⌘/Shift를 누른 채 클릭하면 기존대로 가감식이며,
+    // 발견되기 어려우므로 필터바에 안내를 함께 노출한다(dashboard.html).
+    function isAdditiveClick(e) { return e.ctrlKey || e.metaKey || e.shiftKey; }
+
+    function nextPillSelection(current, value, additive) {
+      if (additive) return current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      // 단일 선택. 이미 그 값만 보고 있었다면 해제해 "전체"로 돌아간다.
+      return (current.length === 1 && current[0] === value) ? [] : [value];
+    }
+
+    // 상태 → 화면. pill의 active는 selectedYears에서만 나온다(체크박스 필터와 같은 원칙).
+    function syncYearPillActive() {
+      const container = document.getElementById('yearPills');
+      if (!container) return;
+      container.querySelectorAll('.pill-btn').forEach(btn => {
+        const val = btn.getAttribute('data-year');
+        btn.classList.toggle('active', val === 'all' ? selectedYears.length === 0 : selectedYears.includes(parseInt(val)));
+      });
+    }
+
     function updateMonthPillAvailability() {
       const container = document.getElementById('monthPills');
       if (!container) return;
       const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
+      // 활성 판정은 **지금 적용 중인 매출기준과 같은 기준으로** 센다. 예전에는 rawData 전체를
+      // amount > 0으로만 훑어서, 취급고로 보는 중에도 회계조정만 있는 달이 열려 있었고
+      // (누르면 0건) 반대로 마이너스 실적만 있는 달은 볼 수 없었다.
       const availableMonths = new Set();
-      rawData.forEach(r => { if (scopeYears.includes(r.year) && r.amount > 0) availableMonths.add(r.month); });
+      rawData.forEach(r => {
+        if (!scopeYears.includes(r.year)) return;
+        if (revenueBasisMode === 'performance' && r.revenueBasis !== '실적') return;
+        if (r.amount !== 0) availableMonths.add(r.month);
+      });
 
       // 기존에 특정 월이 선택돼 있었다면, 더 이상 데이터가 없는 월은 선택에서 제외
       if (selectedMonths.length > 0) selectedMonths = selectedMonths.filter(m => availableMonths.has(m));
-      const isImplicitAll = selectedMonths.length === 0; // "전체"를 눌러서 아무 월도 명시 선택 안 한 상태
-      // 개별 월을 하나씩 눌러서 결국 선택 가능한 월을 전부 골랐다면, 의미상 "전체"와 동일하므로 같이 강조
-      const isExplicitAll = !isImplicitAll && availableMonths.size > 0 && [...availableMonths].every(m => selectedMonths.includes(m));
 
       container.querySelectorAll('.pill-btn').forEach(btn => {
         const val = btn.getAttribute('data-month');
@@ -171,31 +198,25 @@
         const isAvailable = availableMonths.has(m);
         btn.disabled = !isAvailable;
         btn.classList.toggle('disabled', !isAvailable);
-        if (!isAvailable) { btn.classList.remove('active'); return; }
-        // "전체" 상태에서는 개별 월을 켜지 않는다. 바로 위 연도 pill과 동일한 규칙이다 —
-        // 전체가 켜져 있고 개별은 꺼져 있다가, 하나를 누르면 그 달만 선택된다(가산식).
-        btn.classList.toggle('active', selectedMonths.includes(m));
+        btn.classList.toggle('active', isAvailable && selectedMonths.includes(m));
       });
 
+      // "전체"는 아무 월도 명시 선택하지 않았을 때만 켠다. 예전에는 개별 월을 눌러 선택 가능한
+      // 달을 전부 고른 경우에도 함께 강조했는데(isExplicitAll), 그러면 화면상 두 상태가 구분되지
+      // 않았다. 게다가 그 상태에서 연도를 넓히면 강조가 "전체"에서 개별 월로 옮겨가, 전체로 보고
+      // 있다고 생각한 사용자에게는 몇 달치만 남은 것처럼 보였다.
       const allBtn = container.querySelector('[data-month="all"]');
-      if (allBtn) allBtn.classList.toggle('active', isImplicitAll || isExplicitAll);
+      if (allBtn) allBtn.classList.toggle('active', selectedMonths.length === 0);
     }
 
     function setupMonthPills() {
       const container = document.getElementById('monthPills');
       container.querySelectorAll('.pill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          if (e.target.disabled) return;
-          const val = e.target.getAttribute('data-month');
-          if (val === 'all') { selectedMonths = []; }
-          else {
-            // 가산식: 누르면 그 달이 선택에 들어오고, 다시 누르면 빠진다. 전부 빠지면 "전체"로 돌아간다.
-            // (예전에는 "전체" 상태에서 개별 월을 누르면 그 달만 빼는 감산식이었다. 개별 월이 전부
-            //  켜져 보이는 화면과는 맞았지만, 바로 위 연도 pill과 정반대라 6월만 보려면 7번을 눌러야 했다.)
-            const m = parseInt(val);
-            if (selectedMonths.includes(m)) selectedMonths = selectedMonths.filter(x => x !== m);
-            else selectedMonths = [...selectedMonths, m];
-          }
+          if (e.currentTarget.disabled) return;
+          const val = e.currentTarget.getAttribute('data-month');
+          if (val === 'all') selectedMonths = [];
+          else selectedMonths = nextPillSelection(selectedMonths, parseInt(val), isAdditiveClick(e));
           updateMonthPillAvailability();
           updateFilterCheckboxes(false); applyFilters();
         });
@@ -249,14 +270,11 @@
       revenueBasisMode = 'performance';
       document.getElementById('btnBasisPerformance').classList.add('active'); document.getElementById('btnBasisAccounting').classList.remove('active');
 
-      const yContainer = document.getElementById('yearPills');
-      yContainer.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
       const years = [...new Set(rawData.map(r => r.year))];
       const currentYear = new Date().getFullYear();
       let defaultYear = years.includes(currentYear) ? currentYear : (years.length > 0 ? Math.max(...years) : 'all');
-      
-      if (defaultYear === 'all') { selectedYears = []; yContainer.querySelector('[data-year="all"]').classList.add('active'); } 
-      else { selectedYears = [defaultYear]; const targetBtn = yContainer.querySelector(`[data-year="${defaultYear}"]`); if (targetBtn) targetBtn.classList.add('active'); }
+      selectedYears = defaultYear === 'all' ? [] : [defaultYear];
+      syncYearPillActive();
 
       // 월 pill의 활성/비활성은 되돌린 연도 기준으로 **다시 계산해야** 한다. 예전에는 active 클래스만
       // 손으로 지우고 끝내서, 초기화 직후 데이터가 없는 월(예: 아직 오지 않은 하반기)이 눌리는 상태로

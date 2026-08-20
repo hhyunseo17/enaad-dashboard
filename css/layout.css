@@ -74,6 +74,10 @@
     .checkbox-item-all { font-weight: 500; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
     .filter-label { font-size: 12px; font-weight: 400; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
+    /* pill의 Ctrl+클릭 복수 선택은 발견되기 어려운 조작이라 한 줄 안내를 붙인다. 필터바에서
+       가장 조용해야 할 요소이므로 본문보다 작고 흐리게 두고, 좁은 화면에서는 숨긴다. */
+    .filter-hint { font-size: 11px; color: var(--text-disabled); white-space: nowrap; margin-left: 4px; }
+    @media (max-width: 768px) { .filter-hint { display: none; } }
 
     .multi-dropdown { position: relative; display: inline-block; }
     .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 400; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
