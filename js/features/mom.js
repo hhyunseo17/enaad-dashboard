@@ -62,7 +62,10 @@
         <span>전월비 증감: <strong style="color:${diff >= 0 ? '#4ADE80' : CH('#F87171')};">${diff >= 0 ? '+' : ''}${formatCurrencyKorean(diff)} (${diffRate >= 0 ? '+' : ''}${diffRate.toFixed(1)}%)</strong></span>
       `;
 
-      const momColors = { 신규: '#4ADE80', 증액: '#60A5FA', 유지: '#94A3B8', 감액: '#FBBF24', 중지: '#F87171' };
+      // 신규 → 증액 → 유지 → 감액 → 중지는 "좋음에서 나쁨으로" 가는 순서다.
+      // 예전엔 초록/파랑/회색/노랑/빨강이라 순서가 색에 드러나지 않고 색만 5개 늘었다.
+      // 초록(양) → 회색(중립) → 빨강(음)의 발산형 램프로 바꿔 순서 자체가 읽히게 한다.
+      const momColors = { 신규: CH('#4ADE80'), 증액: CH('#2FA97A'), 유지: CH('#94A3B8'), 감액: CH('#E08A5F'), 중지: CH('#F87171') };
 
       const ctx = document.getElementById('chartMoM').getContext('2d');
       if (chartInstances.mom) chartInstances.mom.destroy();
@@ -82,7 +85,7 @@
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
             tooltip: { callbacks: { label: (ctx) => { const k = orderedKeys[ctx.dataIndex]; const b = buckets[k]; const d = b.currSum - b.prevSum; return `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원 (전월비 ${d >= 0 ? '+' : ''}${(d/1e8).toFixed(2)}억)`; } } }
           },
           scales: { y: { grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } }, x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '600' } }, grid: { display: false } } }

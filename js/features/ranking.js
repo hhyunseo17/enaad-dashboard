@@ -26,7 +26,7 @@
         }));
       }
 
-      chartInstances.rankAgency = new Chart(ctx, { type: 'bar', data: { labels: chartLabels, datasets: datasets }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, grace: '20%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } }, y: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', weight: '600' } }, grid: { display: false } } } } });
+      chartInstances.rankAgency = new Chart(ctx, { type: 'bar', data: { labels: chartLabels, datasets: datasets }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, grace: '20%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } }, y: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', weight: '600' } }, grid: { display: false } } } } });
     }
 
     function renderRankAdvertiserChart() {
@@ -37,7 +37,7 @@
         datalabels: { display: (ctx) => cat === subCats[subCats.length - 1], anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
       }));
-      chartInstances.rankAdvertiser = new Chart(ctx, { type: 'bar', data: { labels: sortedAdvertisers, datasets: datasets }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, grace: '20%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } }, y: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', weight: '600' } }, grid: { display: false } } } } });
+      chartInstances.rankAdvertiser = new Chart(ctx, { type: 'bar', data: { labels: sortedAdvertisers, datasets: datasets }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, grace: '20%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } }, y: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', weight: '600' } }, grid: { display: false } } } } });
     }
 
     function renderDeptChart() {
@@ -52,7 +52,7 @@
         datalabels: { display: (ctx) => idx === subKeys.length - 1, anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
       }));
-      chartInstances.dept = new Chart(ctx, { type: 'bar', data: { labels: topDepts, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6') }, grid: { color: CH('#21232A') } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } } } });
+      chartInstances.dept = new Chart(ctx, { type: 'bar', data: { labels: topDepts, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } } } });
     }
 
     function renderManagerChart() {
@@ -64,7 +64,7 @@
         datalabels: { display: (ctx) => idx === subKeys.length - 1, anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
       }));
-      chartInstances.manager = new Chart(ctx, { type: 'bar', data: { labels: topManagers, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6') }, grid: { color: CH('#21232A') } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } } } });
+      chartInstances.manager = new Chart(ctx, { type: 'bar', data: { labels: topManagers, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, plugins: { legend: { position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } } } });
     }
 
     // ==========================================================================

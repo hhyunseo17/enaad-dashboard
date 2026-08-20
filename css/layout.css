@@ -70,25 +70,16 @@
     .pill-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.08); }
     .pill-btn.active { background: var(--primary-blue); color: #FFFFFF; font-weight: 600; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
-    .kpi-card.kpi-accent-green { border-left-color: var(--accent-green); }
-    .kpi-card.kpi-accent-purple { border-left-color: var(--accent-purple); }
-    .kpi-card.kpi-accent-orange { border-left-color: var(--accent-orange); }
-    .kpi-card.kpi-accent-pink { border-left-color: var(--accent-pink); }
-    .kpi-card.kpi-accent-teal { border-left-color: var(--accent-teal); }
-    .kpi-card.kpi-accent-green .kpi-icon { background: var(--accent-green-bg); color: var(--accent-green); }
-    .kpi-card.kpi-accent-purple .kpi-icon { background: rgba(123, 97, 255, 0.15); color: var(--accent-purple); }
-    .kpi-card.kpi-accent-orange .kpi-icon { background: var(--accent-orange-bg); color: var(--accent-orange); }
-    .kpi-card.kpi-accent-pink .kpi-icon { background: rgba(219, 39, 119, 0.15); color: var(--accent-pink); }
-    .kpi-card.kpi-accent-teal .kpi-icon { background: var(--accent-teal-bg); color: var(--accent-teal); }
+    /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
+       있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
+       '의미 있는 색'과 '장식적인 색'이 경쟁하면 읽는 사람이 초록 카드를 기타광고와 연결짓게 된다.
+       카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
     .select-input, .text-input { background: #212630; border: 1px solid #3A3F4C; border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: #FFFFFF; font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: #282D3A; }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-left: 3px solid var(--primary-blue); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; position: relative; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
-    .kpi-card.kpi-accent-purple.clickable:hover { border-color: var(--accent-purple); box-shadow: 0 0 0 1px var(--accent-purple); }
-    .kpi-card.kpi-accent-orange.clickable:hover { border-color: var(--accent-orange); box-shadow: 0 0 0 1px var(--accent-orange); }
-    .kpi-card.kpi-accent-pink.clickable:hover { border-color: var(--accent-pink); box-shadow: 0 0 0 1px var(--accent-pink); }
     .kpi-card.clickable { cursor: pointer; }
     .kpi-card.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .kpi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }

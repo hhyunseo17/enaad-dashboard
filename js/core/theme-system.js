@@ -9,7 +9,9 @@
     const CHART_COLOR_MAP = {
       '#21232A': '#E5E8EB', '#8B95A1': '#4E5968', '#B0B8C1': '#4E5968', '#F2F4F6': '#191F28',
       '#3A4258': '#D1D6DB', '#6B7280': '#8B95A1', '#60A5FA': '#0064FF', '#94A3B8': '#8B95A1',
-      '#F87171': '#FF4040', '#FBBF24': '#FF9500'
+      '#F87171': '#FF4040', '#FBBF24': '#FF9500',
+      // MoM 발산형 램프(신규→중지)용. 라이트 배경에서는 채도를 낮추고 명도를 떨어뜨린다.
+      '#4ADE80': '#00A85A', '#2FA97A': '#0E7A55', '#E08A5F': '#C25A28'
     };
     function CH(hex) { return currentTheme === 'light' ? (CHART_COLOR_MAP[hex] || hex) : hex; }
     Chart.register(ChartDataLabels);

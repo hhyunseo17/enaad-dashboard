@@ -222,17 +222,18 @@
         type: 'bar',
         data: { labels: labels, datasets: [
           // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
-          { label: '목표', data: targetVals, backgroundColor: chartColors.blue, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          // 색 역할 규칙: 기준(목표)은 중립 회색, 현재(실적)는 강조색. 두 목표 차트가 동일 규칙을 쓴다.
+          { label: '목표', data: targetVals, backgroundColor: CH('#3A4258'), borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.orange, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: chartColors.orange, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          { label: '실적', data: actualVals, backgroundColor: categoryColors['일반광고'], borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
                 afterBody: (t) => {
                   const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];
@@ -298,19 +299,19 @@
       chartInstances.goalBreakdown = new Chart(ctx, {
         type: 'bar',
         data: { labels: groups, datasets: [
-          // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치. 월별 추이 차트(파랑/주황)와
-          // 구분되도록 이 차트는 회색/초록 유지.
-          { label: '목표', data: targetVals, backgroundColor: '#8B95A1', borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
+          // 월별 목표 차트와 같은 색 규칙을 쓴다 — 예전엔 두 차트가 서로 다른 색 쌍(파랑/주황 vs 회색/초록)이었다.
+          { label: '목표', data: targetVals, backgroundColor: CH('#3A4258'), borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: chartColors.green, borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: chartColors.green, font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          { label: '실적', data: actualVals, backgroundColor: categoryColors['일반광고'], borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `${groupLabelText}: ${t[0].label}`, label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원`,
                 afterBody: (t) => {
                   const idx = t[0].dataIndex; const actual = actualVals[idx]; const target = targetVals[idx];

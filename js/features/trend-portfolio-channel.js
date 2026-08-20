@@ -23,7 +23,7 @@
         type: 'bar', data: { labels: sortedMonths, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: () => null, afterBody: (t) => {
                   let mt = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; mt += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); });
                   return [`💰 총 매출: ${mt.toFixed(2)} 억원`, ``, ...bd];
@@ -31,7 +31,7 @@
               }
             }
           },
-          scales: { x: { stacked: true, ticks: { color: CH('#8B95A1') }, grid: { color: CH('#21232A') } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { stacked: true, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
         }
       });
     }
@@ -73,7 +73,7 @@
         type: 'bar', data: { labels: labels, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
           scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { stacked: true, type: channelScaleMode, grace: '15%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { color: CH('#21232A') } } }
         }
       });
@@ -94,7 +94,7 @@
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: '#FFB547', backgroundColor: '#FFB547', borderWidth: 2, pointRadius: 4, yAxisID: 'y1', order: 1,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         } ] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { family: 'Pretendard', size: 13, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), stepSize: 1 }, grid: { color: CH('#21232A') } }, y1: { type: 'linear', position: 'right', grace: '25%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { drawOnChartArea: false } } } }
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: { type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), stepSize: 1 }, grid: { color: CH('#21232A') } }, y1: { type: 'linear', position: 'right', grace: '25%', ticks: { color: CH('#8B95A1'), callback: v => v + '억' }, grid: { drawOnChartArea: false } } } }
       });
     }
 
