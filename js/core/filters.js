@@ -140,9 +140,9 @@
         btn.disabled = !isAvailable;
         btn.classList.toggle('disabled', !isAvailable);
         if (!isAvailable) { btn.classList.remove('active'); return; }
-        // "전체" 상태에서는 데이터가 있는 달을 전부 활성으로 보여준다 — 그래야 그중 하나를 클릭했을 때
-        // (아래 setupMonthPills) "여러 달 중 하나를 뺀다"는 동작과 화면이 실제로 맞아떨어진다.
-        btn.classList.toggle('active', isImplicitAll ? true : selectedMonths.includes(m));
+        // "전체" 상태에서는 개별 월을 켜지 않는다. 바로 위 연도 pill과 동일한 규칙이다 —
+        // 전체가 켜져 있고 개별은 꺼져 있다가, 하나를 누르면 그 달만 선택된다(가산식).
+        btn.classList.toggle('active', selectedMonths.includes(m));
       });
 
       const allBtn = container.querySelector('[data-month="all"]');
@@ -157,18 +157,12 @@
           const val = e.target.getAttribute('data-month');
           if (val === 'all') { selectedMonths = []; }
           else {
+            // 가산식: 누르면 그 달이 선택에 들어오고, 다시 누르면 빠진다. 전부 빠지면 "전체"로 돌아간다.
+            // (예전에는 "전체" 상태에서 개별 월을 누르면 그 달만 빼는 감산식이었다. 개별 월이 전부
+            //  켜져 보이는 화면과는 맞았지만, 바로 위 연도 pill과 정반대라 6월만 보려면 7번을 눌러야 했다.)
             const m = parseInt(val);
-            const wasAllMode = selectedMonths.length === 0;
-            if (wasAllMode) {
-              // "전체" 상태에서는 데이터 있는 달이 전부 화면에 켜져 보이므로, 하나를 클릭하면
-              // 그 달만 남기는 게 아니라 "전부 선택된 상태에서 그 달만 뺀다"로 구체화한다.
-              const scopeYears = selectedYears.length > 0 ? selectedYears : [...new Set(rawData.map(r => r.year))];
-              const availableMonths = new Set();
-              rawData.forEach(r => { if (scopeYears.includes(r.year) && r.amount > 0) availableMonths.add(r.month); });
-              selectedMonths = [...availableMonths].filter(x => x !== m);
-            }
-            else if (selectedMonths.includes(m)) { selectedMonths = selectedMonths.filter(x => x !== m); }
-            else { selectedMonths = [...selectedMonths, m]; }
+            if (selectedMonths.includes(m)) selectedMonths = selectedMonths.filter(x => x !== m);
+            else selectedMonths = [...selectedMonths, m];
           }
           updateMonthPillAvailability();
           updateFilterCheckboxes(false); applyFilters();
