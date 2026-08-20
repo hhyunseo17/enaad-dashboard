@@ -21,7 +21,7 @@
       const tree = {};
       targetData.forEach(r => {
         const yr = r.year || 2025; const m = r.month || 1; const amtM = r.amount / 1000000;
-        const l1 = r.categoryOriginal || '기타'; const l2 = r.subCategory || '일반'; const l3 = r.subCategory3 || '일반';
+        const l1 = r.categoryReclassified || '기타'; const l2 = r.subCategory || '일반'; const l3 = r.subCategory3 || '일반';
         if(!tree[l1]) tree[l1] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2]) tree[l1].subs[l2] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2].subs[l3]) tree[l1].subs[l2].subs[l3] = { total:0, yrs:{} };
@@ -92,7 +92,7 @@
       const tree = {};
       targetData.forEach(r => {
         const yr = r.year || 2025; const m = r.month || 1; const amtM = r.amount / 1000000;
-        const l1 = r.dept || '(미지정)'; const l2 = r.categoryOriginal || '기타'; const l3 = r.subCategory || '일반';
+        const l1 = r.dept || '(미지정)'; const l2 = r.categoryReclassified || '기타'; const l3 = r.subCategory || '일반';
         if(!tree[l1]) tree[l1] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2]) tree[l1].subs[l2] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2].subs[l3]) tree[l1].subs[l2].subs[l3] = { total:0, yrs:{} };
@@ -165,7 +165,7 @@
       const tree = {};
       targetData.forEach(r => {
         const yr = r.year || 2025; const m = r.month || 1; const amtM = r.amount / 1000000;
-        const l1 = r.dept || '(미지정)'; const l2 = r.manager || '(미지정)'; const l3 = r.categoryOriginal || '기타'; const l4 = r.advertiser || '(미지정)'; const l5 = r.channel || '(미지정)';
+        const l1 = r.dept || '(미지정)'; const l2 = r.manager || '(미지정)'; const l3 = r.categoryReclassified || '기타'; const l4 = r.advertiser || '(미지정)'; const l5 = r.channel || '(미지정)';
         if(!tree[l1]) tree[l1] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2]) tree[l1].subs[l2] = { total:0, yrs:{}, subs:{} };
         if(!tree[l1].subs[l2].subs[l3]) tree[l1].subs[l2].subs[l3] = { total:0, yrs:{}, subs:{} };
