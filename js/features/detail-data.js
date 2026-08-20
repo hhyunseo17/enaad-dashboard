@@ -7,13 +7,16 @@
       { key: 'year', label: '연' }, { key: 'month', label: '귀속월' },
       { key: 'dept', label: '부서' }, { key: 'manager', label: '담당자' },
       { key: 'advertiser', label: '광고주' }, { key: 'agency', label: '대행사' }, { key: 'agencyGroup', label: '대행사그룹' },
-      { key: 'categoryOriginal', label: '원본대분류' },
+      { key: 'categoryReclassified', label: '대분류' },
       { key: 'subCategory', label: '중분류' }, { key: 'subCategory3', label: '소분류' },
       { key: 'channel', label: '채널' }, { key: 'industry', label: '업종' }, { key: 'broadDigital', label: '방송/디지털' },
       { key: 'revenueBasis', label: '회계계정' }, { key: 'isUpfront', label: '업프론트여부' },
       { key: 'amount', label: '금액' }
     ];
-    // 재분류 대분류(categoryReclassified)는 원본대분류와 나란히 두면 헷갈리므로 이 탭에서는 제외 — 원본대분류만 사용.
+    // 상단 전역 필터바가 이미 연/월/부서/채널/방송·디지털/대분류를 커버하므로, 아래쪽 드래그앤드롭
+    // 필터 well에는 이 필드들을 놓을 수 없다(행/열/값에는 계속 쓸 수 있음) — onDetailDataWellDrop/onDetailDataChipDrop에서 가드.
+    // 대행사/광고주는 전역 검색이 부분일치라 별도로 더 좁히고 싶을 수 있어 필터 well에서도 허용.
+    const DD_FILTER_BAR_COVERED_FIELDS = new Set(['year', 'month', 'dept', 'channel', 'broadDigital', 'categoryReclassified']);
 
     const DETAIL_DATA_AGG_LABELS = { sum: '합계', avg: '평균', count: '개수', distinct: '고유 개수' };
 
@@ -35,9 +38,8 @@
     // 집계 로직
     // ==========================================================================
     function getDetailDataBaseRows() {
-      return rawData.filter(r => {
-        if (r.bonbuRevenueStatus !== '본부매출') return false;
-        if (detailDataRevenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false; // '회계'는 실적+회계조정 전체 통과
+      // 본부매출/매출기준/연·월/부서/채널/방송디지털/대분류/대행사·광고주 검색은 상단 전역 필터바(filteredData)가 이미 적용.
+      return filteredData.filter(r => {
         return detailDataConfig.filters.every(f => {
           if (!f.selected || f.selected.length === 0) return true;
           return f.selected.includes(String(r[f.field]));
@@ -45,17 +47,8 @@
       });
     }
 
-    function setDetailDataRevenueBasisMode(mode) {
-      detailDataRevenueBasisMode = mode;
-      const btnPerf = document.getElementById('ddBtnBasisPerformance');
-      const btnAcct = document.getElementById('ddBtnBasisAccounting');
-      if (btnPerf) btnPerf.classList.toggle('active', mode === 'performance');
-      if (btnAcct) btnAcct.classList.toggle('active', mode === 'accounting');
-      renderDetailDataPivot();
-    }
-
-    function setDetailDataValueAgg(field, agg) {
-      const v = detailDataConfig.values.find(x => x.field === field);
+    function setDetailDataValueAgg(id, agg) {
+      const v = detailDataConfig.values.find(x => x.id === id);
       if (!v) return;
       v.agg = agg;
       renderDetailDataPivot();
@@ -168,7 +161,9 @@
     }
 
     // ==========================================================================
-    // 필드 배치 상태(필터/열/행/값) — 한 필드는 동시에 한 곳에만 존재
+    // 필드 배치 상태(필터/열/행/값)
+    // 필터/행/열 세 영역끼리는 한 필드가 한 곳에만 존재(상호 배타적). 값 영역은 완전히 독립 —
+    // 다른 영역에 이미 쓰인 필드도 값에 자유롭게 추가할 수 있고, 같은 필드를 여러 번(다른 집계로) 넣을 수 있다.
     // ==========================================================================
     function getDetailDataPlacedFields() {
       const s = new Set();
@@ -179,17 +174,23 @@
       return s;
     }
 
-    function removeDetailDataFieldEverywhere(fieldKey) {
+    // 필터/행/열에서만 제거(값은 건드리지 않음) — 이 세 영역 간 이동 시 사용.
+    function removeDetailDataFieldFromStructuralAreas(fieldKey) {
       detailDataConfig.filters = detailDataConfig.filters.filter(f => f.field !== fieldKey);
       detailDataConfig.rows = detailDataConfig.rows.filter(f => f !== fieldKey);
       detailDataConfig.columns = detailDataConfig.columns.filter(f => f !== fieldKey);
-      detailDataConfig.values = detailDataConfig.values.filter(v => v.field !== fieldKey);
       if (detailDataOpenFilterField === fieldKey) detailDataOpenFilterField = null;
+    }
+
+    // 필터/행/열/값 전부에서 제거 — 필드 목록으로 다시 드래그(완전히 빼기)했을 때만 사용.
+    function removeDetailDataFieldEverywhere(fieldKey) {
+      removeDetailDataFieldFromStructuralAreas(fieldKey);
+      detailDataConfig.values = detailDataConfig.values.filter(v => v.field !== fieldKey);
     }
 
     function removeDetailDataField(wellName, key) {
       if (wellName === 'filters') detailDataConfig.filters = detailDataConfig.filters.filter(f => f.field !== key);
-      else if (wellName === 'values') detailDataConfig.values = detailDataConfig.values.filter(v => v.field !== key);
+      else if (wellName === 'values') detailDataConfig.values = detailDataConfig.values.filter(v => v.id !== key);
       else detailDataConfig[wellName] = detailDataConfig[wellName].filter(f => f !== key);
       if (detailDataOpenFilterField === key) detailDataOpenFilterField = null;
       renderDetailDataPivot();
@@ -198,47 +199,87 @@
     // ==========================================================================
     // 드래그앤드롭
     // ==========================================================================
-    function onDetailDataDragStart(ev, fieldKey) {
-      detailDataDragField = fieldKey;
-      ev.dataTransfer.setData('text/plain', fieldKey);
+    function onDetailDataDragStart(ev, fieldKey, valueId) {
+      const payload = { field: fieldKey, valueId: (valueId === undefined ? null : valueId) };
+      detailDataDragPayload = payload;
+      ev.dataTransfer.setData('text/plain', JSON.stringify(payload));
       ev.dataTransfer.effectAllowed = 'move';
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.add('dd-dragging');
     }
     function onDetailDataWellDragOver(ev) { ev.preventDefault(); if (ev.currentTarget.classList) ev.currentTarget.classList.add('drag-over'); }
     function onDetailDataWellDragLeave(ev) { if (ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over'); }
 
+    function getDetailDataDragPayload(ev) {
+      try {
+        const raw = ev.dataTransfer.getData('text/plain');
+        if (raw) return JSON.parse(raw);
+      } catch (e) { /* dragover 단계 등 일부 브라우저에서 getData가 비어있을 수 있음 — 아래 백업 변수로 폴백 */ }
+      return detailDataDragPayload;
+    }
+
+    function makeDetailDataValueEntry(fieldKey) {
+      return { id: detailDataValueIdCounter++, field: fieldKey, agg: fieldKey === 'amount' ? 'sum' : 'count' };
+    }
+
     function onDetailDataWellDrop(ev, wellName) {
       ev.preventDefault();
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over');
-      const fieldKey = ev.dataTransfer.getData('text/plain') || detailDataDragField;
-      detailDataDragField = null;
-      if (!fieldKey) return;
+      const payload = getDetailDataDragPayload(ev);
+      detailDataDragPayload = null;
+      if (!payload || !payload.field) return;
+      const fieldKey = payload.field;
       if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); renderDetailDataPivot(); return; }
       if (fieldKey === 'amount' && wellName !== 'values') return; // amount는 값 well 전용
-      removeDetailDataFieldEverywhere(fieldKey);
-      if (wellName === 'filters') detailDataConfig.filters.push({ field: fieldKey, selected: [] });
-      else if (wellName === 'values') detailDataConfig.values.push({ field: fieldKey, agg: fieldKey === 'amount' ? 'sum' : 'count' });
-      else detailDataConfig[wellName].push(fieldKey);
+      if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
+      if (wellName === 'values') {
+        if (payload.valueId != null) {
+          // 값 영역 내 기존 항목을 빈 공간에 드롭 — 새로 추가하지 않고 맨 뒤로 이동만
+          const arr = detailDataConfig.values;
+          const idx = arr.findIndex(v => v.id === payload.valueId);
+          if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.push(item); }
+        } else {
+          detailDataConfig.values.push(makeDetailDataValueEntry(fieldKey));
+        }
+      } else {
+        removeDetailDataFieldFromStructuralAreas(fieldKey);
+        if (wellName === 'filters') detailDataConfig.filters.push({ field: fieldKey, selected: [] });
+        else detailDataConfig[wellName].push(fieldKey);
+      }
       renderDetailDataPivot();
     }
 
-    function onDetailDataChipDrop(ev, wellName, targetFieldKey) {
+    function onDetailDataChipDrop(ev, wellName, targetKey) {
       ev.preventDefault(); ev.stopPropagation();
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over');
-      const fieldKey = ev.dataTransfer.getData('text/plain') || detailDataDragField;
-      detailDataDragField = null;
-      if (!fieldKey || fieldKey === targetFieldKey) return;
+      const payload = getDetailDataDragPayload(ev);
+      detailDataDragPayload = null;
+      if (!payload || !payload.field) return;
+      const fieldKey = payload.field;
       if (fieldKey === 'amount' && wellName !== 'values') return;
-      removeDetailDataFieldEverywhere(fieldKey);
-      if (wellName === 'filters') {
-        const arr = detailDataConfig.filters; const idx = arr.findIndex(f => f.field === targetFieldKey);
-        arr.splice(idx < 0 ? arr.length : idx, 0, { field: fieldKey, selected: [] });
-      } else if (wellName === 'values') {
-        const arr = detailDataConfig.values; const idx = arr.findIndex(v => v.field === targetFieldKey);
-        arr.splice(idx < 0 ? arr.length : idx, 0, { field: fieldKey, agg: fieldKey === 'amount' ? 'sum' : 'count' });
+      if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
+      if (wellName === 'values') {
+        const arr = detailDataConfig.values;
+        if (payload.valueId != null) {
+          if (payload.valueId === targetKey) return; // 자기 자신 위에 드롭
+          const fromIdx = arr.findIndex(v => v.id === payload.valueId);
+          if (fromIdx < 0) return;
+          const [item] = arr.splice(fromIdx, 1);
+          const targetIdx = arr.findIndex(v => v.id === targetKey);
+          arr.splice(targetIdx < 0 ? arr.length : targetIdx, 0, item);
+        } else {
+          const targetIdx = arr.findIndex(v => v.id === targetKey);
+          arr.splice(targetIdx < 0 ? arr.length : targetIdx, 0, makeDetailDataValueEntry(fieldKey));
+        }
       } else {
-        const arr = detailDataConfig[wellName]; const idx = arr.indexOf(targetFieldKey);
-        arr.splice(idx < 0 ? arr.length : idx, 0, fieldKey);
+        if (fieldKey === targetKey) return;
+        removeDetailDataFieldFromStructuralAreas(fieldKey);
+        if (wellName === 'filters') {
+          const arr = detailDataConfig.filters; const idx = arr.findIndex(f => f.field === targetKey);
+          arr.splice(idx < 0 ? arr.length : idx, 0, { field: fieldKey, selected: [] });
+        } else {
+          const arr = detailDataConfig[wellName]; const idx = arr.indexOf(targetKey);
+          arr.splice(idx < 0 ? arr.length : idx, 0, fieldKey);
+        }
       }
       renderDetailDataPivot();
     }
@@ -268,9 +309,11 @@
     // ==========================================================================
     function renderDetailDataFieldListHtml() {
       const placed = getDetailDataPlacedFields();
-      return DETAIL_DATA_FIELDS.filter(f => !placed.has(f.key)).map(f =>
-        `<div class="dd-field-chip" draggable="true" data-field="${f.key}" ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="this.classList.remove('dd-dragging')">${f.label}</div>`
-      ).join('');
+      return DETAIL_DATA_FIELDS.map(f => {
+        const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
+        const title = DD_FILTER_BAR_COVERED_FIELDS.has(f.key) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
+        return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="this.classList.remove('dd-dragging')">${f.label}</div>`;
+      }).join('');
     }
 
     function renderDetailDataWellFieldChips(wellName, fieldKeys) {
@@ -312,12 +355,14 @@
       return detailDataConfig.values.map(v => {
         const label = detailDataFieldLabel(v.field);
         const opts = getDetailDataAggOptions(v.field);
-        const select = `<select class="dd-agg-select" onclick="event.stopPropagation();" onchange="setDetailDataValueAgg('${ddEsc(v.field)}', this.value)">${opts.map(a =>
+        const select = `<select class="dd-agg-select" onclick="event.stopPropagation();" onchange="setDetailDataValueAgg(${v.id}, this.value)">${opts.map(a =>
           `<option value="${a}" ${a === v.agg ? 'selected' : ''}>${DETAIL_DATA_AGG_LABELS[a]}</option>`
         ).join('')}</select>`;
-        return `<div class="dd-field-chip dd-field-chip-placed dd-field-chip-value" draggable="true" data-field="${v.field}"
-          ondragstart="onDetailDataDragStart(event,'${v.field}')" ondragend="this.classList.remove('dd-dragging')">
-          <span>${label}</span>${select}<span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('values','${v.field}')">✕</span>
+        return `<div class="dd-field-chip dd-field-chip-placed dd-field-chip-value" draggable="true" data-field="${v.field}" data-value-id="${v.id}"
+          ondragstart="onDetailDataDragStart(event,'${v.field}', ${v.id})" ondragend="this.classList.remove('dd-dragging')"
+          ondragover="event.preventDefault(); event.stopPropagation();"
+          ondrop="onDetailDataChipDrop(event,'values', ${v.id})">
+          <span>${label}</span>${select}<span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('values', ${v.id})">✕</span>
         </div>`;
       }).join('');
     }

@@ -212,6 +212,7 @@
       else if (currentView === 'agencyCompPivot') renderAgencyCompPivotTable();
       else if (currentView === 'newAdvPivot') renderNewAdvPivotTable();
       else if (currentView === 'upfrontPivot') renderUpfrontPivotTable();
+      else if (currentView === 'detailData') renderDetailDataPivot();
     }
 
     function resetFilters() {

@@ -821,13 +821,9 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">세부데이터 탐색</h2>
-            <span style="font-size: 12px; color: var(--text-tertiary);">전역 필터바와 무관한 독립 탐색 탭(본부매출 기준 원본 데이터) · 필드를 끌어 배치를 바꾸면 즉시 재집계</span>
+            <span style="font-size: 12px; color: var(--text-tertiary);">상단 전역 필터바(연/월/부서/채널/방송디지털/대분류/매출기준/검색)를 그대로 반영 · 아래 필드 패널은 그 위에 추가로 좁히거나 행/열/값을 배치하는 용도 · 배치를 바꾸면 즉시 재집계</span>
           </div>
           <div style="display:flex; align-items:center; gap:20px;">
-            <div class="revenue-basis-toggle">
-              <button class="revenue-basis-btn active" id="ddBtnBasisPerformance" onclick="setDetailDataRevenueBasisMode('performance')">취급고</button>
-              <button class="revenue-basis-btn" id="ddBtnBasisAccounting" onclick="setDetailDataRevenueBasisMode('accounting')">회계</button>
-            </div>
             <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 합계</div><div id="detailDataTotalAmount" style="font-size: 24px; font-weight: 800;">0.0 백만</div></div>
           </div>
         </div>

@@ -38,19 +38,20 @@
     let expandedDeptPivot = {};
     let expandedMgrPivot = {};
 
-    // 세부데이터 탐색 탭(자유 피벗 빌더): 전역 필터바와 무관한 독립 상태.
-    // 본부매출 기준·취급고/회계 매출기준은 이 탭에서도 고정 전제/상시 토글이라 드래그앤드롭 필터 필드 목록에 노출하지 않는다.
-    // (본부매출: getDetailDataBaseRows()에서 항상 적용 / 매출기준: detailDataRevenueBasisMode 토글 버튼으로 별도 제공)
+    // 세부데이터 탐색 탭(자유 피벗 빌더): 상단 전역 필터바(연/월/부서/채널/방송디지털/대분류/매출기준 등)를 그대로 받아서
+    // 시작하고(getDetailDataBaseRows()가 filteredData를 기준으로 삼음), 아래쪽 드래그앤드롭 필터는 전역 필터바가
+    // 커버하지 못하는 추가 필드(담당자/대행사그룹/중분류/소분류/업종/회계계정/업프론트여부와, 전역 검색과 별개로 더
+    // 좁히고 싶을 수 있는 대행사/광고주)만을 위한 보조 수단이다.
     let detailDataConfig = {
       filters: [],
       rows: [],
       columns: [],
-      values: [{ field: 'amount', agg: 'sum' }]
+      values: [{ id: 0, field: 'amount', agg: 'sum' }]
     };
+    let detailDataValueIdCounter = 1; // 다음에 추가될 값(values) 항목의 id — 같은 필드를 여러 번 넣어도 개별 항목으로 구분하기 위함
     let expandedDetailDataPivot = {};
-    let detailDataDragField = null;
+    let detailDataDragPayload = null; // 드래그 중인 { field, valueId } 임시 보관 (valueId: 값 영역 내 기존 항목을 재정렬하는 경우만 채워짐)
     let detailDataOpenFilterField = null;
-    let detailDataRevenueBasisMode = 'performance';
 
     let advertiserActiveMonthIndex = {}; // ?�규광고�??�별 ?�능개선?? advertiser -> [{monthStr, time}] ?�렬??배열
     let expandedMoMCategories = {}; // ?�월?��?증감 ?�벗: 카테고리�??�침 ?�태 (기본 ?��? ?�힘)
