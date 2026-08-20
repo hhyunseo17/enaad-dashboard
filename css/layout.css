@@ -40,7 +40,7 @@
        흰 칩이 읽히던 흔적인데, 헤더가 카드 표면이 된 지금은 제목이 태그처럼 보인다.
        배경·테두리를 걷어내고 크기와 굵기로 위계를 준다. 로고와는 얇은 구분선으로 나눈다. */
     .brand-title { min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-default); }
-    .brand-title h1.title-pill { font-size: 18px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-title h1.title-pill { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 500; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
     .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -59,7 +59,7 @@
 
     .file-dropzone-container { background: var(--bg-elevated); border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 24px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 12px; transition: border-color 0.2s ease; }
     .file-dropzone-container.active { border-color: var(--primary-blue); background: var(--bg-card-hover); }
-    .dropzone-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+    .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
 
     .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
@@ -124,7 +124,7 @@
     .kpi-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue-glow); display: grid; place-items: center; color: var(--primary-blue); flex-shrink: 0; }
     .kpi-icon svg { width: 15px; height: 15px; display: block; }
     .kpi-value-box { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-    .kpi-value { font-size: 24px; font-weight: 500; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
+    .kpi-value { font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
     .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
     .kpi-annual-progress { font-size: 10px; color: var(--text-tertiary); }
 
@@ -170,7 +170,7 @@
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
     .card-box-title { display: flex; align-items: center; gap: 8px; }
-    .card-box-title h2 { font-size: 16px; font-weight: 400; color: var(--text-primary); letter-spacing: -0.015em; }
+    .card-box-title h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
     .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 500; color: var(--text-tertiary); }
 

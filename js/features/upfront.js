@@ -102,8 +102,8 @@
         grandTotal += dNode.total; months.forEach(m => { grandMonthTotals[m] += (dNode.months[m] || 0); });
 
         html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleUpfrontDeptNode('${dept.replace(/'/g,"\\'")}')">${isDeptExpanded ? '-' : '+'}</span>${dept}</strong></td><td></td><td></td><td></td>`;
-        months.forEach(m => { html += `<td style="text-align: right; font-weight: 700;">${fmtEok(dNode.months[m] || 0)}</td>`; });
-        html += `<td style="text-align: right; font-weight: 800; color: #60A5FA;">${fmtEok(dNode.total)}</td></tr>`;
+        months.forEach(m => { html += `<td style="text-align: right; font-weight: 400;">${fmtEok(dNode.months[m] || 0)}</td>`; });
+        html += `<td style="text-align: right; font-weight: 500; color: #60A5FA;">${fmtEok(dNode.total)}</td></tr>`;
 
         if (isDeptExpanded) {
           const advertisers = Object.keys(dNode.advertisers).sort((a,b) => dNode.advertisers[b].total - dNode.advertisers[a].total);
@@ -117,7 +117,7 @@
 
             html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;"><span class="toggle-icon" onclick="toggleUpfrontAdvertiserNode('${dept.replace(/'/g,"\\'")}', '${adv.replace(/'/g,"\\'")}')">${isAdvExpanded ? '-' : '+'}</span>${adv}</td><td style="color: #93C5FD;">${contractText}</td><td style="text-align: center;">${fmtDateShort(startD)}</td><td style="text-align: center;">${fmtDateShort(endD)}</td>`;
             months.forEach(m => { html += `<td style="text-align: right;">${fmtEok(aNode.months[m] || 0)}</td>`; });
-            html += `<td style="text-align: right; font-weight: 700; color: #93C5FD;">${fmtEok(aNode.total)}</td></tr>`;
+            html += `<td style="text-align: right; font-weight: 400; color: #93C5FD;">${fmtEok(aNode.total)}</td></tr>`;
 
             if (isAdvExpanded) {
               const agencies = Object.keys(aNode.agencies).sort((a,b) => aNode.agencies[b].total - aNode.agencies[a].total);
@@ -130,8 +130,8 @@
             }
           });
           html += `<tr class="row-category" style="border-top: 1px solid var(--border-default);"><td class="indent-step-1" style="font-weight: 800; background: #1E293B;">${dept} 요약</td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td>`;
-          months.forEach(m => { html += `<td style="text-align: right; font-weight: 800; background: #1E293B;">${fmtEok(dNode.months[m] || 0)}</td>`; });
-          html += `<td style="text-align: right; font-weight: 800; background: #1E293B; color: #93C5FD;">${fmtEok(dNode.total)}</td></tr>`;
+          months.forEach(m => { html += `<td style="text-align: right; font-weight: 500; background: #1E293B;">${fmtEok(dNode.months[m] || 0)}</td>`; });
+          html += `<td style="text-align: right; font-weight: 500; background: #1E293B; color: #93C5FD;">${fmtEok(dNode.total)}</td></tr>`;
         }
       });
 

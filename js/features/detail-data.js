@@ -240,7 +240,7 @@
           valueDefs.forEach(v => { html += `<td style="text-align:right;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
         });
         const rt = child.metrics.__ROWTOTAL__;
-        valueDefs.forEach(v => { html += `<td style="text-align:right; font-weight:800;">${fmtDetailDataMetricCell(computeDetailDataMetric(rt, v), v.agg)}</td>`; });
+        valueDefs.forEach(v => { html += `<td style="text-align:right; font-weight: 500;">${fmtDetailDataMetricCell(computeDetailDataMetric(rt, v), v.agg)}</td>`; });
         html += `</tr>`;
         out.push(html);
         if (hasMore && isExpanded) renderDetailDataNodeRows(child, rowFieldDefs, depth + 1, path, visibleColumns, valueDefs, out);
@@ -508,10 +508,10 @@
         visibleColumns.forEach(() => { valueDefs.forEach(v => valueRowCells.push(`<th style="text-align:center; font-size:11px; font-weight:700;">${getDetailDataValueLabel(v)}</th>`)); });
         rows.push(valueRowCells);
         const lastIdx = rows.length - 1;
-        valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:11px; font-weight:800; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
+        valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:11px; font-weight:500; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
       }
       if (groupRows.length > 0) {
-        rows[0].push(`<th colspan="${valuesPerCol}" rowspan="${groupRows.length}" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900;">총합계</th>`);
+        rows[0].push(`<th colspan="${valuesPerCol}" rowspan="${groupRows.length}" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:500;">총합계</th>`);
       }
       const headDepth = Math.max(rows.length, 1);
 
@@ -536,10 +536,10 @@
       bodyHtml += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       visibleColumns.forEach(col => {
         const m = mergeDetailDataMetrics(root, col.leafKeys);
-        valueDefs.forEach(v => { bodyHtml += `<td style="text-align:right; font-weight:900;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
+        valueDefs.forEach(v => { bodyHtml += `<td style="text-align:right; font-weight: 500;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
       });
       const rootTotal = root.metrics.__ROWTOTAL__;
-      valueDefs.forEach(v => { bodyHtml += `<td style="text-align:right; font-weight:900;">${fmtDetailDataMetricCell(computeDetailDataMetric(rootTotal, v), v.agg)}</td>`; });
+      valueDefs.forEach(v => { bodyHtml += `<td style="text-align:right; font-weight: 500;">${fmtDetailDataMetricCell(computeDetailDataMetric(rootTotal, v), v.agg)}</td>`; });
       bodyHtml += `</tr>`;
       document.getElementById('detailDataTableBody').innerHTML = mapPivotHtml(bodyHtml);
 

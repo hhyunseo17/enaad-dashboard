@@ -117,7 +117,7 @@
       let html = '';
       orderedKeys.forEach(k => {
         const b = buckets[k]; const isExpanded = !!expandedMoMCategories[k]; const bDiff = b.currSum - b.prevSum;
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 800;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 800; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 800; color: ${bDiff >= 0 ? '#4ADE80' : CH('#F87171')};">${fmtDiffM(bDiff)}</td></tr>`;
+        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 500;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 500; color: ${bDiff >= 0 ? '#4ADE80' : CH('#F87171')};">${fmtDiffM(bDiff)}</td></tr>`;
         if (isExpanded) {
           b.items.forEach(item => {
             html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">${fmtM(item.prev)}</td><td style="text-align: right;">${fmtM(item.curr)}</td><td style="text-align: right; color: ${item.diff >= 0 ? '#4ADE80' : CH('#F87171')};">${fmtDiffM(item.diff)}</td></tr>`;

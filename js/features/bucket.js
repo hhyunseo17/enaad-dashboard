@@ -30,7 +30,7 @@
           headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`;
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('bucket', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
-      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle;">총합계</th>`;
+      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 500; vertical-align: middle;">총합계</th>`;
       document.getElementById('bucketPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('bucketPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       // 월단위 광고주별 합산금액 → 구간 배정
@@ -84,13 +84,13 @@
               let cVal = 0, sVal = 0;
               bucketTierOrder.forEach(b => { const mo = cellData[b].years[yr].months[m]; if (mo) { cVal += mo.count; sVal += mo.sum; } });
               const val = sec.key === '광고주수' ? cVal : sec.key === '평균매출' ? (cVal>0 ? sVal/cVal/1e6 : 0) : sVal/1e6;
-              tbodyHtml += `<td style="text-align: right; font-weight: 700;">${fmtBucketVal(val, isCount)}</td>`;
+              tbodyHtml += `<td style="text-align: right; font-weight: 400;">${fmtBucketVal(val, isCount)}</td>`;
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`;
-          } else { tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`; }
+            tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`;
+          } else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`; }
         });
         const totalVal = sec.key === '광고주수' ? grandTotalCount : sec.key === '평균매출' ? (grandTotalCount>0 ? grandTotalSum/grandTotalCount/1e6 : 0) : grandTotalSum/1e6;
-        tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #60A5FA; background: #1E3A8A;">${fmtBucketVal(totalVal, isCount)}</td></tr>`;
+        tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${fmtBucketVal(totalVal, isCount)}</td></tr>`;
 
         if (isSecExpanded) {
           bucketTierOrder.forEach(bKey => {
@@ -110,7 +110,7 @@
               } else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${fmtBucketVal(yVal, isCount)}</td>`; }
             });
             const bTotal = sec.key === '광고주수' ? bData.totalCount : sec.key === '평균매출' ? (bData.totalCount>0 ? bData.totalSum/bData.totalCount/1e6 : 0) : bData.totalSum/1e6;
-            tbodyHtml += `<td style="text-align: right; font-weight: 700; background: #1E293B; color: #93C5FD;">${fmtBucketVal(bTotal, isCount)}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${fmtBucketVal(bTotal, isCount)}</td></tr>`;
 
             if (isBucketAdvExpanded) {
               const advertisers = Object.keys(bData.advertisers).sort((a,b) => bData.advertisers[b].totalSum - bData.advertisers[a].totalSum);

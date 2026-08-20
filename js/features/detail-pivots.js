@@ -36,9 +36,9 @@
         years.forEach(yr => {
           const isExp = expandedCatYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right;">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight:700; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
-        cells += `<td style="text-align:right; font-weight:800; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
+        cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
       };
 
@@ -62,7 +62,7 @@
       html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isExp = expandedCatYearColumns[yr] !== false;
-        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
+        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight: 500;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
         html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
       html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
@@ -107,9 +107,9 @@
         years.forEach(yr => {
           const isExp = expandedDeptYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right;">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight:700; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
-        cells += `<td style="text-align:right; font-weight:800; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
+        cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
       };
 
@@ -135,7 +135,7 @@
       html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isExp = expandedDeptYearColumns[yr] !== false;
-        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
+        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight: 500;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
         html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
       html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
@@ -182,9 +182,9 @@
         years.forEach(yr => {
           const isExp = expandedMgrYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right; font-weight:${fontW};">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight:700; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
-        cells += `<td style="text-align:right; font-weight:800; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
+        cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
       };
 
@@ -224,7 +224,7 @@
       html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isExp = expandedMgrYearColumns[yr] !== false;
-        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
+        if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight: 500;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
         html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
       html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
@@ -249,7 +249,7 @@
           headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`;
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('channel', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
-      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
+      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 500; vertical-align: middle; z-index: 35;">총합계</th>`;
       document.getElementById('pivotTableHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('pivotTableHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const channelTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};    
@@ -278,10 +278,10 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleChannelNode('${ch}')">${isChExpanded ? '-' : '+'}</span>${ch}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = chData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 700;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
-          else { tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
+          else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
-        tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #60A5FA; background: #1E3A8A;">${Math.round(chData.totalSum).toLocaleString()}</td></tr>`;
+        tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(chData.totalSum).toLocaleString()}</td></tr>`;
         
         if (isChExpanded) {
           const categories = Object.keys(chData.categories).sort((a,b) => { let idxA = categoryOrderList.indexOf(a); let idxB = categoryOrderList.indexOf(b); if (idxA !== -1 && idxB !== -1) return idxA - idxB; if (idxA !== -1) return -1; if (idxB !== -1) return 1; return a.localeCompare(b); });
@@ -293,7 +293,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 700; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
 
             if (isCatExpanded) {
               const subCategories = Object.keys(catData.subCategories).sort();
@@ -314,10 +314,10 @@
       tbodyHtml += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isYrExpanded = expandedYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; } 
-        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
+        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; } 
+        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
       });
-      tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('pivotTableBody').innerHTML = mapPivotHtml(tbodyHtml);
     }
 
@@ -336,7 +336,7 @@
           headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`;
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('advertiser', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
-      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
+      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 500; vertical-align: middle; z-index: 35;">총합계</th>`;
       document.getElementById('advertiserPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('advertiserPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const advTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};
@@ -362,10 +362,10 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleAdvertiserNode('${advEsc}')">${isAdvExpanded ? '-' : '+'}</span>${adv}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedAdvertiserYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = advData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 700;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
-          else { tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
-        tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #60A5FA; background: #1E3A8A;">${Math.round(advData.totalSum).toLocaleString()}</td></tr>`;
+        tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(advData.totalSum).toLocaleString()}</td></tr>`;
 
         if (isAdvExpanded) {
           const categories = Object.keys(advData.categories).sort((a,b) => { let idxA = categoryOrderList.indexOf(a); let idxB = categoryOrderList.indexOf(b); if (idxA !== -1 && idxB !== -1) return idxA - idxB; if (idxA !== -1) return -1; if (idxB !== -1) return 1; return a.localeCompare(b); });
@@ -377,7 +377,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 700; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
           });
         }
       });
@@ -385,10 +385,10 @@
       tbodyHtml += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isYrExpanded = expandedAdvertiserYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
-        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
+        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
+        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
       });
-      tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('advertiserPivotTableBody').innerHTML = mapPivotHtml(tbodyHtml);
     }
 
@@ -407,7 +407,7 @@
           headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`;
         } else { headerRow1 += `<th rowspan="1" style="text-align: center;"><span class="year-toggle-btn" onclick="toggleYearColumn('agency', ${yr})">${toggleSymbol}</span> ${yr}년</th>`; headerRow2 += `<th style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;">${yr}년 요약</th>`; }
       });
-      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 900; vertical-align: middle; z-index: 35;">총합계</th>`;
+      headerRow1 += `<th rowspan="2" style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 500; vertical-align: middle; z-index: 35;">총합계</th>`;
       document.getElementById('agencyPivotHeaderRow1').innerHTML = mapPivotHtml(headerRow1); document.getElementById('agencyPivotHeaderRow2').innerHTML = mapPivotHtml(headerRow2);
 
       const grpTree = {}; let grandTotalSum = 0; let grandTotalByYearMonth = {}; let grandTotalByYear = {};
@@ -437,10 +437,10 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleAgencyGroupNode('${esc(grp)}')">${isGrpExpanded ? '-' : '+'}</span>${grp}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedAgencyYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = grpData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 700;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
-          else { tbodyHtml += `<td style="text-align: right; font-weight: 800; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
-        tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #60A5FA; background: #1E3A8A;">${Math.round(grpData.totalSum).toLocaleString()}</td></tr>`;
+        tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(grpData.totalSum).toLocaleString()}</td></tr>`;
 
         if (isGrpExpanded) {
           const agencies = Object.keys(grpData.agencies).sort((a,b) => grpData.agencies[b].totalSum - grpData.agencies[a].totalSum);
@@ -452,7 +452,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 700; background: #1E293B; color: #93C5FD;">${Math.round(agyData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(agyData.totalSum).toLocaleString()}</td></tr>`;
 
             if (isAgyExpanded) {
               const advertisers = Object.keys(agyData.advertisers).sort((a,b) => agyData.advertisers[b].totalSum - agyData.advertisers[a].totalSum);
@@ -474,10 +474,10 @@
       tbodyHtml += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       years.forEach(yr => {
         const isYrExpanded = expandedAgencyYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
-        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
+        if (isYrExpanded) { activeMonths.forEach(m => { const ymKey = `${yr}-${m}`; const val = grandTotalByYearMonth[ymKey] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
+        else { const ySumVal = grandTotalByYear[yr] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;">${ySumVal > 0 ? Math.round(ySumVal).toLocaleString() : '-'}</td>`; }
       });
-      tbodyHtml += `<td style="text-align: right; font-weight: 900; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #FFFFFF; background: #1D4ED8;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('agencyPivotTableBody').innerHTML = mapPivotHtml(tbodyHtml);
     }
     const bucketTierOrder = ['1억 이상', '0.5~1억원', '0.4~0.5억원', '0.3~0.4억원', '0.2~0.3억원', '0.1~0.2억원', '0.1억원 미만'];

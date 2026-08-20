@@ -73,7 +73,7 @@
       let html = '';
       groupKeys.forEach(key => {
         const g = data[key]; const isExpanded = !!expandedNewAdvGroups[key];
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleNewAdvGroup('${key}')">${isExpanded ? '-' : '+'}</span>${g.year}년 ${g.month}월</strong></td><td style="text-align: right; font-weight: 800;">${g.items.length.toLocaleString()}</td><td style="text-align: right; font-weight: 800; color: #93C5FD;">${fmtM(g.monthTotal)}</td><td style="text-align: right; font-weight: 800; color: #C4B5FD;">${fmtM(g.yearTotalSum)}</td></tr>`;
+        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleNewAdvGroup('${key}')">${isExpanded ? '-' : '+'}</span>${g.year}년 ${g.month}월</strong></td><td style="text-align: right; font-weight: 500;">${g.items.length.toLocaleString()}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(g.monthTotal)}</td><td style="text-align: right; font-weight: 500; color: #C4B5FD;">${fmtM(g.yearTotalSum)}</td></tr>`;
         if (isExpanded) {
           g.items.forEach(item => {
             html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">-</td><td style="text-align: right;">${fmtM(item.monthAmount)}</td><td style="text-align: right;">${fmtM(item.yearAmount)}</td></tr>`;
