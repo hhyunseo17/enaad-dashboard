@@ -63,9 +63,14 @@
     .filter-row-primary { justify-content: space-between; }
     /* 짧은 라벨은 고정폭(62px)을 쓰지 않는다 — '월' 뒤에 빈 공간이 생겨 pill이 떨어져 보인다 */
     .filter-label-sm { min-width: auto; }
-    /* 매출기준은 동작 버튼과 붙지 않도록 앞에 여백을 두고, 구분선으로 필터/동작을 가른다 */
-    .filter-group-basis { margin-left: auto; padding-left: 14px; border-left: 1px solid var(--border-default); }
+    /* 매출기준 + 동작 버튼은 한 덩어리로 묶어 오른쪽 끝에 붙인다.
+       따로 두면 폭이 모자랄 때 동작 버튼만 다음 줄로 떨어져 나간다
+       (연도 8~9개 + 월 12개면 1920px에서도 모자란다). */
+    .filter-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+    .filter-group-basis { padding-left: 14px; border-left: 1px solid var(--border-default); }
     .filter-actions { display: flex; align-items: center; gap: 8px; }
+    /* 월 pill은 숫자만 들어가므로 최소폭을 줘야 1과 12의 폭이 들쭉날쭉하지 않다 */
+    #monthPills .pill-btn { min-width: 30px; }
     /* 2행(상세 조건)은 접히는 영역이라 위에 경계선 하나로 구분 */
     .filter-row-conditions { padding-top: 10px; border-top: 1px solid var(--border-default); row-gap: 10px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
