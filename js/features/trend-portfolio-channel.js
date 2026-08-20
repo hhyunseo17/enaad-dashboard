@@ -14,7 +14,7 @@
         return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categories[categories.length - 1],
-            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 12, weight: '700' },
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 12, weight: '600' },
             formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? `${total.toFixed(1)}억` : ''; }
           }
         };
@@ -23,7 +23,7 @@
         type: 'bar', data: { labels: sortedMonths, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '500' } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: () => null, afterBody: (t) => {
                   let mt = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; mt += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); });
                   return [`💰 총 매출: ${mt.toFixed(2)} 억원`, ``, ...bd];
@@ -31,7 +31,7 @@
               }
             }
           },
-          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '500' } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -50,7 +50,7 @@
         // spacing은 조각을 바깥으로 밀어 원이 어긋나 보인다. 배경색 테두리는 형태를 건드리지 않는다.
         data: dataVals, backgroundColor: (c) => ddArcFill(bgColors[c.dataIndex])(c), borderWidth: 0.3, borderColor: ddSurfaceColor(), borderAlign: 'inner', hoverOffset: 6,
         datalabels: {
-          display: 'auto', color: '#FFFFFF', font: { family: 'Pretendard', size: 12, weight: '700' }, textStrokeColor: 'rgba(0,0,0,0.22)', textStrokeWidth: 1.5,
+          display: 'auto', color: '#FFFFFF', font: { family: 'Pretendard', size: 12, weight: '600' }, textStrokeColor: 'rgba(0,0,0,0.22)', textStrokeWidth: 1.5,
           formatter: (value) => `${((value / totalSum) * 100).toFixed(1)}%`
         }
       }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '68%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 11, family: 'Pretendard', weight: '600' } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } } });
@@ -66,7 +66,7 @@
         return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categoryOrderList[categoryOrderList.length - 1],
-            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' },
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '600' },
             formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
           }
         };
@@ -76,8 +76,8 @@
         type: 'bar', data: { labels: labels, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
-          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, type: channelScaleMode, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '500' } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '500' } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, type: channelScaleMode, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -93,11 +93,11 @@
       chartInstances.advBucket = new Chart(ctx, {
         type: 'bar',
         data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), yAxisID: 'y', borderRadius: 6, order: 2,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v + '개' : '' }
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '600' }, formatter: (v) => v > 0 ? v + '개' : '' }
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: CH('#FFB547'), backgroundColor: ddAreaFill('#FFB547'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: CH('#FFB547'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '600' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         } ] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { family: 'Pretendard', size: 12, weight: '600' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '600' } }, grid: { display: false } }, y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, stepSize: 1 } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { family: 'Pretendard', size: 12, weight: '500' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '500' } }, grid: { display: false } }, y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, stepSize: 1 } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
       });
     }
 

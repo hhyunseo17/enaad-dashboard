@@ -40,7 +40,7 @@
        흰 칩이 읽히던 흔적인데, 헤더가 카드 표면이 된 지금은 제목이 태그처럼 보인다.
        배경·테두리를 걷어내고 크기와 굵기로 위계를 준다. 로고와는 얇은 구분선으로 나눈다. */
     .brand-title { min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-default); }
-    .brand-title h1.title-pill { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-title h1.title-pill { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
     .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -51,7 +51,7 @@
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
     .sync-time { font-size: 11px; color: var(--text-tertiary); }
 
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 500; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
     .btn:hover { background: var(--border-default); border-color: var(--border-strong); }
     .btn-primary { background: var(--primary-blue); color: var(--text-on-primary); border: none; box-shadow: var(--shadow-blue-glow); }
     .btn-primary:hover { background: var(--primary-blue-hover); }
@@ -76,7 +76,7 @@
     .filter-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
 
     .multi-dropdown { position: relative; display: inline-block; }
-    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
+    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
     .multi-dropdown-btn:hover { border-color: var(--primary-blue); background: var(--control-bg-hover); }
     .multi-dropdown-panel { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--surface-popover); border: 1px solid var(--control-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; z-index: 250; min-width: 200px; max-height: 260px; overflow-y: auto; display: none; }
     .multi-dropdown-panel.show { display: block; }
@@ -106,7 +106,7 @@
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
     .text-input { width: 150px; }
-    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
+    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
@@ -124,7 +124,7 @@
     .kpi-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue-glow); display: grid; place-items: center; color: var(--primary-blue); flex-shrink: 0; }
     .kpi-icon svg { width: 15px; height: 15px; display: block; }
     .kpi-value-box { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-    .kpi-value { font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
+    .kpi-value { font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
     .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
     .kpi-annual-progress { font-size: 10px; color: var(--text-tertiary); }
 
@@ -179,7 +179,7 @@
     .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
     table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.45; text-align: left; }
-    table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
+    table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
     table.data-table th:hover { color: var(--primary-blue); }
     table.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-default); color: var(--text-primary); white-space: nowrap; }
     table.data-table tr:hover td { background: var(--bg-card-hover); }
