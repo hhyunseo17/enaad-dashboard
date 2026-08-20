@@ -55,10 +55,11 @@
     .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
 
-    .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 16px 20px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 12px; backdrop-filter: blur(12px); }
+    .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
-    .filter-label { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; min-width: 65px; }
+    /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
+    .filter-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
 
     .multi-dropdown { position: relative; display: inline-block; }
     .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
@@ -75,11 +76,16 @@
     .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
     .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 600; }
 
+    /* 월/연도 pill — 여러 개가 동시에 켜지는 컨트롤이다. '전체' 상태에서 12개가 전부
+       진한 파랑으로 차면 아무것도 걸러지지 않은 기본 상태가 화면에서 가장 시끄러워진다.
+       채워진 파랑 대신 옅은 틴트 + 파란 글자로 바꿔 켜진 건 분명히 보이되 벽처럼 보이지 않게 한다.
+       (매출기준 토글처럼 둘 중 하나만 켜지는 컨트롤은 채워진 파랑을 그대로 둔다 — 거기서는
+        면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
-    .pill-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
-    .pill-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 600; }
-    .pill-btn:disabled, .pill-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
+    .pill-btn:hover { color: var(--primary-blue); background: var(--primary-blue-glow); }
+    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 600; }
+    .pill-btn:disabled, .pill-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; background: transparent; color: var(--text-disabled); }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
        '의미 있는 색'과 '장식적인 색'이 경쟁하면 읽는 사람이 초록 카드를 기타광고와 연결짓게 된다.
