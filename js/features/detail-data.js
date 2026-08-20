@@ -34,6 +34,14 @@
       return value ? value.toLocaleString('ko-KR') : '-';
     }
 
+    // 행/열 트리의 그룹 라벨 표시용 — 연/월은 숫자 그대로가 아니라 "2026년"/"1월"로 표기.
+    function ddFormatFieldValue(fieldKey, rawValue) {
+      if (rawValue === '(미지정)') return rawValue;
+      if (fieldKey === 'year') return `${rawValue}년`;
+      if (fieldKey === 'month') return `${rawValue}월`;
+      return rawValue;
+    }
+
     // ==========================================================================
     // 집계 로직
     // ==========================================================================
@@ -170,7 +178,8 @@
     }
 
     // visibleColumns 기준 depth별 그룹핑 헤더 행 <th> 배열 반환. 접힌 그룹은 자기 depth에서 남은 헤더 행 전부를 rowspan으로 덮고 토글 아이콘을 붙인다.
-    function renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefsLen, valuesPerCol) {
+    function renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefs, valuesPerCol) {
+      const colFieldDefsLen = colFieldDefs.length;
       const rowsHtml = [];
       for (let depth = 0; depth < colFieldDefsLen; depth++) {
         const cells = []; let i = 0;
@@ -180,13 +189,15 @@
           if (col.path.length - 1 === depth) {
             const rowspan = colFieldDefsLen - depth;
             const toggle = col.canToggle ? `<span class="toggle-icon" onclick="toggleDetailDataColNode('${ddEsc(col.pathKey)}')">${col.isExpanded ? '-' : '+'}</span>` : '';
-            cells.push(`<th colspan="${valuesPerCol}" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${toggle}${col.path[col.path.length - 1]}</th>`);
+            const label = ddFormatFieldValue(colFieldDefs[depth].key, col.path[col.path.length - 1]);
+            cells.push(`<th colspan="${valuesPerCol}" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${toggle}${label}</th>`);
             i++;
           } else {
             const prefix = col.path.slice(0, depth + 1);
             let span = 0; let j = i;
             while (j < visibleColumns.length && visibleColumns[j].path.length > depth && ddArraysEqual(visibleColumns[j].path.slice(0, depth + 1), prefix)) { span++; j++; }
-            cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;">${prefix[depth]}</th>`);
+            const label = ddFormatFieldValue(colFieldDefs[depth].key, prefix[depth]);
+            cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;">${label}</th>`);
             i = j;
           }
         }
@@ -223,7 +234,7 @@
         const isExpanded = !!expandedDetailDataPivot[pathKey];
         const indentClass = `indent-step-${Math.min(depth + 1, 5)}`;
         const toggle = hasMore ? `<span class="toggle-icon" onclick="toggleDetailDataNode('${ddEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
-        let html = `<tr><td class="${indentClass}">${toggle}${k}</td>`;
+        let html = `<tr><td class="${indentClass}">${toggle}${ddFormatFieldValue(rowFieldDefs[depth].key, k)}</td>`;
         visibleColumns.forEach(col => {
           const m = mergeDetailDataMetrics(child, col.leafKeys);
           valueDefs.forEach(v => { html += `<td style="text-align:right;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
@@ -487,7 +498,7 @@
 
       // 그룹핑 행: 열 필드가 있으면 필드별 colspan 그룹(접힌 그룹은 병합 1칸 + 토글), 없으면 (단일값일 때만) "합계" 한 칸.
       let groupRows = colFieldDefs.length > 0
-        ? renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefs.length, valuesPerCol)
+        ? renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefs, valuesPerCol)
         : (multiValue ? [] : [[`<th colspan="1" style="text-align:center;">합계</th>`]]);
       const rows = groupRows.map(r => r.slice());
 

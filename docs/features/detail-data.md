@@ -31,6 +31,7 @@ detailDataOpenFilterField   // 값 선택 팝오버가 열려있는 필터 필�
 
 ## 필드 카탈로그
 `DETAIL_DATA_FIELDS` — `rawData`/`filteredData` row의 camelCase 필드명을 그대로 사용(16개). `bonbuRevenueStatus`(항상 본부매출 고정)와 매출기준 토글에 대응하는 의사 필드는 목록에 없다. **대분류는 `categoryReclassified`(재분류된 5대분류)를 노출** — 다른 상세 피벗(`detail-pivots.js`)·상단 필터바와 동일한 기준으로 맞춰서, skylife큐톤 같은 재분류 예외 건이 여기서도 큐톤광고로 집계된다. 원본대분류(`categoryOriginal`)는 이 탭에서 제외.
+- 행/열 그룹 라벨은 `ddFormatFieldValue(fieldKey, rawValue)`를 거쳐 표시된다 — `year`는 숫자 그대로가 아니라 `"2026년"`, `month`는 `"1월"`로 포맷. `rawData`의 `year`/`month`는 숫자형이라 그룹핑 키(`node.children[val]`, 열 조합 join key) 자체는 원본 숫자 그대로 쓰고, 화면에 그릴 때만 포맷을 씌운다.
 
 ## 값(Values) — 다중 필드 + 집계방식, 필터/행/열과 완전히 독립
 - 값 well에는 **`amount`를 포함해 어떤 필드든** 여러 개 동시에 배치할 수 있다. 이미 필터/행/열에 쓰이고 있는 필드도 값에 자유롭게 추가할 수 있고, **같은 필드를 값 안에서 여러 번**(예: 광고주 합계 + 광고주 평균 + 광고주 개수) 넣을 수 있다 — 값 항목마다 `id`로 구분되므로 하나를 지워도 나머지엔 영향 없음.
