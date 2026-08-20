@@ -74,10 +74,10 @@
         data: {
           labels: orderedKeys.map(k => `${k} (${buckets[k].count.toLocaleString()}개사)`),
           datasets: [
-            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: CH('#3A4258'), borderRadius: 4,
+            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5,
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
-            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: orderedKeys.map(k => momColors[k]), borderRadius: 4,
+            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: orderedKeys.map(k => ddBarFill(momColors[k])), borderRadius: 5,
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             }
           ]

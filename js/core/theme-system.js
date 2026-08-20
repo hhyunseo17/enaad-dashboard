@@ -19,6 +19,51 @@
     function dataLabelTextColor() { return currentTheme === 'light' ? '#191F28' : '#F2F4F6'; }
 
     // ==========================================================================
+    // 차트 표면 질감 — 막대/영역에 아주 옅은 그라데이션을 입혀 깊이를 준다.
+    //
+    // 색상(hue)은 계열 정체성을 담고 있으므로 절대 섞지 않는다. 같은 색의 투명도만 흐르게 해서
+    // 평평한 단색이 주는 '기본 차트' 느낌만 걷어내는 것이 목적이다.
+    //
+    // 스택 막대에서도 세그먼트 단위가 아니라 **차트 영역 전체**를 기준으로 그라데이션을 만든다.
+    // 세그먼트마다 따로 그리면 층마다 띠가 생겨 오히려 지저분해진다. 영역 기준으로 하면
+    // 스택 하나가 아래에서 위로 이어지는 하나의 흐름으로 읽힌다.
+    // ==========================================================================
+    function ddHexAlpha(hex, alpha) {
+      const h = String(hex).replace('#', '');
+      const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+      return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+    }
+
+    // 막대 채움. **밑동이 가장 진하고 끝으로 갈수록 아주 조금 옅어진다.**
+    // 반대로(끝이 진하게) 하면 스택 맨 아래에 오는 계열 — 보통 비중이 가장 큰 일반광고 — 이
+    // 항상 제일 물빠져 보인다. 폭도 좁게(1.0 → 0.78) 잡아 색 정체성이 흐려지지 않게 한다.
+    // Chart.js는 레이아웃 전에도 backgroundColor를 한 번 평가하므로 chartArea가 없으면 단색으로 돌려준다.
+    function ddBarFill(hex, horizontal) {
+      return (ctx) => {
+        const chart = ctx.chart, area = chart.chartArea;
+        if (!area) return hex;
+        const g = horizontal
+          ? chart.ctx.createLinearGradient(area.left, 0, area.right, 0)
+          : chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        g.addColorStop(0, hex);
+        g.addColorStop(1, ddHexAlpha(hex, 0.78));
+        return g;
+      };
+    }
+
+    // 선 차트 아래 영역 채움 — 선 색에서 시작해 바닥으로 갈수록 사라진다.
+    function ddAreaFill(hex) {
+      return (ctx) => {
+        const chart = ctx.chart, area = chart.chartArea;
+        if (!area) return ddHexAlpha(hex, 0.14);
+        const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+        g.addColorStop(0, ddHexAlpha(hex, 0.28));
+        g.addColorStop(1, ddHexAlpha(hex, 0));
+        return g;
+      };
+    }
+
+    // ==========================================================================
     // 차트 애니메이션 길이 — 같은 애니메이션이 두 가지 역할을 해서 길이를 나눈다.
     //  · 최초 진입/화면 전환: 연출. 길게 가도 기다린다는 느낌이 없다.
     //  · 필터 변경: "값이 바뀌었다"는 신호만 필요하다. 여기서 1초를 쓰면 연출이 아니라

@@ -6,15 +6,15 @@
        Toss Dark Mode Design System
        ========================================================================== */
     :root {
-      --bg-base: #0F1115;
-      --bg-subtle: #15171C;
-      --bg-elevated: #1A1D24;
-      --bg-card-hover: #21252F;
+      --bg-base: #0C1016;
+      --bg-subtle: #12161E;
+      --bg-elevated: #171C26;
+      --bg-card-hover: #1E2431;
       --bg-overlay: rgba(10, 12, 16, 0.85);
 
-      --border-default: #21232A;
+      --border-default: #202634;
       --border-subtle: #15171C;
-      --border-strong: #2C2F37;
+      --border-strong: #2B3243;
       --border-focus: #4795FF;
 
       --text-primary: #F2F4F6;

@@ -223,10 +223,10 @@
         data: { labels: labels, datasets: [
           // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
           // 색 역할 규칙: 기준(목표)은 중립 회색, 현재(실적)는 강조색. 두 목표 차트가 동일 규칙을 쓴다.
-          { label: '목표', data: targetVals, backgroundColor: CH('#3A4258'), borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '목표', data: targetVals, backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: categoryColors['일반광고'], borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: ddBarFill(categoryColors['일반광고']), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
@@ -301,10 +301,10 @@
         data: { labels: groups, datasets: [
           // 목표/실적 둘 다 같은 두께의 얇은 막대로 나란히(안 겹치게) 배치.
           // 월별 목표 차트와 같은 색 규칙을 쓴다 — 예전엔 두 차트가 서로 다른 색 쌍(파랑/주황 vs 회색/초록)이었다.
-          { label: '목표', data: targetVals, backgroundColor: CH('#3A4258'), borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '목표', data: targetVals, backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: categoryColors['일반광고'], borderRadius: 0, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: ddBarFill(categoryColors['일반광고']), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
