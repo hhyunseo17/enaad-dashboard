@@ -19,7 +19,7 @@
     
     /* 헤더는 채도 높은 파랑 대신 중립 표면으로 두고, 강조는 맨 아래 굵은 선 하나로만 준다.
        넓은 면적을 색으로 덮으면 정작 주인공인 숫자가 뒤로 밀린다. */
-    .pivot-tree-table th { background: var(--pivot-header-bg) !important; color: var(--pivot-header-fg) !important; font-weight: 500; text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
+    .pivot-tree-table th { background: var(--pivot-header-bg) !important; color: var(--pivot-header-fg) !important; font-weight: 400; text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
     .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: var(--pivot-header-bg-alt) !important; z-index: 32; }
     .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: var(--pivot-header-bg) !important; z-index: 32; }
     /* 헤더 아래 강조선. rowspan으로 두 줄을 걸치는 셀(첫 열·총합계)은 마지막 행에 속하지 않으므로
@@ -39,22 +39,22 @@
 
     /* 총합계 행: 파란 블록 대신 위쪽 강조선 + 살짝 올라온 표면. 표에서 유일하게 강조되는 행이므로
        색으로 덮지 않아도 충분히 눈에 들어온다. */
-    .row-grand-total { font-weight: 500; }
+    .row-grand-total { font-weight: 400; }
     .row-grand-total td { background: var(--pivot-total-bg) !important; color: var(--text-primary) !important; border-top: 2px solid var(--primary-blue); border-bottom: 0; padding: 8px 12px !important; }
     .row-grand-total td:first-child { background: var(--pivot-total-bg) !important; z-index: 26; }
 
     /* 요약·총합계 열 — 예전엔 렌더러가 인라인 !important로 진한 파랑을 박아 넣었다.
        클래스로 옮겨 CSS가 소유하게 하고, 구분은 채도가 아니라 명도 한 단계로만 준다. */
     .pivot-tree-table th.pv-th-summary { background: var(--pivot-th-summary-bg) !important; color: var(--pivot-th-summary-fg) !important; }
-    .pivot-tree-table th.pv-th-total { background: var(--pivot-th-total-bg) !important; color: var(--pivot-th-total-fg) !important; font-weight: 600; }
+    .pivot-tree-table th.pv-th-total { background: var(--pivot-th-total-bg) !important; color: var(--pivot-th-total-fg) !important; font-weight: 500; }
     .row-grand-total td.pv-num-sum,
     .row-grand-total td.pv-num-total { text-align: right; }
-    .row-grand-total td.pv-num-total { color: var(--primary-blue) !important; font-weight: 600; }
+    .row-grand-total td.pv-num-total { color: var(--primary-blue) !important; font-weight: 500; }
 
     /* 펼치기/접기 칩: 채도 높은 파랑 칩이 행마다 반복되면 표가 시끄러워진다.
        평소엔 조용히 두고 hover에서만 강조색을 쓴다. */
     .toggle-icon,
-    .year-toggle-btn { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: transparent; color: var(--text-tertiary); border: 1px solid var(--toggle-border); border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer; margin-right: 8px; user-select: none; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
+    .year-toggle-btn { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: transparent; color: var(--text-tertiary); border: 1px solid var(--toggle-border); border-radius: 4px; font-weight: 500; font-size: 11px; cursor: pointer; margin-right: 8px; user-select: none; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
     .year-toggle-btn { margin-right: 6px; }
     .toggle-icon:hover,
     .year-toggle-btn:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--text-on-accent); }
@@ -96,7 +96,7 @@
 
     .dd-well { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 90px; background: var(--bg-subtle); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md); transition: border-color 0.15s, background 0.15s; }
     .dd-well.drag-over { border-color: var(--primary-blue); background: var(--primary-blue-glow); border-style: solid; }
-    .dd-well-title { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+    .dd-well-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
     .dd-well-body { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
     .dd-well-placeholder { align-self: center; margin: auto; font-size: 12px; color: var(--text-tertiary); text-align: center; }
 

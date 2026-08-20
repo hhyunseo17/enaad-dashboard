@@ -75,10 +75,10 @@
           labels: orderedKeys.map(k => `${k} (${buckets[k].count.toLocaleString()}개사)`),
           datasets: [
             { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, ...ddGroupSeparator(),
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
             { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: orderedKeys.map(k => ddBarFill(momColors[k])), borderRadius: 5, ...ddGroupSeparator(),
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             }
           ]
         },
@@ -88,7 +88,7 @@
             legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '400' } } },
             tooltip: { callbacks: { label: (ctx) => { const k = orderedKeys[ctx.dataIndex]; const b = buckets[k]; const d = b.currSum - b.prevSum; return `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원 (전월비 ${d >= 0 ? '+' : ''}${(d/1e8).toFixed(2)}억)`; } } }
           },
-          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '500' } }, grid: { display: false } } }
+          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '400' } }, grid: { display: false } } }
         }
       });
     }

@@ -227,7 +227,7 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
@@ -243,7 +243,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '500' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '400' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -305,7 +305,7 @@
             datalabels: { display: false }
           },
           { label: '실적', data: actualVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '500' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
         options: {
@@ -321,7 +321,7 @@
               }
             }
           },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '500' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '400' } }, grid: { display: false } }, y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }

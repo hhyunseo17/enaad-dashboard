@@ -40,12 +40,12 @@
        흰 칩이 읽히던 흔적인데, 헤더가 카드 표면이 된 지금은 제목이 태그처럼 보인다.
        배경·테두리를 걷어내고 크기와 굵기로 위계를 준다. 로고와는 얇은 구분선으로 나눈다. */
     .brand-title { min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-default); }
-    .brand-title h1.title-pill { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
+    .brand-title h1.title-pill { font-size: 18px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 500; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
     .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     /* 상태 표시는 배경·테두리 없이 점 + 조용한 텍스트로. 칩으로 두르면 제목과 경쟁한다. */
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 11px; font-weight: 500; color: var(--text-tertiary); }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 11px; font-weight: 400; color: var(--text-tertiary); }
     .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
 
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
@@ -59,7 +59,7 @@
 
     .file-dropzone-container { background: var(--bg-elevated); border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 24px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 12px; transition: border-color 0.2s ease; }
     .file-dropzone-container.active { border-color: var(--primary-blue); background: var(--bg-card-hover); }
-    .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .dropzone-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
     .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
 
     .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
@@ -71,12 +71,12 @@
     .filter-collapsible { display: flex; flex-direction: column; gap: 10px; }
     .filter-row-conditions { padding-top: 10px; border-top: 1px solid var(--border-default); row-gap: 10px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
-    .checkbox-item-all { font-weight: 600; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
+    .checkbox-item-all { font-weight: 500; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
     .filter-label { font-size: 12px; font-weight: 400; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
 
     .multi-dropdown { position: relative; display: inline-block; }
-    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
+    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 400; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
     .multi-dropdown-btn:hover { border-color: var(--primary-blue); background: var(--control-bg-hover); }
     .multi-dropdown-panel { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--surface-popover); border: 1px solid var(--control-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; z-index: 250; min-width: 200px; max-height: 260px; overflow-y: auto; display: none; }
     .multi-dropdown-panel.show { display: block; }
@@ -86,9 +86,9 @@
     .checkbox-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; border-top: 1px solid var(--border-strong); padding-top: 4px; }
 
     .revenue-basis-toggle { display: flex; align-items: center; background: var(--control-bg); border: 1px solid var(--control-border); padding: 4px; border-radius: var(--radius-md); }
-    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
+    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
     .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
-    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 500; }
+    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 400; }
 
     /* 월/연도 pill — 여러 개가 동시에 켜지는 컨트롤이다. '전체' 상태에서 12개가 전부
        진한 파랑으로 차면 아무것도 걸러지지 않은 기본 상태가 화면에서 가장 시끄러워진다.
@@ -96,9 +96,9 @@
        (매출기준 토글처럼 둘 중 하나만 켜지는 컨트롤은 채워진 파랑을 그대로 둔다 — 거기서는
         면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
+    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 400; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
     .pill-btn:hover { color: var(--primary-blue); background: var(--primary-blue-glow); }
-    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 500; }
+    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 400; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; background: transparent; color: var(--text-disabled); }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
@@ -106,7 +106,7 @@
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
     .text-input { width: 150px; }
-    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
+    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 400; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
@@ -128,7 +128,7 @@
     .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
     .kpi-annual-progress { font-size: 10px; color: var(--text-tertiary); }
 
-    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
+    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 400; display: inline-flex; align-items: center; gap: 2px; }
     .badge-growth.up { background: var(--accent-green-bg); color: var(--accent-green); }
     .badge-growth.down { background: var(--accent-red-bg); color: var(--accent-red); }
 
@@ -170,21 +170,21 @@
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
     .card-box-title { display: flex; align-items: center; gap: 8px; }
-    .card-box-title h2 { font-size: 16px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.015em; }
+    .card-box-title h2 { font-size: 16px; font-weight: 400; color: var(--text-primary); letter-spacing: -0.015em; }
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
-    .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-tertiary); }
+    .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 500; color: var(--text-tertiary); }
 
     .table-container { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
     .table-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
     table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.45; text-align: left; }
-    table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
+    table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 400; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
     table.data-table th:hover { color: var(--primary-blue); }
     table.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-default); color: var(--text-primary); white-space: nowrap; }
     table.data-table tr:hover td { background: var(--bg-card-hover); }
-    .amount-cell { font-weight: 600; color: var(--primary-blue); text-align: right; }
-    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; background: var(--bg-subtle); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .amount-cell { font-weight: 500; color: var(--primary-blue); text-align: right; }
+    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 400; background: var(--bg-subtle); border: 1px solid var(--border-default); color: var(--text-secondary); }
 
     /* ========================================================================
        모바일 반응형 - 캐스케이드 우선순위 확보를 위해 스타일 맨 끝에 배치.
