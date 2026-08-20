@@ -69,11 +69,19 @@
     .filter-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     /* 접히는 영역: 연도 / 월 / 상세조건 */
     .filter-collapsible { display: flex; flex-direction: column; gap: 10px; }
-    .filter-row-conditions { padding-top: 10px; border-top: 1px solid var(--border-default); row-gap: 10px; }
+    /* 조회조건 행은 [라벨+컨트롤] 묶음이 여럿 늘어선다. 묶음 사이(column-gap)를 묶음 안쪽
+       (.filter-group의 gap 8px)보다 확실히 넓게 두어야 라벨이 제 컨트롤에 붙어 읽힌다. */
+    .filter-row-conditions { padding-top: 10px; border-top: 1px solid var(--border-default); row-gap: 10px; column-gap: 22px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
     .checkbox-item-all { font-weight: 500; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
     .filter-label { font-size: 12px; font-weight: 400; color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
+    /* min-width는 **각 행의 첫 라벨에만** 필요하다. 매출 기준·연도 선택·월 선택·부서의 컨트롤이
+       같은 x에서 시작하도록 폭을 맞춰 주는 자리이기 때문이다. 그런데 이 값이 행 중간의 라벨에까지
+       걸리면서, 짧은 라벨은 남는 폭만큼 밀려나 라벨과 드롭다운 사이가 제각각이 됐다 —
+       채널 49.7px / 방송·디지털 15.6px / 대분류 39.6px. 한 행 안에서 3배 넘게 벌어진 셈이라
+       라벨이 제 드롭다운보다 앞 드롭다운에 더 붙어 보였다. 중간 라벨은 글자 폭 그대로 둔다. */
+    .filter-group:not(:first-child) .filter-label { min-width: 0; }
     /* pill의 Ctrl+클릭 복수 선택은 발견되기 어려운 조작이라 한 줄 안내를 붙인다. 필터바에서
        가장 조용해야 할 요소이므로 본문보다 작고 흐리게 두고, 좁은 화면에서는 숨긴다. */
     .filter-hint { font-size: 11px; color: var(--text-disabled); white-space: nowrap; margin-left: 4px; }
