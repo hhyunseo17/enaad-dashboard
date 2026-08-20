@@ -88,52 +88,57 @@
 
     <!-- Zone 1: Global Filters Bar -->
     <section class="filter-bar">
-      <!-- 1행: 기간(연도+월). 가장 자주 쓰는 필터라 접어도 남는다.
-           연도와 월은 하나의 개념이므로 두 줄로 나누지 않고 한 줄에 둔다. -->
+      <!-- 1행: 매출기준 + 전역 동작. 항상 보인다.
+           매출기준은 '어떤 행을 볼까'가 아니라 '이 숫자가 무엇을 뜻하는가'를 바꾸는 컨트롤이라
+           (취급고=실적만 / 회계=실적+회계조정) 나머지 필터와 성격이 다르다. 그래서 필터 묶음에
+           섞지 않고 단독으로 두고, 접어도 남는다 — 화면의 모든 숫자를 바꾸기 때문이다. -->
       <div class="filter-row filter-row-primary">
         <div class="filter-group">
-          <span class="filter-label">연도</span>
-          <div id="yearPills" class="pills-group"></div>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label filter-label-sm">월</span>
-          <div id="monthPills" class="pills-group">
-            <button class="pill-btn active" data-month="all">전체</button>
-            <button class="pill-btn" data-month="1">1</button>
-            <button class="pill-btn" data-month="2">2</button>
-            <button class="pill-btn" data-month="3">3</button>
-            <button class="pill-btn" data-month="4">4</button>
-            <button class="pill-btn" data-month="5">5</button>
-            <button class="pill-btn" data-month="6">6</button>
-            <button class="pill-btn" data-month="7">7</button>
-            <button class="pill-btn" data-month="8">8</button>
-            <button class="pill-btn" data-month="9">9</button>
-            <button class="pill-btn" data-month="10">10</button>
-            <button class="pill-btn" data-month="11">11</button>
-            <button class="pill-btn" data-month="12">12</button>
-          </div>
-        </div>
-
-        <!-- 매출기준은 '필터'라 라벨을 달아 왼쪽 묶음의 연장으로 두고,
-             초기화·상세조건은 '동작'이라 구분선 뒤 오른쪽 끝에 모은다. -->
-        <div class="filter-right">
-        <div class="filter-group filter-group-basis">
-          <span class="filter-label filter-label-sm">매출기준</span>
+          <span class="filter-label">매출 기준</span>
           <div class="revenue-basis-toggle">
             <button class="revenue-basis-btn active" id="btnBasisPerformance" onclick="setRevenueBasis('performance')">취급고</button>
             <button class="revenue-basis-btn" id="btnBasisAccounting" onclick="setRevenueBasis('accounting')">회계</button>
           </div>
         </div>
 
+        <!-- 전체폭 접기 바를 없애고 1행의 빈 오른쪽으로 흡수했다 -->
         <div class="filter-actions">
-          <button class="btn btn-sm" onclick="resetFilters()" title="모든 필터를 기본값으로">초기화</button>
+          <button class="btn btn-sm" onclick="resetFilters()" title="모든 필터를 기본값으로">🔄 필터 초기화</button>
           <button id="filterBarToggleBtn" class="btn btn-sm" onclick="toggleFilterBar()">▲ 상세조건</button>
-        </div>
         </div>
       </div>
 
-      <!-- 2행: 상세 조건. 자주 바꾸지 않으므로 접을 수 있다. -->
-      <div id="filterBarCollapsible" class="filter-row filter-row-conditions">
+      <!-- 접히는 영역: 연도 / 월 / 상세 조건 -->
+      <div id="filterBarCollapsible" class="filter-collapsible">
+      <div class="filter-row filter-row-conditions">
+        <div class="filter-group">
+          <span class="filter-label">연도 선택</span>
+          <div id="yearPills" class="pills-group"></div>
+        </div>
+      </div>
+
+      <div class="filter-row filter-row-conditions">
+        <div class="filter-group">
+          <span class="filter-label">월 선택</span>
+          <div id="monthPills" class="pills-group">
+            <button class="pill-btn active" data-month="all">전체</button>
+            <button class="pill-btn" data-month="1">1월</button>
+            <button class="pill-btn" data-month="2">2월</button>
+            <button class="pill-btn" data-month="3">3월</button>
+            <button class="pill-btn" data-month="4">4월</button>
+            <button class="pill-btn" data-month="5">5월</button>
+            <button class="pill-btn" data-month="6">6월</button>
+            <button class="pill-btn" data-month="7">7월</button>
+            <button class="pill-btn" data-month="8">8월</button>
+            <button class="pill-btn" data-month="9">9월</button>
+            <button class="pill-btn" data-month="10">10월</button>
+            <button class="pill-btn" data-month="11">11월</button>
+            <button class="pill-btn" data-month="12">12월</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-row filter-row-conditions">
         <div class="filter-group">
           <span class="filter-label">부서</span>
           <div class="multi-dropdown" id="dropdownDept">
@@ -203,6 +208,7 @@
           <span class="filter-label">광고주</span>
           <input type="text" id="inputAdvertiser" class="text-input" placeholder="광고주명 검색">
         </div>
+      </div>
       </div>
     </section>
 

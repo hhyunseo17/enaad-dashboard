@@ -90,8 +90,7 @@
       const years = [...new Set(rawData.map(r => r.year))].sort((a, b) => b - a);
       const container = document.getElementById('yearPills');
       let html = `<button class="pill-btn" data-year="all">전체</button>`;
-      // 라벨이 '연도'이므로 '년'은 중복이다. 연도가 8~9개면 그 글자 하나가 줄바꿈을 만든다.
-      years.forEach(y => { html += `<button class="pill-btn" data-year="${y}">${y}</button>`; });
+      years.forEach(y => { html += `<button class="pill-btn" data-year="${y}">${y}년</button>`; });
       container.innerHTML = html;
 
       if (isInit) {
