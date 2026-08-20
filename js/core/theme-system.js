@@ -173,12 +173,32 @@
         // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
         // 밑동이 진하고 끝으로 갈수록 밝아진다 — 반대로 하면 스택 맨 아래에 오는 계열
         // (보통 비중이 가장 큰 일반광고)이 항상 제일 물빠져 보인다.
-        const base = currentTheme === 'light' ? ddLift(hex, -0.07) : ddLift(hex, 0.10);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.05) : hex;
-        // 목표/실적 차트(ddDuoFill)와 같은 대각 방향으로 흐르게 해 결이 맞도록 한다.
+        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+
+        // **각 세그먼트 자기 구간을 기준으로** 그린다.
+        // 차트 영역 전체를 기준으로 잡으면(특히 대각선) 세그먼트 하나가 그 띠의 아주 얇은 구간만
+        // 지나가 사실상 단색이 된다. 목표/실적 차트는 단일 계열이라 '막대 사이' 변화로 읽혀서
+        // 같은 방식이 통했지만, 스택에서는 층마다 자기 안에서 흘러야 눈에 보인다.
+        //
+        // 요소(el.base/el.y)를 읽으면 안 된다 — backgroundColor는 요소 좌표가 계산되기 전
+        // (_getSharedOptions) 단계에서 평가되어 NaN이 들어온다. 스케일에서 직접 구간을 구한다.
+        const meta = chart.getDatasetMeta(ctx.datasetIndex);
+        const scale = meta && chart.scales[horizontal ? meta.xAxisID : meta.yAxisID];
+        if (!scale) return hex;
+        let below = 0;
+        for (let d = 0; d < ctx.datasetIndex; d++) {
+          const pv = chart.data.datasets[d].data[ctx.dataIndex];
+          if (typeof pv === 'number' && isFinite(pv)) below += pv;
+        }
+        const val = chart.data.datasets[ctx.datasetIndex].data[ctx.dataIndex];
+        if (typeof val !== 'number' || !isFinite(val) || val === 0) return hex;
+        const pStart = scale.getPixelForValue(below);
+        const pEnd = scale.getPixelForValue(below + val);
+        if (!isFinite(pStart) || !isFinite(pEnd) || Math.abs(pEnd - pStart) < 1) return hex;
         const g = horizontal
-          ? chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top)
-          : chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top);
+          ? chart.ctx.createLinearGradient(pStart, 0, pEnd, 0)
+          : chart.ctx.createLinearGradient(0, pStart, 0, pEnd);
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
         return g;
