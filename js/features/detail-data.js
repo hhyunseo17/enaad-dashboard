@@ -40,7 +40,7 @@
         if (detailDataRevenueBasisMode === 'performance' && r.revenueBasis !== '실적') return false; // '회계'는 실적+회계조정 전체 통과
         return detailDataConfig.filters.every(f => {
           if (!f.selected || f.selected.length === 0) return true;
-          return f.selected.includes(r[f.field]);
+          return f.selected.includes(String(r[f.field]));
         });
       });
     }
@@ -294,7 +294,7 @@
         if (isOpen) {
           const values = getDetailDataFieldUniqueValues(f.field);
           popover = `<div class="dd-filter-popover" onclick="event.stopPropagation();">${values.map(v =>
-            `<label class="dd-filter-popover-item"><input type="checkbox" ${f.selected.includes(v) ? 'checked' : ''} onchange="toggleDetailDataFilterValue('${ddEsc(f.field)}','${ddEsc(String(v))}')"> ${String(v)}</label>`
+            `<label class="dd-filter-popover-item"><input type="checkbox" ${f.selected.includes(String(v)) ? 'checked' : ''} onchange="toggleDetailDataFilterValue('${ddEsc(f.field)}','${ddEsc(String(v))}')"> ${String(v)}</label>`
           ).join('')}</div>`;
         }
         return `<div class="dd-field-chip dd-field-chip-filter" draggable="true" data-field="${f.field}"
