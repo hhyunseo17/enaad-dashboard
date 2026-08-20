@@ -200,6 +200,10 @@
         return true;
       });
 
+      // 이 렌더가 화면 전환인지 단순 필터 변경인지에 따라 차트 애니메이션 길이를 정한다
+      // (switchView가 cfg.render() 동안만 진입 플래그를 세운다 — theme-system.js 참고)
+      applyChartAnimDuration();
+
       if (currentView === 'main') renderDashboard();
       else if (currentView === 'channel') renderChannelPivotTable();
       else if (currentView === 'bucket') renderBucketPivotTable();

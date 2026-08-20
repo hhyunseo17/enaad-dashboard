@@ -39,7 +39,12 @@
       document.getElementById(cfg.containerId).classList.add('active');
       document.getElementById('breadcrumbBox').style.display = cfg.showBreadcrumb ? 'flex' : 'none';
       document.getElementById('headerMainTitle').innerText = cfg.title;
-      cfg.render();
+      // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
+      // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.
+      setChartAnimForViewEntry(true);
+      // finally에서 기본값을 짧은 쪽으로 되돌려 둔다 — 이후 차트 모드 토글(setTrendChartMode 등)은
+      // applyFilters()를 거치지 않고 render*Chart()를 직접 부르므로, 그때 남아있는 기본값을 쓴다.
+      try { cfg.render(); } finally { setChartAnimForViewEntry(false); applyChartAnimDuration(); }
       if (pushHistory) history.pushState({ view: viewKey }, '', '');
     }
 
