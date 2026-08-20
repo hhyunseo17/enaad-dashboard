@@ -116,16 +116,16 @@
     html[data-theme="light"] .select-input, html[data-theme="light"] .text-input { background: #FFFFFF; border-color: #E5E8EB; color: #191F28; }
     html[data-theme="light"] .select-input:focus, html[data-theme="light"] .text-input:focus { background: #F2F4F6; }
     html[data-theme="light"] .table-wrapper { background: #FFFFFF; }
-    html[data-theme="light"] .pivot-tree-table th, html[data-theme="light"] .pivot-tree-table td { border-color: #E5E8EB; }
-    html[data-theme="light"] .pivot-tree-table th { background: #0064FF !important; box-shadow: 0 1px 0 #4795FF; }
-    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(1) th { background: #0050D9 !important; }
-    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(2) th { background: #1F7CFF !important; }
+    html[data-theme="light"] .pivot-tree-table th, html[data-theme="light"] .pivot-tree-table td { border-bottom-color: #E8ECEF; }
+    html[data-theme="light"] .pivot-tree-table th { background: #F7F8FA !important; color: #4E5968 !important; }
+    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(1) th { background: #F1F3F5 !important; }
+    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(2) th { background: #F7F8FA !important; }
     /* td는 !important 없이 — 렌더러 인라인의 깊이별 색이 이겨야 한다(pivot-table.css 주석 참고) */
-    html[data-theme="light"] .pivot-tree-table td:first-child { background: #F2F4F6; color: #191F28; }
-    html[data-theme="light"] .pivot-tree-table th:first-child { background: #0064FF !important; color: #FFFFFF !important; }
-    html[data-theme="light"] .row-grand-total { background: #0050D9 !important; border-top-color: #4795FF; }
-    html[data-theme="light"] .row-grand-total td { background: #0050D9 !important; }
-    html[data-theme="light"] .row-grand-total td:first-child { background: #0064FF !important; }
+    html[data-theme="light"] .pivot-tree-table td:first-child { background: #FFFFFF; color: #191F28; border-right-color: #E8ECEF; }
+    html[data-theme="light"] .pivot-tree-table th:first-child { background: #F1F3F5 !important; color: #4E5968 !important; }
+    html[data-theme="light"] .row-grand-total td { background: #F0F4FA !important; }
+    html[data-theme="light"] .pivot-tree-table th.pv-th-summary { background: #EDF0F3 !important; color: #4E5968 !important; }
+    html[data-theme="light"] .pivot-tree-table th.pv-th-total { background: #E6EAEF !important; color: #191F28 !important; }
     html[data-theme="light"] .pivot-hero-card { background: linear-gradient(135deg, #FFFFFF 0%, #F2F4F6 100%) !important; }
     html[data-theme="light"] .pivot-hero-card h2 { color: #191F28 !important; }
     /* 헤더가 라이트 모드에서도 블루 배경이라 화이트 로고를 공통으로 사용 (테마별 전환 없음) */

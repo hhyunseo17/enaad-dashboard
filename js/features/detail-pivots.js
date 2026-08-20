@@ -11,10 +11,10 @@
       let h1 = `<th rowspan="2" style="text-align:left; min-width:280px; vertical-align:middle;">항목별 (대·중·소)</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedCatYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; } 
-        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
+        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 
+        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">+</span> ${yr}년</th>`; h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; }
       });
-      h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
+      h1 += `<th rowspan="2" class="pv-th-total" style="z-index:35;">총합계</th>`;
       document.getElementById('catPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('catPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
@@ -63,9 +63,9 @@
       years.forEach(yr => {
         const isExp = expandedCatYearColumns[yr] !== false;
         if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
-        html += `<td style="text-align:right; font-weight:900; background:#1E3A8A !important; color:#93C5FD !important;">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
+        html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
-      html += `<td style="text-align:right; font-weight:900; background:#1D4ED8 !important; color:#FFFFFF !important;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('catPivotTableBody').innerHTML = mapPivotHtml(html);
     }
 
@@ -82,10 +82,10 @@
       let h1 = `<th rowspan="2" style="text-align:left; min-width:280px; vertical-align:middle;">부서별 (부서·대·중)</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedDeptYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; } 
-        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
+        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 
+        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">+</span> ${yr}년</th>`; h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; }
       });
-      h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
+      h1 += `<th rowspan="2" class="pv-th-total" style="z-index:35;">총합계</th>`;
       document.getElementById('deptPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('deptPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
@@ -136,9 +136,9 @@
       years.forEach(yr => {
         const isExp = expandedDeptYearColumns[yr] !== false;
         if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
-        html += `<td style="text-align:right; font-weight:900; background:#1E3A8A !important; color:#93C5FD !important;">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
+        html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
-      html += `<td style="text-align:right; font-weight:900; background:#1D4ED8 !important; color:#FFFFFF !important;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('deptPivotTableBody').innerHTML = mapPivotHtml(html);
     }
 
@@ -155,10 +155,10 @@
       let h1 = `<th rowspan="2" style="text-align:left; min-width:320px; vertical-align:middle;">담당자별 5단계 (부서·담당·대·광고주·채널)</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedMgrYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
-        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; } 
-        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">+</span> ${yr}년</th>`; h2 += `<th style="background:#1E3A8A !important; color:#93C5FD !important;">${yr}년 요약</th>`; }
+        if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 
+        else { h1 += `<th rowspan="1"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">+</span> ${yr}년</th>`; h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; }
       });
-      h1 += `<th rowspan="2" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:900; z-index:35;">총합계</th>`;
+      h1 += `<th rowspan="2" class="pv-th-total" style="z-index:35;">총합계</th>`;
       document.getElementById('mgrPivotHeaderRow1').innerHTML = mapPivotHtml(h1); document.getElementById('mgrPivotHeaderRow2').innerHTML = mapPivotHtml(h2);
 
       let grandTotalSum = 0; let totalByYM = {}; let totalByY = {};
@@ -225,9 +225,9 @@
       years.forEach(yr => {
         const isExp = expandedMgrYearColumns[yr] !== false;
         if(isExp) { (yearMonthsMap[yr]||[]).forEach(m => { html += `<td style="text-align:right; font-weight:900;">${totalByYM[`${yr}-${m}`]>0?Math.round(totalByYM[`${yr}-${m}`]).toLocaleString():'-'}</td>`; }); }
-        html += `<td style="text-align:right; font-weight:900; background:#1E3A8A !important; color:#93C5FD !important;">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
+        html += `<td class="pv-num-sum">${totalByY[yr]>0?Math.round(totalByY[yr]).toLocaleString():'-'}</td>`;
       });
-      html += `<td style="text-align:right; font-weight:900; background:#1D4ED8 !important; color:#FFFFFF !important;">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
+      html += `<td class="pv-num-total">${Math.round(grandTotalSum).toLocaleString()}</td></tr>`;
       document.getElementById('mgrPivotTableBody').innerHTML = mapPivotHtml(html);
     }
 
