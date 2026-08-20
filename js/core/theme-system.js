@@ -225,6 +225,29 @@
       };
     }
 
+    // 도넛 원호 채움 — 링 안쪽에서 바깥으로 흐른다.
+    // 원호에 선형 그라데이션을 걸면 조각 위치마다 밝기가 달라져 같은 계열이 다른 색으로 보인다.
+    // 방사형으로 하면 모든 조각이 '안쪽 진함 → 바깥 밝음'이라는 같은 규칙을 따르므로
+    // 계열 구분은 유지되면서 막대와 같은 결의 입체감만 생긴다.
+    // 요소 좌표는 옵션 해석 시점에 없으므로 차트 영역에서 중심·반지름을 구한다.
+    function ddArcFill(hex) {
+      return (ctx) => {
+        const chart = ctx.chart, area = chart.chartArea;
+        if (!area) return hex;
+        const cx = (area.left + area.right) / 2, cy = (area.top + area.bottom) / 2;
+        const outer = Math.min(area.right - area.left, area.bottom - area.top) / 2;
+        const cut = parseFloat(String(chart.options.cutout || '0')) / 100;
+        const inner = outer * (isFinite(cut) && cut > 0 ? cut : 0.6);
+        if (!isFinite(outer) || outer <= 0 || outer - inner < 1) return hex;
+        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+        const g = chart.ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+        g.addColorStop(0, base);
+        g.addColorStop(1, tip);
+        return g;
+      };
+    }
+
     // 다색 대각 그라데이션 채움 — **단일 계열 차트에만 쓴다.**
     // 색이 계열(5대분류)을 뜻하는 차트에 쓰면 범례가 무의미해진다. 실적 막대나 광고주 수처럼
     // 계열이 하나뿐이라 색에 의미가 없는 곳에서는 순수 장식이므로 무해하고, 화면이 풍부해진다.
