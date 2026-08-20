@@ -98,9 +98,11 @@
     .checkbox-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; border-top: 1px solid var(--border-strong); padding-top: 4px; }
 
     .revenue-basis-toggle { display: flex; align-items: center; background: var(--control-bg); border: 1px solid var(--control-border); padding: 4px; border-radius: var(--radius-md); }
-    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
+    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
     .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
-    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 400; }
+    /* 선택된 쪽은 한 단계 낮춘다. 채도 높은 파란 면 위의 흰 글자는 같은 굵기라도 더 두껍게
+       보이므로, 굵기를 맞추면 오히려 선택된 쪽만 뭉쳐 보인다(광학 보정). */
+    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 500; }
 
     /* 월/연도 pill — 여러 개가 동시에 켜지는 컨트롤이다. '전체' 상태에서 12개가 전부
        진한 파랑으로 차면 아무것도 걸러지지 않은 기본 상태가 화면에서 가장 시끄러워진다.
@@ -108,9 +110,11 @@
        (매출기준 토글처럼 둘 중 하나만 켜지는 컨트롤은 채워진 파랑을 그대로 둔다 — 거기서는
         면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 400; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
+    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
     .pill-btn:hover { color: var(--primary-blue); background: var(--primary-blue-glow); }
-    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 400; }
+    /* 선택 상태는 옅은 파란 면 위의 파란 글자라 대비가 낮다 — 취급고/회계 토글과 달리
+       광학 보정이 필요 없으므로 굵기를 기본과 같이 둔다. */
+    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 500; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; background: transparent; color: var(--text-disabled); }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
