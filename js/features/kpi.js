@@ -226,7 +226,7 @@
           { label: '목표', data: targetVals, backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: ddBarFill(categoryColors['일반광고']), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: ddDuoFill('#4795FF', '#7B6BF0'), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },
@@ -304,7 +304,7 @@
           { label: '목표', data: targetVals, backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: false }
           },
-          { label: '실적', data: actualVals, backgroundColor: ddBarFill(categoryColors['일반광고']), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
+          { label: '실적', data: actualVals, backgroundColor: ddDuoFill('#4795FF', '#7B6BF0'), borderRadius: 5, barPercentage: 1, categoryPercentage: 0.8,
             datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 6, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
           }
         ] },

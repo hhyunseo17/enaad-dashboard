@@ -3,7 +3,24 @@
 // 다크/라이트 테마 전환 + 차트/피벗 색상 매핑(CH, mapPivotHtml)
 // 색상 토큰(CSS 변수)은 css/theme.css 참조
 // ============================================================
-    let currentTheme = 'dark'; // 'dark' | 'light'
+    // 테마 결정 순서: 저장된 사용자 선택 → OS 설정 → 라이트(기본).
+    //
+    // 기본값을 라이트로 둔 이유: 이 대시보드는 화면 캡처가 보고서·PPT·인쇄로 나가고,
+    // 대부분의 사용자는 테마를 바꿀 수 있다는 것 자체를 모른다. 즉 기본값이 곧 제품이다.
+    // 다크는 그대로 유지한다 — 쓰던 사람이 불편해지면 안 된다. 한 번 바꾸면 기억된다.
+    const THEME_STORAGE_KEY = 'enaad-theme';
+    function resolveInitialTheme() {
+      try {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY);
+        if (saved === 'dark' || saved === 'light') return saved;
+      } catch (e) { /* 프라이빗 모드 등에서 localStorage 접근이 막힐 수 있다 */ }
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+      // TODO(라이트 재구축 완료 시): 이 폴백을 'light'로 바꾸면 기본값 전환이 끝난다.
+      // 라이트를 바닥부터 다시 쌓는 중이라, 완성 전까지는 기존 사용자가 미완성 화면을 보지 않도록 다크를 유지한다.
+      return 'dark';
+    }
+    let currentTheme = resolveInitialTheme(); // 'dark' | 'light'
+    document.documentElement.setAttribute('data-theme', currentTheme);
 
     // 차트(Chart.js) 구조색 다크→라이트 매핑. 팔레트(chartColors/categoryColors/momColors)는 두 테마 공통으로 그대로 사용.
     const CHART_COLOR_MAP = {
@@ -69,6 +86,20 @@
           : chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
         g.addColorStop(0, lit);
         g.addColorStop(1, hex);
+        return g;
+      };
+    }
+
+    // 다색 대각 그라데이션 채움 — **단일 계열 차트에만 쓴다.**
+    // 색이 계열(5대분류)을 뜻하는 차트에 쓰면 범례가 무의미해진다. 실적 막대나 광고주 수처럼
+    // 계열이 하나뿐이라 색에 의미가 없는 곳에서는 순수 장식이므로 무해하고, 화면이 풍부해진다.
+    function ddDuoFill(fromHex, toHex) {
+      return (ctx) => {
+        const chart = ctx.chart, area = chart.chartArea;
+        if (!area) return fromHex;
+        const g = chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top);
+        g.addColorStop(0, fromHex);
+        g.addColorStop(1, toHex);
         return g;
       };
     }

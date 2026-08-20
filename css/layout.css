@@ -12,7 +12,17 @@
     ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
-    .dashboard-container { max-width: 1720px; margin: 0 auto; padding: 20px 24px 60px; display: flex; flex-direction: column; gap: 20px; }
+    /* 앰비언트 워시 — 페이지 바탕에 깔리는 옅은 빛(토큰 설명은 theme.css 참고).
+       중심을 뷰포트 밖에 두어 물체가 아니라 빛으로 읽히게 하고, fixed로 고정해 스크롤해도
+       배경이 따라 흐르지 않게 한다. 카드·표가 불투명하므로 실제로는 여백에서만 보인다. */
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(900px 520px at 88% -10%, var(--ambient-1), transparent 62%),
+        radial-gradient(760px 460px at 4% 2%, var(--ambient-2), transparent 66%);
+    }
+
+    .dashboard-container { position: relative; z-index: 1; max-width: 1720px; margin: 0 auto; padding: 20px 24px 60px; display: flex; flex-direction: column; gap: 20px; }
     .view-section { display: none; flex-direction: column; gap: 20px; }
     .view-section.active { display: flex; }
 
@@ -24,11 +34,11 @@
 
     .brand-group { display: flex; align-items: center; gap: 14px; }
     .brand-logo img { height: 26px; object-fit: contain; }
-    .brand-title h1.title-pill { font-size: 15px; font-weight: 600; color: #FFFFFF; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: var(--radius-full); padding: 7px 16px; }
-    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); color: #FFFFFF; white-space: nowrap; }
+    .brand-title h1.title-pill { font-size: 15px; font-weight: 600; color: var(--chip-fg); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; background: var(--chip-bg); border: 1px solid var(--chip-border); border-radius: var(--radius-full); padding: 7px 16px; }
+    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
     .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--radius-full); font-size: 10px; font-weight: 500; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); color: #FFFFFF; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--radius-full); font-size: 10px; font-weight: 500; background: var(--chip-bg-subtle); border: 1px solid var(--chip-border-subtle); color: var(--chip-fg); }
     .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
 
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
@@ -45,38 +55,38 @@
     .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
 
-    .filter-bar { position: sticky; top: 10px; z-index: 100; background: #181C24; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 16px 20px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 12px; backdrop-filter: blur(12px); }
+    .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 16px 20px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 12px; backdrop-filter: blur(12px); }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
-    .filter-label { font-size: 12px; font-weight: 600; color: #FFFFFF; white-space: nowrap; min-width: 65px; }
+    .filter-label { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; min-width: 65px; }
 
     .multi-dropdown { position: relative; display: inline-block; }
-    .multi-dropdown-btn { background: #212630; border: 1px solid #3A3F4C; border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
-    .multi-dropdown-btn:hover { border-color: var(--primary-blue); background: #282D3A; }
-    .multi-dropdown-panel { position: absolute; top: 100%; left: 0; margin-top: 4px; background: #1C2029; border: 1px solid #3A3F4C; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; z-index: 250; min-width: 200px; max-height: 260px; overflow-y: auto; display: none; }
+    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
+    .multi-dropdown-btn:hover { border-color: var(--primary-blue); background: var(--control-bg-hover); }
+    .multi-dropdown-panel { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--surface-popover); border: 1px solid var(--control-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; z-index: 250; min-width: 200px; max-height: 260px; overflow-y: auto; display: none; }
     .multi-dropdown-panel.show { display: block; }
-    .checkbox-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 13px; color: #FFFFFF; cursor: pointer; border-radius: var(--radius-sm); user-select: none; }
-    .checkbox-item:hover { background: #282D3A; }
+    .checkbox-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 13px; color: var(--text-primary); cursor: pointer; border-radius: var(--radius-sm); user-select: none; }
+    .checkbox-item:hover { background: var(--control-bg-hover); }
     .checkbox-item input[type="checkbox"] { accent-color: var(--primary-blue); width: 15px; height: 15px; cursor: pointer; }
     .checkbox-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; border-top: 1px solid var(--border-strong); padding-top: 4px; }
 
-    .revenue-basis-toggle { display: flex; align-items: center; background: #212630; border: 1px solid #3A3F4C; padding: 4px; border-radius: var(--radius-md); }
-    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: #D1D5DB; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
-    .revenue-basis-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.08); }
-    .revenue-basis-btn.active { background: var(--primary-blue); color: #FFFFFF; font-weight: 600; }
+    .revenue-basis-toggle { display: flex; align-items: center; background: var(--control-bg); border: 1px solid var(--control-border); padding: 4px; border-radius: var(--radius-md); }
+    .revenue-basis-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
+    .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
+    .revenue-basis-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 600; }
 
-    .pills-group { display: flex; align-items: center; gap: 4px; background: #212630; padding: 3px; border-radius: var(--radius-md); border: 1px solid #3A3F4C; flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: #D1D5DB; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
-    .pill-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.08); }
-    .pill-btn.active { background: var(--primary-blue); color: #FFFFFF; font-weight: 600; }
+    .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
+    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+    .pill-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
+    .pill-btn.active { background: var(--primary-blue); color: var(--text-on-accent); font-weight: 600; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서
        '의미 있는 색'과 '장식적인 색'이 경쟁하면 읽는 사람이 초록 카드를 기타광고와 연결짓게 된다.
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
-    .select-input, .text-input { background: #212630; border: 1px solid #3A3F4C; border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: #FFFFFF; font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
-    .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: #282D3A; }
+    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
+    .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-left: 3px solid var(--primary-blue); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; position: relative; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
@@ -99,6 +109,36 @@
     .grid-2col { display: grid; grid-template-columns: 1fr; gap: 20px; }
     @media (min-width: 1024px) { .grid-zone3 { grid-template-columns: 65% 35%; } .grid-zone5 { grid-template-columns: 50% 50%; } }
 
+    /* ==========================================================================
+       피벗 히어로 카드 — 다색 대각 그라데이션이 제자리를 찾는 유일한 곳.
+       큰 면이고, 제목과 총합계만 있고, 데이터가 없다. 그래서 색을 섞어도 무엇과도
+       경쟁하지 않는다. (같은 처리를 차트 막대에 하면 색이 곧 계열을 뜻하므로 읽을 수 없게 된다.)
+       화면별로 톤이 다른 건 의미가 있다 — 지금 어느 피벗인지 알려준다.
+       ========================================================================== */
+    /* 히어로 카드는 두 테마 모두 진한 그라데이션이므로, 카드 안에서만 텍스트 토큰을 밝은 값으로
+       재정의한다. 마크업이 인라인으로 var(--text-tertiary) 등을 쓰고 있어 이 방식이면
+       마크업을 건드리지 않고도 라이트 모드에서 라벨이 배경에 묻히는 문제가 해결된다. */
+    .pivot-hero-card {
+      position: relative; overflow: hidden; border: 1px solid var(--border-default);
+      color: #FFFFFF;
+      --text-primary: #FFFFFF;
+      --text-secondary: rgba(255, 255, 255, 0.86);
+      --text-tertiary: rgba(255, 255, 255, 0.68);
+    }
+    .pivot-hero-card > * { position: relative; z-index: 1; }
+    /* 오른쪽 위에서 흘러드는 빛 한 겹 — 앰비언트 워시와 같은 발상 */
+    .pivot-hero-card::after {
+      content: ''; position: absolute; z-index: 0; width: 420px; height: 420px;
+      right: -140px; top: -230px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.10), transparent 68%);
+    }
+    .pivot-hero-card.hero-blue   { background: linear-gradient(135deg, #1A2033 0%, #223A6B 62%, #2E4FA0 100%); }
+    .pivot-hero-card.hero-violet { background: linear-gradient(135deg, #1E1A33 0%, #372A6B 62%, #4E3BA0 100%); }
+    .pivot-hero-card.hero-teal   { background: linear-gradient(135deg, #172A2C 0%, #1E4F52 62%, #256E6E 100%); }
+    .pivot-hero-card.hero-green  { background: linear-gradient(135deg, #182B22 0%, #1F5138 62%, #276E4A 100%); }
+    .pivot-hero-card.hero-amber  { background: linear-gradient(135deg, #2C2418 0%, #5A4520 62%, #7C5D26 100%); }
+    .pivot-hero-card.hero-rose   { background: linear-gradient(135deg, #2C1A22 0%, #5A2740 62%, #7C3253 100%); }
+
     .card-box { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; transition: all 0.2s ease; }
     .card-box.clickable { cursor: pointer; }
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
@@ -110,7 +150,7 @@
 
     .table-container { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
     .table-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-    .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: #14171F; overscroll-behavior-x: contain; }
+    .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
     table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
     table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }

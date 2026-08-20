@@ -9,7 +9,7 @@
        숫자를 읽는 데 방해가 된다. 열 구분은 우측 정렬과 여백이 이미 충분히 해준다.
        tabular-nums: 자릿수 폭을 고정해 금액 열이 실제로 정렬돼 보이게 한다. */
     .pivot-tree-table { border-collapse: separate; border-spacing: 0; font-size: 13px !important; font-variant-numeric: tabular-nums; }
-    .pivot-tree-table th, .pivot-tree-table td { border: 0; border-bottom: 1px solid #232931; padding: 6px 12px; }
+    .pivot-tree-table th, .pivot-tree-table td { border: 0; border-bottom: 1px solid var(--pivot-cell-border); padding: 6px 12px; }
 
     .indent-step-1 { padding-left: 12px !important; }
     .indent-step-2 { padding-left: 36px !important; }
@@ -19,9 +19,9 @@
     
     /* 헤더는 채도 높은 파랑 대신 중립 표면으로 두고, 강조는 맨 아래 굵은 선 하나로만 준다.
        넓은 면적을 색으로 덮으면 정작 주인공인 숫자가 뒤로 밀린다. */
-    .pivot-tree-table th { background: #1B2029 !important; color: #C9D2DA !important; font-weight: 600; text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
-    .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: #1F252E !important; z-index: 32; }
-    .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: #1B2029 !important; z-index: 32; }
+    .pivot-tree-table th { background: var(--pivot-header-bg) !important; color: var(--pivot-header-fg) !important; font-weight: 600; text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
+    .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: var(--pivot-header-bg-alt) !important; z-index: 32; }
+    .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: var(--pivot-header-bg) !important; z-index: 32; }
     /* 헤더 아래 강조선. rowspan으로 두 줄을 걸치는 셀(첫 열·총합계)은 마지막 행에 속하지 않으므로
        따로 잡아주지 않으면 선이 중간에 끊긴다. */
     .pivot-tree-table thead tr:last-child th,
@@ -30,23 +30,23 @@
     /* Sticky 첫 열 — 위치·레이어는 th/td 공통.
        세로선을 전부 지웠으므로 고정 열의 오른쪽 경계만 예외로 남긴다(스크롤 시 경계 인지용). */
     .pivot-tree-table td:first-child,
-    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 500; border-right: 1px solid #2A313A; }
+    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 500; border-right: 1px solid var(--pivot-sticky-border); }
     /* 배경·글자색에는 !important를 쓰지 않는다. 렌더러가 인라인으로 넣는 행 깊이별 색이 이겨야
        하기 때문이다. 여기 값은 인라인 배경이 없는 피벗(세부데이터 등)을 위한 불투명 fallback이다
        — sticky 열은 반드시 불투명해야 아래 내용이 비쳐 보이지 않는다. */
-    .pivot-tree-table td:first-child { background: #1E293B; color: #F8FAFC; }
-    .pivot-tree-table th:first-child { z-index: 35 !important; background: #1F252E !important; color: #C9D2DA !important; text-align: left; }
+    .pivot-tree-table td:first-child { background: var(--pivot-rowlabel-bg); color: var(--pivot-rowlabel-fg); }
+    .pivot-tree-table th:first-child { z-index: 35 !important; background: var(--pivot-header-bg-alt) !important; color: var(--pivot-header-fg) !important; text-align: left; }
 
     /* 총합계 행: 파란 블록 대신 위쪽 강조선 + 살짝 올라온 표면. 표에서 유일하게 강조되는 행이므로
        색으로 덮지 않아도 충분히 눈에 들어온다. */
     .row-grand-total { font-weight: 700; }
-    .row-grand-total td { background: #1E252E !important; color: var(--text-primary) !important; border-top: 2px solid var(--primary-blue); border-bottom: 0; padding: 8px 12px !important; }
-    .row-grand-total td:first-child { background: #1E252E !important; z-index: 26; }
+    .row-grand-total td { background: var(--pivot-total-bg) !important; color: var(--text-primary) !important; border-top: 2px solid var(--primary-blue); border-bottom: 0; padding: 8px 12px !important; }
+    .row-grand-total td:first-child { background: var(--pivot-total-bg) !important; z-index: 26; }
 
     /* 요약·총합계 열 — 예전엔 렌더러가 인라인 !important로 진한 파랑을 박아 넣었다.
        클래스로 옮겨 CSS가 소유하게 하고, 구분은 채도가 아니라 명도 한 단계로만 준다. */
-    .pivot-tree-table th.pv-th-summary { background: #232A34 !important; color: #A9B6C2 !important; }
-    .pivot-tree-table th.pv-th-total { background: #262E39 !important; color: #E8EDF0 !important; font-weight: 700; }
+    .pivot-tree-table th.pv-th-summary { background: var(--pivot-th-summary-bg) !important; color: var(--pivot-th-summary-fg) !important; }
+    .pivot-tree-table th.pv-th-total { background: var(--pivot-th-total-bg) !important; color: var(--pivot-th-total-fg) !important; font-weight: 700; }
     .row-grand-total td.pv-num-sum,
     .row-grand-total td.pv-num-total { text-align: right; }
     .row-grand-total td.pv-num-total { color: var(--primary-blue) !important; font-weight: 800; }
@@ -54,10 +54,10 @@
     /* 펼치기/접기 칩: 채도 높은 파랑 칩이 행마다 반복되면 표가 시끄러워진다.
        평소엔 조용히 두고 hover에서만 강조색을 쓴다. */
     .toggle-icon,
-    .year-toggle-btn { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: transparent; color: var(--text-tertiary); border: 1px solid #333B45; border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer; margin-right: 8px; user-select: none; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
+    .year-toggle-btn { display: inline-block; width: 16px; height: 16px; line-height: 14px; text-align: center; background: transparent; color: var(--text-tertiary); border: 1px solid var(--toggle-border); border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer; margin-right: 8px; user-select: none; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
     .year-toggle-btn { margin-right: 6px; }
     .toggle-icon:hover,
-    .year-toggle-btn:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: #FFFFFF; }
+    .year-toggle-btn:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--text-on-accent); }
 
     .pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .page-info { font-size: 12px; color: var(--text-tertiary); }

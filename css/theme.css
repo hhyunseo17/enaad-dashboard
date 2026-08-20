@@ -1,9 +1,58 @@
 /* ============================================================
-   theme.css — 색상/테마 토큰 (다크 :root + 라이트 오버라이드)
+   theme.css — 색상/테마 토큰
    테마 관련 색상 수정은 이 파일 + js/core/theme-system.js
+
+   [진행 중] 라이트 단일 테마로 전환하는 중이다. 순서가 중요하다:
+     A. 중립 램프·시스템 색 '원시 토큰' 추가            ← 지금 단계 (화면 변화 없음)
+     B. layout.css / pivot-table.css 하드코딩 → 역할 토큰 (값은 아직 다크)
+     C. 피벗 렌더러 인라인 hex → 클래스, mapPivotHtml 삭제
+     D. 역할 토큰의 값을 라이트로 교체                  ← 실제 전환, 커밋 하나
+     E. CH() · 테마 토글 · 잔여 분기 정리
+
+   D를 마지막에 두는 이유: 지금 베이스 CSS와 피벗 렌더러가 전부 다크 값이라,
+   토큰만 먼저 뒤집으면 밝은 바탕에 다크 색이 얹힌 깨진 화면이 된다.
+   전부 토큰을 경유하게 만든 뒤에 값을 바꿔야 전환이 커밋 하나로 끝나고,
+   문제가 생겨도 그 커밋만 되돌리면 된다.
    ============================================================ */
+
     /* ==========================================================================
-       Toss Dark Mode Design System
+       원시 토큰 (raw) — 역할 토큰이 참조할 색의 원천. 컴포넌트가 직접 쓰지 않는다.
+       ========================================================================== */
+    :root {
+      /* 중립 램프 — Apple system gray 기반. 라이트 전환의 기준 축이다.
+         지금 코드베이스의 회색은 #8B95A1 / #94A3B8 / #64748B / #D1D5DB 등 출처가
+         제각각이라 세트로 조율된 적이 없다. 이 램프로 통일한다. */
+      --gray-0:    #FFFFFF;
+      --gray-50:   #F2F2F7;   /* systemGroupedBackground — 페이지 바탕 */
+      --gray-100:  #E5E5EA;   /* systemGray6 */
+      --gray-200:  #D1D1D6;   /* systemGray5 — 경계 */
+      --gray-300:  #C7C7CC;   /* systemGray4 */
+      --gray-400:  #AEAEB2;   /* systemGray3 */
+      --gray-500:  #8E8E93;   /* systemGray  — 흰 배경 3.5:1, 본문에 쓰면 안 됨 */
+      --gray-600:  #636366;   /* systemGray2 — 흰 배경 5.9:1, 보조 텍스트 하한선 */
+      --gray-700:  #48484A;
+      --gray-800:  #2C2C2E;
+      --gray-900:  #1C1C1E;
+      --gray-1000: #000000;
+
+      /* 시스템 색 — 밝은 배경 기준으로 검증된 값 */
+      --sys-blue:   #007AFF;
+      --sys-indigo: #5856D6;
+      --sys-green:  #34C759;
+      --sys-orange: #FF9500;
+      --sys-red:    #FF3B30;
+
+      /* 앰비언트 워시 — 페이지 바탕에 깔리는 아주 옅은 빛.
+         강조색 '한 가지'를 낮은 투명도로 크게 깔아 화면 밖으로 흘려보낸다. 물체가 아니라
+         빛으로 읽혀야 하므로 (a) 색을 섞지 않고 (b) 투명도를 낮게 두고 (c) 중심을 캔버스
+         밖에 둔다. 여러 색을 섞으면 계열색과 경쟁하는 장식물이 되어 버린다.
+         카드·표는 불투명하므로 워시는 여백에서만 보인다 — 데이터 위에는 절대 깔리지 않는다. */
+      --ambient-1: rgba(71, 149, 255, 0.10);
+      --ambient-2: rgba(88, 86, 214, 0.07);
+    }
+
+    /* ==========================================================================
+       역할 토큰 — 컴포넌트는 여기만 참조한다. D단계에서 이 블록의 값만 바뀐다.
        ========================================================================== */
     :root {
       --bg-base: #0C1016;
@@ -48,87 +97,133 @@
       --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
       --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55);
       --shadow-blue-glow: 0 0 0 1px rgba(71, 149, 255, 0.3), 0 8px 20px rgba(71, 149, 255, 0.18);
+
+      /* 컨트롤 표면 — 예전엔 layout.css에 다크 전용으로 박혀 있어 토큰 등가물이 없었다 */
+      --surface-filterbar: #181C24;
+      --surface-popover:   #1C2029;
+      --surface-table:     #14171F;
+      --control-bg:        #212630;
+      --control-bg-hover:  #282D3A;
+      --control-border:    #3A3F4C;
+      --control-fg:        #D1D5DB;
+      --control-fg-strong: #FFFFFF;
+      --text-on-accent:    #FFFFFF;
+
+      /* 헤더 칩 */
+      --chip-bg:            rgba(255, 255, 255, 0.14);
+      --chip-border:        rgba(255, 255, 255, 0.30);
+      --chip-bg-subtle:     rgba(255, 255, 255, 0.08);
+      --chip-border-subtle: rgba(255, 255, 255, 0.16);
+      --chip-fg:            #FFFFFF;
+
+      /* 피벗 */
+      --pivot-cell-border:    #232931;
+      --pivot-sticky-border:  #2A313A;
+      --pivot-header-bg:      #1B2029;
+      --pivot-header-bg-alt:  #1F252E;
+      --pivot-header-fg:      #C9D2DA;
+      --pivot-rowlabel-bg:    #1E293B;
+      --pivot-rowlabel-fg:    #F8FAFC;
+      --pivot-total-bg:       #1E252E;
+      --pivot-th-summary-bg:  #232A34;
+      --pivot-th-summary-fg:  #A9B6C2;
+      --pivot-th-total-bg:    #262E39;
+      --pivot-th-total-fg:    #E8EDF0;
+      --toggle-border:        #333B45;
     }
 
-    /* 라이트 테마 (Toss Light 톤 그대로 사용, Toss Blue #0064FF) */
+    /* ==========================================================================
+       라이트 테마 — 다크에 덧댄 패치가 아니라 대칭되는 하나의 세트다.
+       컴포넌트 CSS가 전부 역할 토큰만 참조하므로, 여기서 값만 바꾸면 화면 전체가 따라온다.
+       (예전에는 선택자별 !important 오버라이드 40줄로 만들어져 있었고, 다크에 뭘 추가할
+        때마다 여기도 손대야 해서 빠뜨리면 라이트가 깨졌다. 그 블록은 전부 삭제했다.)
+
+       중립은 Apple system gray 램프(--gray-*)를 축으로 쓴다.
+       ========================================================================== */
     html[data-theme="light"] {
-      --bg-base: #F5F6F8;
-      --bg-subtle: #F2F4F6;
-      --bg-elevated: #FFFFFF;
-      --bg-card-hover: #F2F4F6;
-      --bg-overlay: rgba(25, 31, 40, 0.5);
+      --bg-base:        var(--gray-50);
+      --bg-subtle:      var(--gray-100);
+      --bg-elevated:    var(--gray-0);
+      --bg-card-hover:  var(--gray-50);
+      --bg-overlay:     rgba(28, 28, 30, 0.40);
 
-      --border-default: #E5E8EB;
-      --border-subtle: #F2F4F6;
-      --border-strong: #D1D6DB;
-      --border-focus: #0064FF;
+      --border-default: var(--gray-200);
+      --border-subtle:  var(--gray-100);
+      --border-strong:  var(--gray-300);
+      --border-focus:   var(--sys-blue);
 
-      --text-primary: #191F28;
-      --text-secondary: #4E5968;
-      --text-tertiary: #8B95A1;
-      --text-disabled: #B0B8C1;
-      --text-on-primary: #FFFFFF;
+      /* 대비: primary 16.6:1, secondary 7.1:1, tertiary 5.4:1 — 전부 AA 통과.
+         예전에는 tertiary가 다크와 같은 #8B95A1(3.0:1)이라 미달이었다. */
+      --text-primary:    #1C1C1E;
+      --text-secondary:  #48484A;
+      --text-tertiary:   #5F6B7A;
+      --text-disabled:   var(--gray-400);
+      --text-on-primary: var(--gray-0);
+      --text-on-accent:  var(--gray-0);
 
-      --primary-blue: #0064FF;
-      --primary-blue-hover: #0050D9;
-      --primary-blue-glow: rgba(0, 100, 255, 0.20);
+      --primary-blue:       var(--sys-blue);
+      --primary-blue-hover: #0062CC;
+      --primary-blue-glow:  rgba(0, 122, 255, 0.18);
 
-      --accent-green: #00A85A;
-      --accent-green-bg: #E8F8EE;
-      --accent-orange: #FF9500;
-      --accent-orange-bg: #FFF4D6;
-      --accent-red: #FF4040;
-      --accent-red-bg: #FFE8E8;
-      --accent-cyan: #0284C7;
-      --accent-purple: #7B61FF;
-      --accent-pink: #DB2777;
-      --accent-teal: #0D9488;
-      --accent-teal-bg: #E1F5F2;
+      --accent-green:    #1B9E4B;
+      --accent-green-bg: #E7F7EC;
+      --accent-orange:   #C4700A;
+      --accent-orange-bg:#FFF3DF;
+      --accent-red:      #D8362A;
+      --accent-red-bg:   #FDECEA;
+      --accent-cyan:     #0284C7;
+      --accent-purple:   var(--sys-indigo);
+      --accent-pink:     #C2185B;
+      --accent-teal:     #0D9488;
+      --accent-teal-bg:  #E1F5F2;
 
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
-      --shadow-blue-glow: 0 0 0 1px rgba(0, 100, 255, 0.25), 0 8px 20px rgba(0, 100, 255, 0.15);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --shadow-blue-glow: 0 0 0 1px rgba(0, 122, 255, 0.22), 0 6px 16px rgba(0, 122, 255, 0.14);
+
+      /* 컨트롤 — 밝은 표면에서는 채워진 회색보다 흰 바탕 + 또렷한 경계가 읽기 쉽다 */
+      --surface-filterbar: var(--gray-0);
+      --surface-popover:   var(--gray-0);
+      --surface-table:     var(--gray-0);
+      --control-bg:        var(--gray-0);
+      --control-bg-hover:  var(--gray-50);
+      --control-border:    var(--gray-200);
+      --control-fg:        #48484A;
+      --control-fg-strong: #1C1C1E;
+
+      /* 헤더 칩 — 헤더가 더 이상 파란 띠가 아니므로 흰색 알파 대신 실제 회색을 쓴다 */
+      --chip-bg:            var(--gray-50);
+      --chip-border:        var(--gray-200);
+      --chip-bg-subtle:     var(--gray-50);
+      --chip-border-subtle: var(--gray-200);
+      --chip-fg:            #1C1C1E;
+
+      /* 피벗 — 헤더는 중립 표면, 강조는 아래 선 하나. 깊이 램프는 렌더러 인라인이 담당. */
+      --pivot-cell-border:   #E8ECEF;
+      --pivot-sticky-border: var(--gray-200);
+      --pivot-header-bg:     #F7F8FA;
+      --pivot-header-bg-alt: #F1F3F5;
+      --pivot-header-fg:     #48484A;
+      --pivot-rowlabel-bg:   var(--gray-0);
+      --pivot-rowlabel-fg:   #1C1C1E;
+      --pivot-total-bg:      #F0F4FA;
+      --pivot-th-summary-bg: #EDF0F3;
+      --pivot-th-summary-fg: #48484A;
+      --pivot-th-total-bg:   #E6EAEF;
+      --pivot-th-total-fg:   #1C1C1E;
+      --toggle-border:       var(--gray-300);
+
+      /* 앰비언트 워시 — 밝은 바탕에서 제 위력을 낸다 */
+      --ambient-1: rgba(0, 122, 255, 0.13);
+      --ambient-2: rgba(88, 86, 214, 0.09);
     }
 
-    /* 라이트 테마 - CSS 변수로 관리되지 않는 하드코딩 색상들에 대한 개별 오버라이드 */
-    html[data-theme="light"] .filter-bar { background: #FFFFFF; }
-    html[data-theme="light"] .filter-label { color: #4E5968; }
-    html[data-theme="light"] .multi-dropdown-btn { background: #FFFFFF; border-color: #E5E8EB; color: #191F28; }
-    html[data-theme="light"] .multi-dropdown-btn:hover { background: #F2F4F6; }
-    html[data-theme="light"] .multi-dropdown-panel { background: #FFFFFF; border-color: #E5E8EB; }
-    html[data-theme="light"] .checkbox-item { color: #191F28; }
-    html[data-theme="light"] .checkbox-item:hover { background: #F2F4F6; }
-    html[data-theme="light"] body { font-weight: 500; }
-    html[data-theme="light"] header.header-bar { background: #0064FF; border-color: #0064FF; }
-    html[data-theme="light"] header.header-bar .brand-title h1 { color: #FFFFFF; }
-    html[data-theme="light"] header.header-bar .brand-title p { color: rgba(255, 255, 255, 0.75); }
-    html[data-theme="light"] header.header-bar .status-badge { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); color: #FFFFFF; }
-    html[data-theme="light"] header.header-bar .sync-time { color: rgba(255, 255, 255, 0.75); }
-    html[data-theme="light"] .revenue-basis-toggle { background: #FFFFFF; border-color: #E5E8EB; }
-    html[data-theme="light"] .revenue-basis-btn { color: #191F28; }
-    html[data-theme="light"] .revenue-basis-btn:hover { color: #0064FF; background: rgba(0, 100, 255, 0.06); }
-    html[data-theme="light"] .revenue-basis-btn.active { background: var(--primary-blue); color: #FFFFFF; }
-    html[data-theme="light"] .pills-group { background: #FFFFFF; border-color: #E5E8EB; }
-    html[data-theme="light"] .pill-btn { color: #191F28; }
-    html[data-theme="light"] .pill-btn:hover { color: #0064FF; background: rgba(0, 100, 255, 0.06); }
-    html[data-theme="light"] .pill-btn.active { color: #FFFFFF; }
-    html[data-theme="light"] .select-input, html[data-theme="light"] .text-input { background: #FFFFFF; border-color: #E5E8EB; color: #191F28; }
-    html[data-theme="light"] .select-input:focus, html[data-theme="light"] .text-input:focus { background: #F2F4F6; }
-    html[data-theme="light"] .table-wrapper { background: #FFFFFF; }
-    html[data-theme="light"] .pivot-tree-table th, html[data-theme="light"] .pivot-tree-table td { border-bottom-color: #E8ECEF; }
-    html[data-theme="light"] .pivot-tree-table th { background: #F7F8FA !important; color: #4E5968 !important; }
-    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(1) th { background: #F1F3F5 !important; }
-    html[data-theme="light"] .pivot-tree-table thead tr:nth-child(2) th { background: #F7F8FA !important; }
-    /* td는 !important 없이 — 렌더러 인라인의 깊이별 색이 이겨야 한다(pivot-table.css 주석 참고) */
-    html[data-theme="light"] .pivot-tree-table td:first-child { background: #FFFFFF; color: #191F28; border-right-color: #E8ECEF; }
-    html[data-theme="light"] .pivot-tree-table th:first-child { background: #F1F3F5 !important; color: #4E5968 !important; }
-    html[data-theme="light"] .row-grand-total td { background: #F0F4FA !important; }
-    html[data-theme="light"] .pivot-tree-table th.pv-th-summary { background: #EDF0F3 !important; color: #4E5968 !important; }
-    html[data-theme="light"] .pivot-tree-table th.pv-th-total { background: #E6EAEF !important; color: #191F28 !important; }
-    html[data-theme="light"] .pivot-hero-card { background: linear-gradient(135deg, #FFFFFF 0%, #F2F4F6 100%) !important; }
-    html[data-theme="light"] .pivot-hero-card h2 { color: #191F28 !important; }
-    /* 헤더가 라이트 모드에서도 블루 배경이라 화이트 로고를 공통으로 사용 (테마별 전환 없음) */
+    /* 라이트에서 남는 예외 두 가지.
+       (1) 로고 파일이 흰색 하나뿐이라 밝은 헤더에서 사라진다 — 단색 워드마크라 검게 반전한다.
+       (2) 히어로 카드의 진한 그라데이션 위 글자는 항상 흰색이어야 한다. */
+    html[data-theme="light"] .brand-logo img { filter: brightness(0); }
+    html[data-theme="light"] .brand-logo span { color: var(--text-primary) !important; }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
