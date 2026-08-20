@@ -170,12 +170,17 @@
       return (ctx) => {
         const chart = ctx.chart, area = chart.chartArea;
         if (!area) return hex;
-        const lit = currentTheme === 'light' ? ddMixHex(hex, '#000000', 0.10) : ddMixHex(hex, '#FFFFFF', 0.16);
+        // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
+        // 밑동이 진하고 끝으로 갈수록 밝아진다 — 반대로 하면 스택 맨 아래에 오는 계열
+        // (보통 비중이 가장 큰 일반광고)이 항상 제일 물빠져 보인다.
+        const base = currentTheme === 'light' ? ddLift(hex, -0.07) : ddLift(hex, 0.10);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.05) : hex;
+        // 목표/실적 차트(ddDuoFill)와 같은 대각 방향으로 흐르게 해 결이 맞도록 한다.
         const g = horizontal
-          ? chart.ctx.createLinearGradient(area.left, 0, area.right, 0)
-          : chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
-        g.addColorStop(0, lit);
-        g.addColorStop(1, hex);
+          ? chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top)
+          : chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top);
+        g.addColorStop(0, base);
+        g.addColorStop(1, tip);
         return g;
       };
     }
@@ -197,36 +202,6 @@
       return {
         borderColor: ddSurfaceColor(),
         borderWidth: { left: 0.15, right: 0.15 }
-      };
-    }
-
-    // 스택 바깥 끝만 둥글게 — 목표/실적 차트(단일 막대)의 둥근 느낌을 스택 차트에도 준다.
-    //
-    // 세그먼트마다 라운드를 주면 알약을 쌓아놓은 것처럼 보이고 '하나의 기둥'이라는 읽기가 깨진다.
-    // 그래서 각 막대에서 **값이 있는 마지막 계열**에만 바깥쪽 두 모서리를 준다.
-    // '마지막'이 고정이 아닌 게 핵심이다 — 어떤 달에 기타광고가 0이면 큐톤광고가 맨 위가 되므로
-    // 데이터 포인트마다 다시 판단해야 한다.
-    function ddStackTopRadius(horizontal, r) {
-      const radius = r === undefined ? 5 : r;
-      return (ctx) => {
-        const i = ctx.dataIndex, chart = ctx.chart, sets = chart.data.datasets;
-        // '값이 0보다 큰 마지막 계열'로 판정하면 안 된다. 기타광고처럼 전체의 0.1% 수준인 계열은
-        // 0은 아니지만 1px도 안 되는 조각이라, 보이지 않는 그 조각이 라운드를 가져가고
-        // 정작 눈에 보이는 맨 위 계열(예: 인포머셜)은 각진 채로 남는다.
-        // 그래서 '라운드가 실제로 그려질 만큼 두꺼운 마지막 계열'을 찾는다.
-        const meta = chart.getDatasetMeta(ctx.datasetIndex);
-        const scale = meta && (horizontal ? chart.scales[meta.xAxisID] : chart.scales[meta.yAxisID]);
-        const thickEnough = (v) => {
-          if (typeof v !== 'number' || v <= 0) return false;
-          if (!scale) return true; // 스케일 준비 전에는 값 기준으로 폴백
-          return Math.abs(scale.getPixelForValue(v) - scale.getPixelForValue(0)) >= radius;
-        };
-        let last = -1;
-        for (let d = 0; d < sets.length; d++) if (thickEnough(sets[d].data[i])) last = d;
-        if (ctx.datasetIndex !== last) return 0;
-        return horizontal
-          ? { topRight: radius, bottomRight: radius }
-          : { topLeft: radius, topRight: radius };
       };
     }
 

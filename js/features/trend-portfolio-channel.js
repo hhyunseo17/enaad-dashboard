@@ -11,7 +11,7 @@
           const monthlyCatSum = filteredData.filter(r => r.monthStr === m && r.categoryReclassified === cat).reduce((sum, r) => sum + r.amount, 0) / 1e8;
           if (trendChartMode === 'cumulative') { cumulativeSum += monthlyCatSum; return cumulativeSum; } return monthlyCatSum;
         });
-        return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: ddStackTopRadius(), ...ddStackSeparator(),
+        return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categories[categories.length - 1],
             anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 12, weight: '700' },
@@ -63,7 +63,7 @@
       const labels = [...targetOrder]; let hasOther = false; Object.keys(channelMap).forEach(ch => { if (!targetOrder.includes(ch) && ch !== '(미지정)') hasOther = true; }); if (hasOther) labels.push('기타');
       const datasets = categoryOrderList.map(cat => {
         const data = labels.map(chLabel => { if (chLabel === '기타') return filteredData.filter(r => !targetOrder.includes(r.channel) && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; return filteredData.filter(r => r.channel === chLabel && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; });
-        return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: ddStackTopRadius(), ...ddStackSeparator(),
+        return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || chartColors.blue), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categoryOrderList[categoryOrderList.length - 1],
             anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '700' },
