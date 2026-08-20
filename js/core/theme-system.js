@@ -34,19 +34,41 @@
       return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
     }
 
-    // 막대 채움. **밑동이 가장 진하고 끝으로 갈수록 아주 조금 옅어진다.**
-    // 반대로(끝이 진하게) 하면 스택 맨 아래에 오는 계열 — 보통 비중이 가장 큰 일반광고 — 이
-    // 항상 제일 물빠져 보인다. 폭도 좁게(1.0 → 0.78) 잡아 색 정체성이 흐려지지 않게 한다.
+    // 차트가 올라앉는 카드 표면색. 도넛 세그먼트를 배경색 테두리로 갈라놓을 때 쓴다.
+    // CSS 토큰을 단일 진실 공급원으로 두고 JS는 읽기만 한다(테마 전환 시 차트가 재생성되므로 매번 최신값).
+    function ddSurfaceColor() {
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--bg-elevated').trim();
+      return v || (currentTheme === 'light' ? '#FFFFFF' : '#171C26');
+    }
+
+    // 두 색을 t 비율로 섞는다(0=a, 1=b).
+    function ddMixHex(a, b, t) {
+      const p = (h) => { const s = String(h).replace('#',''); const n = parseInt(s.length===3 ? s.split('').map(c=>c+c).join('') : s, 16);
+        return [(n>>16)&255, (n>>8)&255, n&255]; };
+      const [r1,g1,b1] = p(a), [r2,g2,b2] = p(b);
+      const m = (x,y) => Math.round(x + (y - x) * t);
+      return `rgb(${m(r1,r2)}, ${m(g1,g2)}, ${m(b1,b2)})`;
+    }
+
+    // 막대 채움 — 밑동이 밝고 끝으로 갈수록 원래 색으로 돌아온다.
+    //
+    // **알파로 그라데이션을 만들면 안 된다.** 반투명 색은 배경과 섞이면서 채도가 떨어져
+    // 색 전체가 탁해 보인다(어두운 배경에서 특히 심하다). 그래서 두 스톱 모두 불투명하게 두고
+    // 명도만 움직인다. 다크에서는 밑동을 흰쪽으로, 라이트에서는 검은쪽으로 살짝 민다.
+    //
+    // 밑동을 강조하는 이유: 반대로 하면 스택 맨 아래에 오는 계열 — 보통 비중이 가장 큰
+    // 일반광고 — 이 항상 제일 물빠져 보인다.
     // Chart.js는 레이아웃 전에도 backgroundColor를 한 번 평가하므로 chartArea가 없으면 단색으로 돌려준다.
     function ddBarFill(hex, horizontal) {
       return (ctx) => {
         const chart = ctx.chart, area = chart.chartArea;
         if (!area) return hex;
+        const lit = currentTheme === 'light' ? ddMixHex(hex, '#000000', 0.10) : ddMixHex(hex, '#FFFFFF', 0.16);
         const g = horizontal
           ? chart.ctx.createLinearGradient(area.left, 0, area.right, 0)
           : chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
-        g.addColorStop(0, hex);
-        g.addColorStop(1, ddHexAlpha(hex, 0.78));
+        g.addColorStop(0, lit);
+        g.addColorStop(1, hex);
         return g;
       };
     }
