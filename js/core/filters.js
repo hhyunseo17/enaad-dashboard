@@ -2,6 +2,27 @@
 // js/core/filters.js
 // 필터 UI + applyFilters() — 매출분류/필터 규칙의 단일 지점 (커스텀 조합은 shared-helpers.js의 makeCommonMatch() 참고)
 // ============================================================
+    // 체크박스 필터(부서/채널/방송디지털/대분류)의 선택 상태 접근자.
+    // **상태 변수가 원본이고 화면은 그 투영이다.** 반대로 화면에서 상태를 역산하면 안 된다 —
+    // 연/월을 좁히면 그 기간에 데이터가 없는 항목이 목록에서 빠지는데, 예전에는 그 줄어든 화면을
+    // 그대로 되읽어 선택을 덮어썼다. 그 결과 (a) 선택 중이던 부서가 목록에서 사라지면 선택이
+    // "선택 없음"으로 붕괴해 전 화면이 0건이 되고 연도를 되돌려도 복구되지 않았으며,
+    // (b) 반대로 제외해 둔 항목이 목록에서 빠지면 남은 것이 전부 체크된 꼴이라 '전체 선택'으로
+    // 승격되어, 연도를 오간 것만으로 제외했던 항목이 몰래 되살아났다.
+    function getFilterSelection(type) {
+      if (type === 'Dept') return { list: selectedDepts, isAll: isAllDeptsSelected };
+      if (type === 'Channel') return { list: selectedChannels, isAll: isAllChannelsSelected };
+      if (type === 'Broad') return { list: selectedBroads, isAll: isAllBroadsSelected };
+      return { list: selectedCategories, isAll: isAllCategoriesSelected };
+    }
+
+    function setFilterSelection(type, list, isAll) {
+      if (type === 'Dept') { selectedDepts = list; isAllDeptsSelected = isAll; }
+      else if (type === 'Channel') { selectedChannels = list; isAllChannelsSelected = isAll; }
+      else if (type === 'Broad') { selectedBroads = list; isAllBroadsSelected = isAll; }
+      else if (type === 'Category') { selectedCategories = list; isAllCategoriesSelected = isAll; }
+    }
+
     function updateFilterCheckboxes(isInit) {
       const baseFiltered = rawData.filter(r => {
         if (r.bonbuRevenueStatus !== '본부매출') return false;
@@ -10,16 +31,26 @@
         return true;
       });
 
+      // 스코프(연/월) 밖이라 목록에서 빠질 항목이라도 **명시적으로 선택 중이면 목록에 남긴다.**
+      // 화면과 상태를 일치시켜 두어야 연도를 오갈 때 선택이 조용히 사라지지 않는다.
+      // (첫 로드/초기화이거나 '전체 선택' 상태면 붙일 선택 자체가 없으므로 스코프 그대로 쓴다.)
+      const keepSelected = (type, list) => {
+        if (isInit) return list;
+        const { list: sel, isAll } = getFilterSelection(type);
+        if (isAll) return list;
+        return [...new Set([...list, ...sel])];
+      };
+
       // **부서명 커스텀 정렬 적용 (매출순이 아닌 1팀, 2팀.. 순서)**
-      const depts = [...new Set(baseFiltered.map(r => r.dept))].filter(Boolean).sort(compareDeptOrder);
+      const depts = keepSelected('Dept', [...new Set(baseFiltered.map(r => r.dept))].filter(Boolean)).sort(compareDeptOrder);
       const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
-      const channels = [...new Set(baseFiltered.map(r => r.channel))].filter(Boolean).sort((a,b) => {
+      const channels = keepSelected('Channel', [...new Set(baseFiltered.map(r => r.channel))].filter(Boolean)).sort((a,b) => {
         let idxA = targetOrder.indexOf(a); let idxB = targetOrder.indexOf(b);
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         if (idxA !== -1) return -1; if (idxB !== -1) return 1;
         return a.localeCompare(b);
       });
-      const broads = [...new Set(baseFiltered.map(r => r.broadDigital))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
+      const broads = keepSelected('Broad', [...new Set(baseFiltered.map(r => r.broadDigital))].filter(Boolean)).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
       const cats = [...categoryOrderList];
 
       renderCheckboxList('Dept', depts, isInit);
@@ -30,18 +61,21 @@
 
     function renderCheckboxList(type, list, isInit) {
       const container = document.getElementById(`list${type}Checkboxes`);
-      let html = '';
-      let allSelectedFlag = type === 'Dept' ? isAllDeptsSelected : (type === 'Channel' ? isAllChannelsSelected : (type === 'Broad' ? isAllBroadsSelected : isAllCategoriesSelected));
-      let currentSelectedList = type === 'Dept' ? selectedDepts : (type === 'Channel' ? selectedChannels : (type === 'Broad' ? selectedBroads : selectedCategories));
+      // 첫 로드/필터 초기화는 '전체 선택'에서 출발한다. '전체 선택' 상태에서는 선택 목록을 현재
+      // 목록으로 맞춰만 둔다(목록 자체가 곧 전체이므로). 그 외에는 기존 선택을 그대로 유지한다.
+      if (isInit || getFilterSelection(type).isAll) setFilterSelection(type, [...list], true);
 
+      const { list: selected, isAll } = getFilterSelection(type);
+      let html = '';
       list.forEach(item => {
-        let isChecked = isInit ? true : (allSelectedFlag || currentSelectedList.includes(item));
+        const isChecked = isAll || selected.includes(item);
         html += `<label class="checkbox-item"><input type="checkbox" value="${item}" onchange="onCheckboxChange('${type}')" ${isChecked ? 'checked' : ''}> ${item}</label>`;
       });
       container.innerHTML = html;
-      syncSelectedState(type);
+
       const checkAll = document.getElementById(`checkAll${type}`);
-      if (checkAll) checkAll.checked = allSelectedFlag;
+      if (checkAll) { checkAll.checked = isAll; checkAll.indeterminate = !isAll && selected.length > 0; }
+      updateDropdownLabel(type);
     }
 
     function toggleAllCheckboxes(type, master) {
@@ -60,30 +94,28 @@
       syncSelectedState(type); applyFilters();
     }
 
+    // 화면 → 상태 방향의 갱신은 **사용자가 직접 체크박스를 조작했을 때만** 일어난다.
+    // (목록 재렌더에서는 호출하지 않는다 — renderCheckboxList의 주석 참고)
     function syncSelectedState(type) {
       const container = document.getElementById(`list${type}Checkboxes`);
       const checkboxes = container.querySelectorAll('input[type="checkbox"]');
       const checkedVals = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
       const isAllChecked = (checkedVals.length === checkboxes.length) || (checkboxes.length === 0);
 
-      if (type === 'Dept') { selectedDepts = checkedVals; isAllDeptsSelected = isAllChecked; }
-      else if (type === 'Channel') { selectedChannels = checkedVals; isAllChannelsSelected = isAllChecked; }
-      else if (type === 'Broad') { selectedBroads = checkedVals; isAllBroadsSelected = isAllChecked; }
-      else if (type === 'Category') { selectedCategories = checkedVals; isAllCategoriesSelected = isAllChecked; }
+      setFilterSelection(type, checkedVals, isAllChecked);
       updateDropdownLabel(type);
     }
 
     function updateDropdownLabel(type) {
-      const container = document.getElementById(`list${type}Checkboxes`);
-      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-      const checked = container.querySelectorAll('input[type="checkbox"]:checked');
       const label = document.getElementById(`label${type}`);
+      if (!label) return;
+      const { list, isAll } = getFilterSelection(type);
 
       let defaultText = '전체 선택';
       if (type === 'Dept') defaultText = '전체 부서'; else if (type === 'Channel') defaultText = '전체 채널'; else if (type === 'Broad') defaultText = '전체 구분'; else if (type === 'Category') defaultText = '전체 대분류';
-      if (checked.length === 0) label.innerText = '선택 없음';
-      else if (checked.length === checkboxes.length) label.innerText = defaultText;
-      else label.innerText = `${checked.length}개 선택됨`;
+      if (isAll) label.innerText = defaultText;
+      else if (list.length === 0) label.innerText = '선택 없음';
+      else label.innerText = `${list.length}개 선택됨`;
     }
 
     function setupYearPills(isInit) {
@@ -226,10 +258,11 @@
       if (defaultYear === 'all') { selectedYears = []; yContainer.querySelector('[data-year="all"]').classList.add('active'); } 
       else { selectedYears = [defaultYear]; const targetBtn = yContainer.querySelector(`[data-year="${defaultYear}"]`); if (targetBtn) targetBtn.classList.add('active'); }
 
+      // 월 pill의 활성/비활성은 되돌린 연도 기준으로 **다시 계산해야** 한다. 예전에는 active 클래스만
+      // 손으로 지우고 끝내서, 초기화 직후 데이터가 없는 월(예: 아직 오지 않은 하반기)이 눌리는 상태로
+      // 남아 있었고 그걸 누르면 조회 결과가 0건이었다. 활성/비활성과 강조는 이 함수가 전부 처리한다.
       selectedMonths = [];
-      const mContainer = document.getElementById('monthPills');
-      mContainer.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
-      mContainer.querySelector('[data-month="all"]').classList.add('active');
+      updateMonthPillAvailability();
 
       updateFilterCheckboxes(true);
       document.getElementById('inputAgency').value = ''; document.getElementById('inputAdvertiser').value = '';
