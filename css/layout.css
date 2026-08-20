@@ -4,7 +4,10 @@
     body {
       background-color: var(--bg-base); color: var(--text-primary);
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-      letter-spacing: -0.015em; line-height: 1.5; min-height: 100vh; overflow-x: hidden; width: 100%; overscroll-behavior-x: none;
+      /* 한글에는 음수 자간을 쓰지 않는다. 라틴은 -0.015em 정도가 자연스럽지만, 한글은 네모틀에
+         자소가 꽉 차 있어 자간을 좁히면 글자끼리 붙어 판독이 급격히 나빠진다. 특히 11~13px에서
+         체감이 크다. 음수 자간은 큰 글자(KPI 숫자·제목)에만 국소적으로 준다. */
+      letter-spacing: 0; line-height: 1.6; min-height: 100vh; overflow-x: hidden; width: 100%; overscroll-behavior-x: none;
     }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -173,7 +176,7 @@
     .table-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
-    table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.45; text-align: left; }
     table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
     table.data-table th:hover { color: var(--primary-blue); }
     table.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-default); color: var(--text-primary); white-space: nowrap; }

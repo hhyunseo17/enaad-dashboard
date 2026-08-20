@@ -32,6 +32,20 @@
     };
     function CH(hex) { return currentTheme === 'light' ? (CHART_COLOR_MAP[hex] || hex) : hex; }
     Chart.register(ChartDataLabels);
+
+    // 범례와 플롯 영역 사이 여백.
+    // Chart.js에는 '범례 아래 여백' 옵션이 없다(labels.padding은 항목 사이 간격이다).
+    // 범례 박스의 fit()이 계산한 높이에 여백을 더하는 것이 표준 해법이다.
+    // 이게 없으면 가장 높은 막대의 데이터라벨이 범례에 달라붙는다.
+    Chart.register({
+      id: 'ddLegendSpacing',
+      beforeInit(chart) {
+        const legend = chart.legend;
+        if (!legend) return;
+        const originalFit = legend.fit;
+        legend.fit = function () { originalFit.call(this); this.height += 20; };
+      }
+    });
     Chart.defaults.set('plugins.datalabels', { display: false });
     function dataLabelTextColor() { return currentTheme === 'light' ? '#191F28' : '#F2F4F6'; }
 
@@ -118,6 +132,15 @@
       return {
         borderColor: ddSurfaceColor(),
         borderWidth: horizontal ? { right: 0.3 } : { top: 0.3 }
+      };
+    }
+
+    // 그룹 막대(목표/실적, 전월/당월 등) 사이 간격 — 스택·도넛과 같은 0.3px로 맞춘다.
+    // 스택은 맞닿는 면이 하나(위 또는 오른쪽)지만 그룹은 좌우로 붙으므로 양쪽에 절반씩 준다.
+    function ddGroupSeparator() {
+      return {
+        borderColor: ddSurfaceColor(),
+        borderWidth: { left: 0.15, right: 0.15 }
       };
     }
 

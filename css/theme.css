@@ -141,7 +141,7 @@
        중립은 Apple system gray 램프(--gray-*)를 축으로 쓴다.
        ========================================================================== */
     html[data-theme="light"] {
-      --bg-base:        var(--gray-50);
+      --bg-base:        #ECEDF1;
       --bg-subtle:      var(--gray-100);
       --bg-elevated:    var(--gray-0);
       --bg-card-hover:  var(--gray-50);
@@ -154,8 +154,10 @@
 
       /* 대비: primary 16.6:1, secondary 7.1:1, tertiary 5.4:1 — 전부 AA 통과.
          예전에는 tertiary가 다크와 같은 #8B95A1(3.0:1)이라 미달이었다. */
-      --text-primary:    #1C1C1E;
-      --text-secondary:  #48484A;
+      /* #1C1C1E(16.6:1)는 넓은 흰 바탕에서 글자가 번져 보여 오래 보기 힘들다.
+         13.6:1로 낮춘다 — 여전히 AA를 크게 상회하면서 훨씬 편하다. */
+      --text-primary:    #2C2C2E;
+      --text-secondary:  #52525A;
       --text-tertiary:   #5F6B7A;
       --text-disabled:   var(--gray-400);
       --text-on-primary: var(--gray-0);
@@ -215,8 +217,8 @@
       --toggle-border:       var(--gray-300);
 
       /* 앰비언트 워시 — 밝은 바탕에서 제 위력을 낸다 */
-      --ambient-1: rgba(0, 122, 255, 0.13);
-      --ambient-2: rgba(88, 86, 214, 0.09);
+      --ambient-1: rgba(0, 122, 255, 0.07);
+      --ambient-2: rgba(88, 86, 214, 0.05);
     }
 
     /* 라이트에서 남는 예외 두 가지.

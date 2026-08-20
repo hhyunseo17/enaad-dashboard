@@ -8,7 +8,7 @@
     /* 세로 격자선을 없애고 가로 헤어라인만 남긴다 — 41열짜리 표에서 세로선은 그물처럼 보여
        숫자를 읽는 데 방해가 된다. 열 구분은 우측 정렬과 여백이 이미 충분히 해준다.
        tabular-nums: 자릿수 폭을 고정해 금액 열이 실제로 정렬돼 보이게 한다. */
-    .pivot-tree-table { border-collapse: separate; border-spacing: 0; font-size: 13px !important; font-variant-numeric: tabular-nums; }
+    .pivot-tree-table { border-collapse: separate; border-spacing: 0; font-size: 13px !important; line-height: 1.45; font-variant-numeric: tabular-nums; }
     .pivot-tree-table th, .pivot-tree-table td { border: 0; border-bottom: 1px solid var(--pivot-cell-border); padding: 6px 12px; }
 
     .indent-step-1 { padding-left: 12px !important; }

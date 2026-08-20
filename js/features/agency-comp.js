@@ -57,13 +57,13 @@
         data: {
           labels: topGroups,
           datasets: [
-            { label: `전년동월(${py}.${cm})`, data: topGroups.map(g => getVal(prevYearMap, g)), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5,
+            { label: `전년동월(${py}.${cm})`, data: topGroups.map(g => getVal(prevYearMap, g)), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
-            { label: `전월(${pmY}.${pmM})`, data: topGroups.map(g => getVal(prevMonthMap, g)), backgroundColor: ddBarFill(CH('#6B7280')), borderRadius: 5,
+            { label: `전월(${pmY}.${pmM})`, data: topGroups.map(g => getVal(prevMonthMap, g)), backgroundColor: ddBarFill(CH('#6B7280')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
-            { label: `당월(${cy}.${cm})`, data: topGroups.map(g => getVal(currMap, g)), backgroundColor: ddBarFill(CH('#60A5FA')), borderRadius: 5,
+            { label: `당월(${cy}.${cm})`, data: topGroups.map(g => getVal(currMap, g)), backgroundColor: ddBarFill(CH('#60A5FA')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '700' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             }
           ]
