@@ -22,13 +22,24 @@
     let currentTheme = resolveInitialTheme(); // 'dark' | 'light'
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    // 차트 **구조색**(축 눈금·범례·항목 라벨·그리드)의 다크→라이트 매핑.
+    // 차트 **구조색**(축 눈금·범례·항목 라벨·그리드).
     // 계열 채움색은 여기 없다 — categoryColors(5대분류), SERIES_PALETTE(서수),
-    // SERIES_ROLES(목표·비교·전월대비)가 각각 테마별 값을 따로 갖는다.
+    // SERIES_ROLES(목표·비교·전월대비)가 각각 테마별 값을 갖는다.
+    //
+    // 예전에는 다크 값을 키로 삼고 라이트만 치환해 오는 표였다. 그러면 다크가 원본, 라이트가
+    // 파생이 되어 다크 값을 바꾸려면 호출부 리터럴을 전부 찾아 고쳐야 했다(실제로 참조 막대를
+    // 고칠 때 그랬다). 키는 그대로 두되 **두 테마 값을 나란히** 적는다 — 호출부는 그대로이고,
+    // 이제 어느 쪽이든 이 표 한 곳에서 고칠 수 있다.
     const CHART_COLOR_MAP = {
-      '#21232A': '#E5E8EB', '#8B95A1': '#4E5968', '#B0B8C1': '#4E5968', '#F2F4F6': '#191F28',
+      '#21232A': { light: '#E5E8EB', dark: '#21232A' },  // 그리드 선
+      '#8B95A1': { light: '#4E5968', dark: '#8B95A1' },  // 값축 눈금
+      '#B0B8C1': { light: '#4E5968', dark: '#B0B8C1' },  // 범례
+      '#F2F4F6': { light: '#191F28', dark: '#F2F4F6' }   // 항목축 라벨
     };
-    function CH(hex) { return currentTheme === 'light' ? (CHART_COLOR_MAP[hex] || hex) : hex; }
+    function CH(hex) {
+      const r = CHART_COLOR_MAP[hex];
+      return r ? r[currentTheme === 'light' ? 'light' : 'dark'] : hex;
+    }
 
     // ==========================================================================
     // 계열 역할색 — 5대분류가 아닌 차트(목표/실적, 대행사 비교, 전월대비)가 쓰는 색.
@@ -142,27 +153,21 @@
       const to = (v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
       return `#${to(R)}${to(G)}${to(B)}`.toUpperCase();
     }
-    // 라이트에서만 적용한다. 어두운 배경은 색을 흡수해 같은 채도라도 덜 부담스럽고,
-    // 오히려 명도를 올리면 더 튄다.
-    //
-    function ddSoften(hex) {
-      return currentTheme === 'light' ? ddLift(hex, 0.14) : hex;
-    }
 
     // 5대분류가 아닌 계열(방송/디지털, 채널, 포트폴리오 '기타' 모드 등)에 쓰는 서수 팔레트.
     // 예전에는 Tailwind 10색이라 화면 안에서 혼자 다른 팔레트였다. HIG 시스템 컬러로 통일하고,
     // 계열색과 마찬가지로 테마별 변형을 쓴다.
-    const SERIES_PALETTE_LIGHT = ['#007AFF','#FF9500','#34C759','#9450D8','#30B0C7','#FF2D55','#5856D6','#FFCC00','#A2845E','#8E8E93'];
+    const SERIES_PALETTE_LIGHT = ['#479FFF','#FFB347','#6AD886','#B88AE5','#65C8DA','#FF748F','#918FE4','#FFDA47','#BCA78B','#B3B3B6'];
     const SERIES_PALETTE_DARK  = ['#0A84FF','#FF9F0A','#30D158','#A970E8','#40C8E0','#FF375F','#5E5CE6','#FFD60A','#AC8E68','#98989D'];
     function seriesColor(i) {
       const pal = currentTheme === 'light' ? SERIES_PALETTE_LIGHT : SERIES_PALETTE_DARK;
-      return ddSoften(pal[i % pal.length]);
+      return pal[i % pal.length];
     }
 
     // 5대분류 계열색을 현재 테마에 맞춰 돌려준다. 색상(hue)은 두 테마 동일, 명도만 다르다.
     function catColor(name) {
       const hex = (currentTheme === 'light' ? categoryColorsLight : categoryColorsDark)[name];
-      return hex && ddSoften(hex);
+      return hex;
     }
 
     // 값축 그리드 — 아주 흐리게. 막대마다 합계 라벨이 이미 붙어 있어 촘촘한 눈금은 대부분 중복이고,
@@ -311,12 +316,10 @@
     // 같이 파랑→빨강으로 바뀌었다. 계열색을 건드릴 때마다 무관한 차트가 따라 움직이는 연결이었다.
     //
     // 장식은 장식대로 값을 고정한다. 파랑에서 보라로 흐르는 이 짝이 원래 화면에 나오던 모습이다.
-    // (ddSoften을 태우는 것도 예전과 같다 — catColor를 거치던 때와 동일한 결과가 나온다.)
-    const DUO_FILL_LIGHT = ['#007AFF', '#9450D8'];
+    const DUO_FILL_LIGHT = ['#479FFF', '#B88AE5'];
     const DUO_FILL_DARK  = ['#0A84FF', '#A970E8'];
     function ddDuoPair() {
-      const p = currentTheme === 'light' ? DUO_FILL_LIGHT : DUO_FILL_DARK;
-      return [ddSoften(p[0]), ddSoften(p[1])];
+      return currentTheme === 'light' ? DUO_FILL_LIGHT : DUO_FILL_DARK;
     }
 
     // 다색 대각 그라데이션 채움 — **단일 계열 차트에만 쓴다.**
@@ -375,30 +378,52 @@
     // 같은 방향으로 유지한다 — 다크는 깊어질수록 어두워지고, 라이트는 깊어질수록 밝아진다.
     // (과거에는 깊이 3·4·5 배경이 모두 #FFFFFF로, 텍스트 #CBD5E1·#F8FAFC가 모두 #191F28로
     //  접혀서 라이트 모드에서 트리 계층이 통째로 사라졌다.)
+    // 피벗 표의 색. **키는 렌더러가 HTML에 박아 넣는 토큰이고, 값은 테마별로 따로 적는다.**
+    //
+    // 예전에는 `{다크값: 라이트값}` 형태였고 mapPivotHtml이 라이트에서만 돌았다. 그래서 다크는
+    // 렌더러가 쓴 리터럴이 그대로 화면에 나왔고 — 즉 다크 값을 고치려면 features/*.js 곳곳의
+    // 인라인 hex를 전부 찾아 고쳐야 했다. 이제 두 테마 모두 이 표를 거치므로,
+    // 다크 색도 여기 한 곳에서 바꿀 수 있다. 키와 dark 값이 같은 항목은 지금 화면 그대로다.
     const PIVOT_COLOR_MAP = {
       // 깊이별 배경 (1 → 5)
-      '#1E293B': '#ECEFF3', '#151C2C': '#F2F4F7', '#11151F': '#F7F9FA',
-      '#0D1117': '#FBFCFD', '#090C10': '#FFFFFF',
+      '#1E293B': { light: '#ECEFF3', dark: '#1E293B' },
+      '#151C2C': { light: '#F2F4F7', dark: '#151C2C' },
+      '#11151F': { light: '#F7F9FA', dark: '#11151F' },
+      '#0D1117': { light: '#FBFCFD', dark: '#0D1117' },
+      '#090C10': { light: '#FFFFFF', dark: '#090C10' },
       // 채널·광고주·대행사 피벗의 중간 톤 배경
-      '#172033': '#F2F4F7', '#1A2234': '#F2F4F7', '#141824': '#F7F9FA',
+      '#172033': { light: '#F2F4F7', dark: '#172033' },
+      '#1A2234': { light: '#F2F4F7', dark: '#1A2234' },
+      '#141824': { light: '#F7F9FA', dark: '#141824' },
       // 깊이별 텍스트 (1 → 5) — 배경 램프와 짝을 이뤄 계층을 이중으로 표현
-      '#F8FAFC': '#111827', '#CBD5E1': '#1F2937', '#94A3B8': '#374151',
-      '#64748B': '#4B5563', '#475569': '#5B6470',
+      '#F8FAFC': { light: '#111827', dark: '#F8FAFC' },
+      '#CBD5E1': { light: '#1F2937', dark: '#CBD5E1' },
+      '#94A3B8': { light: '#374151', dark: '#94A3B8' },
+      '#64748B': { light: '#4B5563', dark: '#64748B' },
+      '#475569': { light: '#5B6470', dark: '#475569' },
       // 헤더 / 총합계 / 강조
-      '#1D4ED8': '#0050D9', '#1E3A8A': '#E8F2FF', '#1E40AF': '#0064FF',
-      '#60A5FA': '#0064FF', '#93C5FD': '#0064FF', '#C4B5FD': '#7B61FF',
+      '#1D4ED8': { light: '#0050D9', dark: '#1D4ED8' },
+      '#1E3A8A': { light: '#E8F2FF', dark: '#1E3A8A' },
+      '#1E40AF': { light: '#0064FF', dark: '#1E40AF' },
+      '#60A5FA': { light: '#0064FF', dark: '#60A5FA' },
+      '#93C5FD': { light: '#0064FF', dark: '#93C5FD' },
+      '#C4B5FD': { light: '#7B61FF', dark: '#C4B5FD' },
       // 증감 표시
-      '#4ADE80': '#00A85A', '#F87171': '#FF4040', '#FFB547': '#FF9500',
-      // 연 요약·총합계 열의 반투명 틴트. hex가 아니라 rgba로 적혀 있어 그동안 치환에서
-      // 누락되었고, 라이트 모드에서 영구히 다크 네이비로 남던 지점이다.
-      // (불투명 hex로 바꾸면 다크 모드의 10% 틴트가 짙은 네이비가 되므로 rgba 그대로 매핑한다.)
-      'rgba(30,58,138,0.1)': 'rgba(0,100,255,0.06)',
-      'rgba(30,64,175,0.2)': 'rgba(0,100,255,0.10)'
+      '#4ADE80': { light: '#00A85A', dark: '#4ADE80' },
+      '#F87171': { light: '#FF4040', dark: '#F87171' },
+      '#FFB547': { light: '#FF9500', dark: '#FFB547' },
+      // 연 요약·총합계 열의 반투명 틴트. hex가 아니라 rgba로 적혀 있어 한동안 치환에서
+      // 누락됐고, 라이트에서 영구히 다크 네이비로 남던 지점이다.
+      // (불투명 hex로 바꾸면 다크의 10% 틴트가 짙은 네이비가 되므로 rgba 그대로 둔다.)
+      'rgba(30,58,138,0.1)': { light: 'rgba(0,100,255,0.06)', dark: 'rgba(30,58,138,0.1)' },
+      'rgba(30,64,175,0.2)': { light: 'rgba(0,100,255,0.10)', dark: 'rgba(30,64,175,0.2)' }
     };
+    // 두 테마 모두에서 돈다. 다크에서 그냥 통과시키면 렌더러 리터럴이 곧 다크 색이 되어,
+    // 다크만 손보는 일이 불가능해진다.
     function mapPivotHtml(html) {
-      if (currentTheme !== 'light') return html;
+      const t = currentTheme === 'light' ? 'light' : 'dark';
       let out = html;
-      Object.keys(PIVOT_COLOR_MAP).forEach(k => { out = out.split(k).join(PIVOT_COLOR_MAP[k]); });
+      Object.keys(PIVOT_COLOR_MAP).forEach(k => { out = out.split(k).join(PIVOT_COLOR_MAP[k][t]); });
       return out;
     }
 
