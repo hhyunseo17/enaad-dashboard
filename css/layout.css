@@ -28,7 +28,7 @@
 
     header.header-bar {
       display: flex; align-items: center; justify-content: space-between; padding: 16px 24px;
-      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      background: var(--bg-elevated); border: 1px solid var(--border-card);
       border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
     }
 
@@ -62,7 +62,7 @@
     .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
 
-    .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
+    .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     /* 1행: 좌 매출기준 / 우 전역 동작 */
     .filter-row-primary { justify-content: space-between; }
@@ -133,7 +133,7 @@
     /* 좌측 파란 스트라이프를 없앴다. 원래 6가지 무지개 accent를 담던 자리인데, 무지개를 걷어낸
        뒤로는 똑같은 파란 막대 6개가 되어 의미 없이 KPI 줄에서 가장 시끄러운 요소가 됐다.
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth뿐이다. */
-    .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s ease, background 0.15s ease; }
+    .kpi-card { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s ease, background 0.15s ease; }
     .kpi-card.clickable { cursor: pointer; }
     .kpi-card.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .kpi-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -199,7 +199,7 @@
     .pivot-hero-card.hero-amber  { background: linear-gradient(135deg, #2C2418 0%, #5A4520 62%, #7C5D26 100%); }
     .pivot-hero-card.hero-rose   { background: linear-gradient(135deg, #2C1A22 0%, #5A2740 62%, #7C3253 100%); }
 
-    .card-box { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; transition: all 0.2s ease; }
+    .card-box { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; transition: all 0.2s ease; }
     .card-box.clickable { cursor: pointer; }
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
@@ -208,7 +208,7 @@
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
     .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 500; color: var(--text-tertiary); }
 
-    .table-container { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .table-container { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
     .table-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
