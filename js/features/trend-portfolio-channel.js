@@ -94,14 +94,20 @@
 
       chartInstances.advBucket = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: '400' }, formatter: (v) => v > 0 ? v + '개' : '' }
-        }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: RC('line'), backgroundColor: ddAreaFill(RC('line')), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RC('line'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
+        // 막대=합산 매출액, 꺾은선=광고주 수. 색·라운드·라벨판 등 **꾸밈은 전부 형태에 붙어 있고**
+        // 실어 나르는 값만 서로 바꿨다 — 꺾은선 라벨의 판(backgroundColor)과 offset은 선이 막대 위를
+        // 지나가서 필요한 것이지 '매출액'이라서 붙은 게 아니므로, 내용이 바뀌어도 선 쪽에 남는다.
+        data: { labels: labels, datasets: [ { type: 'bar', label: '합산 매출액', data: sumVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+        }, { type: 'line', label: '광고주 수', data: countVals, borderColor: RC('line'), backgroundColor: ddAreaFill(RC('line')), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RC('line'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: dataLabelTextColor(),
             backgroundColor: ddSurfaceColor(), borderRadius: 4, padding: { top: 2, bottom: 1, left: 4, right: 4 },
-            font: { size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+            font: { size: 11, weight: '400' }, formatter: (v) => v > 0 ? v + '개' : '' }
         } ] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { size: 12, weight: '400' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: '400' } }, grid: { display: false } }, y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, stepSize: 1 } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { size: 12, weight: '400' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `합산 매출액: ${ctx.raw.toFixed(2)} 억원` : `광고주 수: ${ctx.raw.toLocaleString()} 개사` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: '400' } }, grid: { display: false } },
+          // 보이는 축(y)은 막대를 따라간다. 이제 억 단위라 stepSize:1을 뺐다 — 개수일 때는 눈금을
+          // 정수로 묶는 값이었지만 억에 그대로 두면 1억 간격으로 눈금이 박혀 축이 뭉갠다.
+          y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
       });
     }
 
