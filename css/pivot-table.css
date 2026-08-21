@@ -11,6 +11,22 @@
     .pivot-tree-table { border-collapse: separate; border-spacing: 0; font-size: 13px !important; line-height: 1.45; font-variant-numeric: tabular-nums; }
     .pivot-tree-table th, .pivot-tree-table td { border: 0; border-bottom: 1px solid var(--pivot-cell-border); padding: 6px 12px; }
 
+    /* 열이 적을 때 표를 늘리지 않는다 — 왼쪽부터 내용만큼만 채우고 오른쪽은 비운다(엑셀과 같다).
+       layout.css의 `table.data-table`은 `width: max-content`(내용만큼)와 `min-width: 100%`를 함께 걸고
+       있는데, 후자가 전자를 무효화한다. 연도를 다 접어 "2026년 요약 / 2025년 요약 / 총합계" 세 열만
+       남아도 표가 래퍼 폭을 강제로 채우고, 남는 공간이 열마다 배분돼 숫자 사이가 휑하게 벌어졌다.
+       열이 적을수록 오히려 읽기 어려워지는 셈이다.
+       같은 이유로 라벨 열의 인라인 min-width(280~320px)도 렌더러에서 걷어냈다. 다 접힌 상태에서는
+       "일반광고" 네 글자에 280px를 쓰고 있었다. 이제 열 폭은 헤더 문구와 가장 긴 행 라벨(+들여쓰기)이
+       정하므로, 단계를 펼칠수록 필요한 만큼만 넓어진다. th/td에 white-space:nowrap이 걸려 있어
+       (layout.css) 줄바꿈으로 뭉개지지 않는다.
+       메인 대시보드의 원본 데이터 표는 .pivot-tree-table이 아니라서 영향을 받지 않는다.
+
+       **선택자에서 `table.data-table`을 떼지 말 것.** 덮어써야 할 규칙이 `table.data-table`(0,1,1)이라
+       `.pivot-tree-table`(0,1,0)만으로는 특정도가 모자라 조용히 무시된다 — 파일 로드 순서는
+       특정도를 이기지 못한다. */
+    table.data-table.pivot-tree-table { min-width: 0; }
+
     .indent-step-1 { padding-left: 12px !important; }
     .indent-step-2 { padding-left: 36px !important; }
     .indent-step-3 { padding-left: 60px !important; }

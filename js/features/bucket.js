@@ -21,7 +21,7 @@
       years.forEach(yr => { const monthsWithData = new Set(); targetData.filter(r => r.year === yr && r.amount > 0).forEach(r => monthsWithData.add(r.month)); yearMonthsMap[yr] = [...monthsWithData].sort((a,b)=>a-b); });
 
       // 헤더 (연도 펼침/접기 + 연도요약 + 총합계)
-      let headerRow1 = `<th rowspan="2" style="text-align: left; min-width: 220px; vertical-align: middle;">구분</th>`; let headerRow2 = ``;
+      let headerRow1 = `<th rowspan="2" style="text-align: left; vertical-align: middle;">구분</th>`; let headerRow2 = ``;
       years.forEach(yr => {
         const isExpanded = expandedBucketYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const toggleSymbol = isExpanded ? '-' : '+';
         if (isExpanded) {

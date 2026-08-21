@@ -112,7 +112,7 @@
       const { cy, cm, pmY, pmM, py, currRows, prevMonthRows, prevYearRows } = compData;
       document.getElementById('agencyCompPivotTitle').innerText = `주요 대행사 전년·전월 비교 상세 (전년 ${py}.${cm} / 전월 ${pmY}.${pmM} / 당월 ${cy}.${cm})`;
       document.getElementById('agencyCompPivotHeaderRow').innerHTML = `
-        <th style="text-align: left; min-width: 280px;">대행사그룹 / 대행사 / 광고주</th>
+        <th style="text-align: left;">대행사그룹 / 대행사 / 광고주</th>
         <th style="text-align: right;">전년(${py}.${cm}) 금액</th>
         <th style="text-align: right;">전월(${pmY}.${pmM}) 금액</th>
         <th style="text-align: right;">당월(${cy}.${cm}) 금액</th>

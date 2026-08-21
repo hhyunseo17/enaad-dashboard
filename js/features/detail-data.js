@@ -518,7 +518,7 @@
       let headHtml = '';
       for (let d = 0; d < headDepth; d++) {
         headHtml += '<tr>';
-        if (d === 0) headHtml += `<th rowspan="${headDepth}" style="text-align:left; min-width:280px; vertical-align:middle;">${rowLabel}</th>`;
+        if (d === 0) headHtml += `<th rowspan="${headDepth}" style="text-align:left; vertical-align:middle;">${rowLabel}</th>`;
         headHtml += (rows[d] || []).join('');
         headHtml += '</tr>';
       }
