@@ -357,7 +357,11 @@
         contractEndDate: r.contract_end_date ? new Date(r.contract_end_date + 'T00:00:00Z') : null,
         contractAmountText: buildContractAmountText(r.upfront_contract_amount_eok, r.gross_net_flag),
         contractAmountWon: Number(r.contract_amount_won) || 0, grossNetFlag: r.gross_net_flag || '',
-        upfrontAdvertiser: r.upfront_advertiser_raw, upfrontRemark: r.upfront_note || ''
+        // upfront_advertiser_raw는 스키마상 nullable이다(NOT NULL/DEFAULT 없음). 지금은 ETL이
+        // 광고주로 채워 주지만, null이 한 번이라도 들어오면 업프론트 피벗이 예외 없이 조용히
+        // 망가진다 — 광고주 노드 키가 전부 문자열 "null"이 되어 서로 다른 광고주가 한 행으로
+        // 뭉개진다. xlsx 경로(위 upfrontAdvertiser)와 같은 폴백을 둬서 두 경로의 shape을 맞춘다.
+        upfrontAdvertiser: r.upfront_advertiser_raw || r.advertiser || '(미지정)', upfrontRemark: r.upfront_note || ''
       };
     }
 

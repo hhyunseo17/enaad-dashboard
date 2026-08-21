@@ -65,7 +65,7 @@
       document.getElementById('kpiAdvCountSub').innerText = `선택기간 누적 광고주수: ${totalAdvCount.toLocaleString()} 개${advCountDiffStr}`;
 
       const advMonthlyMapNew = {}; targetData.forEach(r => { const key = r.monthStr + '||' + r.advertiser; if (!advMonthlyMapNew[key]) advMonthlyMapNew[key] = { advertiser: r.advertiser, monthStr: r.monthStr, amount: 0 }; advMonthlyMapNew[key].amount += r.amount; });
-      let newAdvCount = 0; Object.values(advMonthlyMapNew).forEach(item => { if (item.amount > 0 && isNewAdvertiserMonth(item.advertiser, item.monthStr, rawData)) newAdvCount++; });
+      let newAdvCount = 0; Object.values(advMonthlyMapNew).forEach(item => { if (item.amount > 0 && isNewAdvertiserMonth(item.advertiser, item.monthStr)) newAdvCount++; });
 
       document.getElementById('kpiNewAdvCount').innerText = `${newAdvCount.toLocaleString()} 개사`; document.getElementById('kpiNewAdvSub').innerText = `일반+IMC / 1/N 제외 (12개월 이력 없음)`;
     }
