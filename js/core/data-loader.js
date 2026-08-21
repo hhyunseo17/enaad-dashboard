@@ -286,6 +286,8 @@
         if (expandedCatYearColumns[y] === undefined) expandedCatYearColumns[y] = true;
         if (expandedDeptYearColumns[y] === undefined) expandedDeptYearColumns[y] = true;
         if (expandedMgrYearColumns[y] === undefined) expandedMgrYearColumns[y] = true;
+        if (expandedGoalTrendYearColumns[y] === undefined) expandedGoalTrendYearColumns[y] = true;
+        if (expandedGoalDeptYearColumns[y] === undefined) expandedGoalDeptYearColumns[y] = true;
       });
 
       setupYearPills(isFirstLoad);

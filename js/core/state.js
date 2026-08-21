@@ -24,6 +24,8 @@
     let expandedCatYearColumns = {};
     let expandedDeptYearColumns = {};
     let expandedMgrYearColumns = {};
+    let expandedGoalTrendYearColumns = {};  // 목표 대비 실적 피벗(월별) — 연도 열 펼침
+    let expandedGoalDeptYearColumns = {};   // 목표 대비 실적 피벗(부서별) — 연도 열 펼침
 
     let expandedChannels = {};    
     let expandedCategories = {};  
@@ -37,6 +39,7 @@
     let expandedCatPivot = {};
     let expandedDeptPivot = {};
     let expandedMgrPivot = {};
+    let expandedGoalDeptPivot = {}; // 목표 대비 실적 피벗(부서별): 부서 → 담당자 트리 펼침 상태 (기본 전부 접힘)
 
     // 세부데이터 탐색 탭(자유 피벗 빌더): 상단 전역 필터바(연/월/부서/채널/방송디지털/대분류/매출기준 등)를 그대로 받아서
     // 시작하고(getDetailDataBaseRows()가 filteredData를 기준으로 삼음), 아래쪽 드래그앤드롭 필터는 전역 필터바가
@@ -85,6 +88,10 @@
     let deptMode = 'categoryReclassified';
     let managerMode = 'categoryReclassified';
     let goalBreakdownMode = 'dept'; // 목표 대비 실적 분해 차트(chartGoalBreakdown): 부서/담당자 토글
+    // 월별 목표 대비 실적 추이 차트(chartGoalTrend): 월별/누적 토글.
+    // 누적은 **연도별로 리셋**한다 — 목표가 연 단위로 편성되므로 연초부터의 누적 달성률이 읽는 값이고,
+    // 여러 해를 함께 볼 때 24개월을 통으로 누적하면 연도 간 비교가 불가능해진다.
+    let goalTrendMode = 'monthly';
 
     let currentPage = 1;
     let rowsPerPage = 25;

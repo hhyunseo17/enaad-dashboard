@@ -21,6 +21,8 @@
       category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 수주 실적 분석', showBreadcrumb: true, render: () => renderCategoryPivotTable() },
       dept: { containerId: 'deptPivotView', title: '부서별 / 항목별 (대·중분류) 월별 분석', showBreadcrumb: true, render: () => renderDeptPivotTable() },
       manager: { containerId: 'managerPivotView', title: '부서별 / 담당자별 / 대분류 / 광고주 상세 분석', showBreadcrumb: true, render: () => renderManagerPivotTable() },
+      goalTrendPivot: { containerId: 'goalTrendPivotView', title: '월별 목표 대비 실적 (대분류별)', showBreadcrumb: true, render: () => renderGoalTrendPivotTable() },
+      goalDeptPivot: { containerId: 'goalDeptPivotView', title: '부서별 / 담당자별 목표 대비 실적', showBreadcrumb: true, render: () => renderGoalDeptPivotTable() },
       channel: { containerId: 'channelPivotView', title: '연도별 / 채널별 통합 분석', showBreadcrumb: true, render: () => { renderChannelPivotTable(); document.getElementById('pivotHeaderTitle').innerText = document.getElementById('headerMainTitle').innerText; } },
       bucket: { containerId: 'bucketPivotView', title: '월단위 광고주 금액 구간별 분포', showBreadcrumb: true, render: () => renderBucketPivotTable() },
       advertiser: { containerId: 'advertiserPivotView', title: '광고주별 ➔ 대분류 월별 실적 (전체 광고주)', showBreadcrumb: true, render: () => renderAdvertiserPivotTable() },
@@ -57,6 +59,8 @@
     function openAdvertiserPivotView() { switchView('advertiser'); }
     function openAgencyPivotView() { switchView('agency'); }
     function openDetailDataView() { switchView('detailData'); }
+    function openGoalTrendPivotView() { switchView('goalTrendPivot'); }
+    function openGoalDeptPivotView() { switchView('goalDeptPivot'); }
 
     function toggleYearColumn(viewType, yr) {
       if (viewType === 'channel') { expandedYearColumns[yr] = !expandedYearColumns[yr]; renderChannelPivotTable(); }
@@ -66,8 +70,20 @@
       else if (viewType === 'cat') { expandedCatYearColumns[yr] = !expandedCatYearColumns[yr]; renderCategoryPivotTable(); }
       else if (viewType === 'dept') { expandedDeptYearColumns[yr] = !expandedDeptYearColumns[yr]; renderDeptPivotTable(); }
       else if (viewType === 'mgr') { expandedMgrYearColumns[yr] = !expandedMgrYearColumns[yr]; renderManagerPivotTable(); }
+      else if (viewType === 'goalTrend') { expandedGoalTrendYearColumns[yr] = !expandedGoalTrendYearColumns[yr]; renderGoalTrendPivotTable(); }
+      else if (viewType === 'goalDept') { expandedGoalDeptYearColumns[yr] = !expandedGoalDeptYearColumns[yr]; renderGoalDeptPivotTable(); }
     }
     function expandAllYears(viewType, expand) {
+      // 목표 피벗은 열 축이 filteredData가 아니라 목표 스코프(buildGoalScopeSet)에서 나오므로
+      // 연도 목록도 거기서 가져오고, applyFilters()를 거치지 않고 자기 표만 다시 그린다.
+      if (viewType === 'goalTrend' || viewType === 'goalDept') {
+        const goalYears = new Set();
+        buildGoalScopeSet().forEach(ym => goalYears.add(Number(ym.split('-')[0])));
+        const map = viewType === 'goalTrend' ? expandedGoalTrendYearColumns : expandedGoalDeptYearColumns;
+        goalYears.forEach(yr => { map[yr] = expand; });
+        if (viewType === 'goalTrend') renderGoalTrendPivotTable(); else renderGoalDeptPivotTable();
+        return;
+      }
       const years = [...new Set(filteredData.map(r => r.year))];
       years.forEach(yr => {
         if (viewType === 'channel') expandedYearColumns[yr] = expand;
@@ -84,6 +100,7 @@
     function toggleCatPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedCatPivot[k] = !expandedCatPivot[k]; renderCategoryPivotTable(); }
     function toggleDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedDeptPivot[k] = !expandedDeptPivot[k]; renderDeptPivotTable(); }
     function toggleMgrPivotNode(l1, l2, l3, l4) { let k = l1; if(l2) k += `||${l2}`; if(l3) k += `||${l3}`; if(l4) k += `||${l4}`; expandedMgrPivot[k] = !expandedMgrPivot[k]; renderManagerPivotTable(); }
+    function toggleGoalDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedGoalDeptPivot[k] = !expandedGoalDeptPivot[k]; renderGoalDeptPivotTable(); }
     function toggleDetailDataNode(path) { expandedDetailDataPivot[path] = !expandedDetailDataPivot[path]; renderDetailDataPivot(); }
     function toggleDetailDataColNode(path) { expandedDetailDataColPivot[path] = !expandedDetailDataColPivot[path]; renderDetailDataPivot(); }
 

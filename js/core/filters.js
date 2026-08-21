@@ -264,6 +264,8 @@
       else if (currentView === 'newAdvPivot') renderNewAdvPivotTable();
       else if (currentView === 'upfrontPivot') renderUpfrontPivotTable();
       else if (currentView === 'detailData') renderDetailDataPivot();
+      else if (currentView === 'goalTrendPivot') renderGoalTrendPivotTable();
+      else if (currentView === 'goalDeptPivot') renderGoalDeptPivotTable();
     }
 
     function resetFilters() {
