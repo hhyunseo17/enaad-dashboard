@@ -288,8 +288,17 @@
         // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
         // 밑동이 진하고 끝으로 갈수록 밝아진다 — 반대로 하면 스택 맨 아래에 오는 계열
         // (보통 비중이 가장 큰 일반광고)이 항상 제일 물빠져 보인다.
-        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+        //
+        // **라이트에서 끝은 정의값 그 자체다(+0).** 예전에는 끝을 +0.08까지 밀었는데, 파랑
+        // 기준색이 L64이니 막대 끝이 L72가 됐다. 누적 막대에서 시선이 가장 오래 머무는 곳이
+        // 거기라, 화면 전체가 흰 쪽으로 빠져 보였다 — 기준색을 아무리 진하게 잡아도 그 위에
+        // 얹힌 +0.08은 그대로 남으므로 색을 바꿔서는 고쳐지지 않는 문제였다.
+        // 이제 코드에 적힌 값이 곧 막대 끝의 색이고, 밑동만 그보다 진하다. 이동폭은 18 → 14로
+        // 좁아졌지만 입체감은 남고, 무엇보다 **적힌 색이 화면에 실제로 나온다** — 예전에는
+        // 어느 색을 고르든 실제로 보일 색을 머릿속으로 환산해야 했다.
+        // 다크는 그대로 둔다. 밑동을 밝히는 방향이라 같은 문제가 없다.
+        const base = currentTheme === 'light' ? ddLift(hex, -0.14) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.00) : ddLift(hex, -0.04);
 
         // **각 세그먼트 자기 구간을 기준으로** 그린다.
         // 차트 영역 전체를 기준으로 잡으면(특히 대각선) 세그먼트 하나가 그 띠의 아주 얇은 구간만
@@ -359,8 +368,9 @@
         const cut = parseFloat(String(chart.options.cutout || '0')) / 100;
         const inner = outer * (isFinite(cut) && cut > 0 ? cut : 0.6);
         if (!isFinite(outer) || outer <= 0 || outer - inner < 1) return hex;
-        const base = currentTheme === 'light' ? ddLift(hex, -0.10) : ddLift(hex, 0.12);
-        const tip  = currentTheme === 'light' ? ddLift(hex,  0.08) : ddLift(hex, -0.04);
+        // 막대와 같은 폭을 쓴다 — 도넛만 다르면 같은 화면에서 조각과 막대의 색이 어긋난다.
+        const base = currentTheme === 'light' ? ddLift(hex, -0.14) : ddLift(hex, 0.12);
+        const tip  = currentTheme === 'light' ? ddLift(hex,  0.00) : ddLift(hex, -0.04);
         const g = chart.ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
