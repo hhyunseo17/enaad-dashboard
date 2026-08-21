@@ -72,7 +72,7 @@
       // 신규 → 증액 → 유지 → 감액 → 중지는 "좋음에서 나쁨으로" 가는 순서다.
       // 예전엔 초록/파랑/회색/노랑/빨강이라 순서가 색에 드러나지 않고 색만 5개 늘었다.
       // 초록(양) → 회색(중립) → 빨강(음)의 발산형 램프로 바꿔 순서 자체가 읽히게 한다.
-      const momColors = { 신규: CH('#4ADE80'), 증액: CH('#2FA97A'), 유지: CH('#94A3B8'), 감액: CH('#E08A5F'), 중지: CH('#F87171') };
+      const momColors = { 신규: RC('momNew'), 증액: RC('momUp'), 유지: RC('momFlat'), 감액: RC('momDown'), 중지: RC('momStop') };
 
       const ctx = document.getElementById('chartMoM').getContext('2d');
       if (chartInstances.mom) chartInstances.mom.destroy();
@@ -81,7 +81,7 @@
         data: {
           labels: orderedKeys.map(k => `${k} (${buckets[k].count.toLocaleString()}개사)`),
           datasets: [
-            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#4D5875')), borderRadius: 5, ...ddGroupSeparator(),
+            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(RC('ref')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
             // ddBarFill()은 색 문자열이 아니라 스크립터블 '함수'를 돌려준다. 함수 배열을 넘기면
@@ -127,10 +127,10 @@
       let html = '';
       orderedKeys.forEach(k => {
         const b = buckets[k]; const isExpanded = !!expandedMoMCategories[k]; const bDiff = b.currSum - b.prevSum;
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 500;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 500; color: ${bDiff >= 0 ? '#4ADE80' : CH('#F87171')};">${fmtDiffM(bDiff)}</td></tr>`;
+        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 500;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 500; color: ${bDiff >= 0 ? '#4ADE80' : RC('momStop')};">${fmtDiffM(bDiff)}</td></tr>`;
         if (isExpanded) {
           b.items.forEach(item => {
-            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">${fmtM(item.prev)}</td><td style="text-align: right;">${fmtM(item.curr)}</td><td style="text-align: right; color: ${item.diff >= 0 ? '#4ADE80' : CH('#F87171')};">${fmtDiffM(item.diff)}</td></tr>`;
+            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">${fmtM(item.prev)}</td><td style="text-align: right;">${fmtM(item.curr)}</td><td style="text-align: right; color: ${item.diff >= 0 ? '#4ADE80' : RC('momStop')};">${fmtDiffM(item.diff)}</td></tr>`;
           });
         }
       });

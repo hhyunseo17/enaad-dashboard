@@ -57,13 +57,13 @@
         data: {
           labels: topGroups,
           datasets: [
-            { label: `전년동월(${py}.${cm})`, data: topGroups.map(g => getVal(prevYearMap, g)), backgroundColor: ddBarFill(CH('#4D5875')), borderRadius: 5, ...ddGroupSeparator(),
+            { label: `전년동월(${py}.${cm})`, data: topGroups.map(g => getVal(prevYearMap, g)), backgroundColor: ddBarFill(RC('ref')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
-            { label: `전월(${pmY}.${pmM})`, data: topGroups.map(g => getVal(prevMonthMap, g)), backgroundColor: ddBarFill(CH('#6B7280')), borderRadius: 5, ...ddGroupSeparator(),
+            { label: `전월(${pmY}.${pmM})`, data: topGroups.map(g => getVal(prevMonthMap, g)), backgroundColor: ddBarFill(RC('prev')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
-            { label: `당월(${cy}.${cm})`, data: topGroups.map(g => getVal(currMap, g)), backgroundColor: ddBarFill(CH('#60A5FA')), borderRadius: 5, ...ddGroupSeparator(),
+            { label: `당월(${cy}.${cm})`, data: topGroups.map(g => getVal(currMap, g)), backgroundColor: ddBarFill(RC('curr')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             }
           ]
@@ -99,9 +99,9 @@
       const diffStr = (diffM > 0 ? '+' : '') + diffM.toLocaleString();
       if (base === 0 && curr === 0) return { rateText: '-', diffText: '-', color: CH('#8B95A1') };
       if (base === 0) return { rateText: '신규', diffText: diffStr, color: '#4ADE80' };
-      if (curr === 0) return { rateText: '-100.0%', diffText: diffStr, color: CH('#F87171') };
+      if (curr === 0) return { rateText: '-100.0%', diffText: diffStr, color: RC('momStop') };
       const rate = (curr - base) / base * 100;
-      return { rateText: `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`, diffText: diffStr, color: rate >= 0 ? '#4ADE80' : CH('#F87171') };
+      return { rateText: `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`, diffText: diffStr, color: rate >= 0 ? '#4ADE80' : RC('momStop') };
     }
 
     function renderAgencyCompPivotTable() {
