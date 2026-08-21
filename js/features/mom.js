@@ -81,7 +81,7 @@
         data: {
           labels: orderedKeys.map(k => `${k} (${buckets[k].count.toLocaleString()}개사)`),
           datasets: [
-            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#3A4258')), borderRadius: 5, ...ddGroupSeparator(),
+            { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(CH('#4D5875')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
             // ddBarFill()은 색 문자열이 아니라 스크립터블 '함수'를 돌려준다. 함수 배열을 넘기면
