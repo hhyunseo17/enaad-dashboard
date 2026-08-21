@@ -182,8 +182,13 @@
     //
     // 부서가 8개 이상이라 10칸을 줄일 수는 없다(줄이면 서로 다른 부서가 같은 색이 된다).
     // 남은 최소 색상차 13°(주황↔노랑)는 순서상 2번과 8번이라 웬만한 차트에서는 같이 나오지 않는다.
-    const SERIES_PALETTE_LIGHT = ['#47A0FF','#FFB347','#68D984','#B88AE5','#68C8D9','#FF758F','#E378CE','#FFDC52','#8B8AE5','#B2B5B8'];
-    const SERIES_PALETTE_DARK  = ['#0A81FF','#FF990A','#2ED157','#AB6EE7','#49BFD4','#FF385D','#DD4BC0','#FFCE0A','#6462DF','#989BA0'];
+    //
+    // 3번 초록은 135°(연두)에서 155°(에메랄드)로 옮겼다. 5대분류 인포머셜과 같은 이유다 —
+    // 노랑 쪽으로 기운 초록이 화면에서 혼자 계열 없이 떠 보였다(state.js 주석 참고).
+    // 다만 여기서는 165°까지 가지 않는다. 5번이 189° 청록이라 165°면 간격이 24°로 좁아진다.
+    // 155°면 34° — 앞 6색 최소 간격 22° 규칙 안에 여유 있게 들어온다.
+    const SERIES_PALETTE_LIGHT = ['#47A0FF','#FFB347','#6AD7AA','#B88AE5','#68C8D9','#FF758F','#E378CE','#FFDC52','#8B8AE5','#B2B5B8'];
+    const SERIES_PALETTE_DARK  = ['#0A81FF','#FF990A','#2ED18D','#AB6EE7','#49BFD4','#FF385D','#DD4BC0','#FFCE0A','#6462DF','#989BA0'];
     function seriesColor(i) {
       const pal = currentTheme === 'light' ? SERIES_PALETTE_LIGHT : SERIES_PALETTE_DARK;
       return pal[i % pal.length];
