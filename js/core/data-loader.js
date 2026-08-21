@@ -536,8 +536,12 @@
     }
 
     function getCategoryBadgeStyle(cat) { const color = catColor(cat) || '#4795FF'; let r = parseInt(color.slice(1, 3), 16); let g = parseInt(color.slice(3, 5), 16); let b = parseInt(color.slice(5, 7), 16); return `background: rgba(${r}, ${g}, ${b}, 0.15); color: ${color}; border-color: rgba(${r}, ${g}, ${b}, 0.3);`; }
-    function formatCurrencyKorean(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toFixed(2) + ' 억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' 만원'; return val.toLocaleString() + ' 원'; }
-    function formatCurrencyKoreanShort(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toFixed(1) + '억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toFixed(0) + '만원'; return val.toLocaleString() + '원'; }
+    // 천 단위 구분은 전 단위에서 동일하게 넣는다. 예전에는 억 단위만 toFixed()라 콤마가 빠졌고
+    // (총매출이 "3918.06 억원"으로 표시됨), 만원·원 단위는 toLocaleString이라 이미 들어가 있었다.
+    // 소수 자릿수를 유지해야 하므로 min/maximumFractionDigits를 같은 값으로 못박는다 —
+    // maximumFractionDigits만 주면 3,918.00억원이 3,918억원으로 줄어 자릿수가 들쭉날쭉해진다.
+    function formatCurrencyKorean(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' 억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' 만원'; return val.toLocaleString() + ' 원'; }
+    function formatCurrencyKoreanShort(val) { if (Math.abs(val) >= 1e8) return (val / 1e8).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '억원'; if (Math.abs(val) >= 1e4) return (val / 1e4).toLocaleString(undefined, { maximumFractionDigits: 0 }) + '만원'; return val.toLocaleString() + '원'; }
 
     function showLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
     function showErrorMessage(msg) { const banner = document.getElementById('errorBanner'); document.getElementById('errorMessage').innerText = msg; banner.style.display = 'flex'; }
