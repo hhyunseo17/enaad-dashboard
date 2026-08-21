@@ -172,6 +172,20 @@
       --text-tertiary: rgba(255, 255, 255, 0.68);
     }
     .pivot-hero-card > * { position: relative; z-index: 1; }
+
+    /* 히어로 제목과 총합계 — 화면에서 가장 큰 두 요소. 예전에는 마크업에 22px/800과
+       24px/800으로 박혀 있었다(전체 28군데).
+       굵기를 800에서 내린 이유: 라이트/다크를 막론하고 800은 참조할 만한 어떤 시스템에도
+       없다. 실측하면 Stripe는 최대 500, Linear는 590, Tremor·Apple은 700을 아주 드물게
+       쓰고 본문 400이 화면의 86~99%다. 굵기 단계가 많을수록 각 단계의 뜻이 옅어진다 —
+       전부 굵으면 아무것도 굵지 않다.
+       대신 크기를 키운 이유: 깊이는 질감이 아니라 **범위**에서 나온다. 애플이 그라데이션
+       토큰 없이도 평면적이지 않은 것이 그 증거다. 이 대시보드의 크기 범위는 9~24px으로
+       2.7배였는데 참조 사이트는 5.0~7.2배였다. 22→30 / 24→34로 3.8배까지 벌린다.
+       클래스로 옮긴 이유: 인라인 스타일은 미디어 쿼리로 덮을 수 없어 좁은 화면에서도
+       34px이 그대로 나온다. 아래 반응형 단계가 동작하려면 클래스여야 한다. */
+    .hero-title  { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; }
+    .hero-metric { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
     /* 오른쪽 위에서 흘러드는 빛 한 겹 — 앰비언트 워시와 같은 발상 */
     .pivot-hero-card::after {
       content: ''; position: absolute; z-index: 0; width: 420px; height: 420px;
@@ -257,6 +271,10 @@
       .kpi-value { font-size: 19px !important; }
       .kpi-title { font-size: 11px !important; }
       .kpi-sub { font-size: 10px; gap: 6px; }
+      /* 히어로는 좁은 화면에서 제목과 총합계가 위아래로 접히므로 한 단계 줄인다.
+         비율(제목:총합계 ≈ 1:1.13)은 유지해서 위계가 흐트러지지 않게 한다. */
+      .hero-title  { font-size: 24px; }
+      .hero-metric { font-size: 27px; }
     }
 
     @media (max-width: 768px) {
@@ -335,4 +353,6 @@
       .kpi-value { font-size: 17px !important; white-space: normal; line-height: 1.15; }
       .kpi-sub { font-size: 9.5px; gap: 4px; }
       .badge-growth { font-size: 9px; padding: 2px 6px; }
+      .hero-title  { font-size: 20px; }
+      .hero-metric { font-size: 23px; }
     }

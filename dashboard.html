@@ -496,7 +496,7 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 800;">상세 매출 내역</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">상세 매출 내역</h2>
             <span id="tableRecordCount" class="tag-badge">총 0 건</span>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -544,18 +544,18 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
-            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">항목별 (대·중·소분류) 월별 분석</h2>
+            <h2 class="hero-title" style="color: #FFFFFF;">항목별 (대·중·소분류) 월별 분석</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
-            <div id="categoryPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 백만</div>
+            <div id="categoryPivotTotalAmount" class="hero-metric" style=" color: var(--primary-blue);">0 백만</div>
           </div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 800;">항목별 분류 피벗</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">항목별 분류 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('cat', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('cat', false)">모든 연도 월 접기 (+)</button>
           </div>
@@ -578,18 +578,18 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(74,222,128,0.2); color: var(--accent-green); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
-            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">부서별 / 항목별 (대·중분류) 월별 분석</h2>
+            <h2 class="hero-title" style="color: #FFFFFF;">부서별 / 항목별 (대·중분류) 월별 분석</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
-            <div id="deptPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-green);">0 백만</div>
+            <div id="deptPivotTotalAmount" class="hero-metric" style=" color: var(--accent-green);">0 백만</div>
           </div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 800;">부서별 항목 피벗</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">부서별 항목 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('dept', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button>
           </div>
@@ -612,18 +612,18 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(236,72,153,0.2); color: var(--accent-pink); font-size: 12px; margin-bottom: 6px;">엑셀 스타일 통합 피벗 테이블</span>
-            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">부서별 / 담당자별 / 대분류 / 광고주 분석</h2>
+            <h2 class="hero-title" style="color: #FFFFFF;">부서별 / 담당자별 / 대분류 / 광고주 분석</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">총합계 : 금액 (백만원)</div>
-            <div id="managerPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-pink);">0 백만</div>
+            <div id="managerPivotTotalAmount" class="hero-metric" style=" color: var(--accent-pink);">0 백만</div>
           </div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 800;">담당자별 5계층 피벗</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">담당자별 5계층 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('mgr', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button>
           </div>
@@ -644,8 +644,8 @@
     <div id="channelPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 id="pivotHeaderTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">연도별 / 채널별 통합 분석</h2></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계 : 금액 (백만원)</div><div id="pivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 백만</div></div>
+          <div><h2 id="pivotHeaderTitle" class="hero-title" style="color: #FFFFFF;">연도별 / 채널별 통합 분석</h2></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계 : 금액 (백만원)</div><div id="pivotTotalAmount" class="hero-metric" style=" color: var(--primary-blue);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -668,8 +668,8 @@
     <div id="bucketPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-amber" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">일반광고+IMC 기준 구간별 분석</h2></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 누적 매출</div><div id="bucketPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-orange);">0 백만</div></div>
+          <div><h2 class="hero-title" style="color: #FFFFFF;">일반광고+IMC 기준 구간별 분석</h2></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 누적 매출</div><div id="bucketPivotTotalAmount" class="hero-metric" style=" color: var(--accent-orange);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -686,8 +686,8 @@
     <div id="advertiserPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-violet" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">광고주별 ➔ 대분류 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="advertiserPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-purple);">0 백만</div></div>
+          <div><h2 class="hero-title" style="color: #FFFFFF;">광고주별 ➔ 대분류 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="advertiserPivotTotalAmount" class="hero-metric" style=" color: var(--accent-purple);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -701,8 +701,8 @@
     <div id="agencyPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-teal" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">대행사그룹 ➔ 대행사 ➔ 광고주 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="agencyPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-cyan);">0 백만</div></div>
+          <div><h2 class="hero-title" style="color: #FFFFFF;">대행사그룹 ➔ 대행사 ➔ 광고주 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="agencyPivotTotalAmount" class="hero-metric" style=" color: var(--accent-cyan);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -716,8 +716,8 @@
     <div id="momPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-green" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 id="momPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">전월대비 광고주 증감 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외)</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">전월대비 순증감</div><div id="momPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-green);">0 백만</div></div>
+          <div><h2 id="momPivotTitle" class="hero-title" style="color: #FFFFFF;">전월대비 광고주 증감 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외)</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">전월대비 순증감</div><div id="momPivotTotalAmount" class="hero-metric" style=" color: var(--accent-green);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -743,8 +743,8 @@
     <div id="agencyCompPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-teal" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 id="agencyCompPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">주요 대행사 전년·전월 비교 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 · 금액 단위: 백만원</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">당월 합계</div><div id="agencyCompPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-cyan);">0 백만</div></div>
+          <div><h2 id="agencyCompPivotTitle" class="hero-title" style="color: #FFFFFF;">주요 대행사 전년·전월 비교 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 · 금액 단위: 백만원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">당월 합계</div><div id="agencyCompPivotTotalAmount" class="hero-metric" style=" color: var(--accent-cyan);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -775,8 +775,8 @@
     <div id="newAdvPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-violet" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 id="newAdvPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">신규 광고주 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외) · 금액 단위: 백만원</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">신규 매출 합계</div><div id="newAdvPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--accent-purple);">0 백만</div></div>
+          <div><h2 id="newAdvPivotTitle" class="hero-title" style="color: #FFFFFF;">신규 광고주 상세</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준 (배분수익·1/N 제외) · 금액 단위: 백만원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">신규 매출 합계</div><div id="newAdvPivotTotalAmount" class="hero-metric" style=" color: var(--accent-purple);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -802,8 +802,8 @@
     <div id="upfrontPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 id="upfrontPivotTitle" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">업프론트 실적 현황</h2><span style="font-size: 12px; color: var(--text-tertiary);">부서 ➔ 광고주(업프론트용) ➔ 대행사 · 연도 1개 선택 시에만 표시 · 금액 단위: 억원</span></div>
-          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">실적 합계</div><div id="upfrontPivotTotalAmount" style="font-size: 24px; font-weight: 800; color: var(--primary-blue);">0 억원</div></div>
+          <div><h2 id="upfrontPivotTitle" class="hero-title" style="color: #FFFFFF;">업프론트 실적 현황</h2><span style="font-size: 12px; color: var(--text-tertiary);">부서 ➔ 광고주(업프론트용) ➔ 대행사 · 연도 1개 선택 시에만 표시 · 금액 단위: 억원</span></div>
+          <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">실적 합계</div><div id="upfrontPivotTotalAmount" class="hero-metric" style=" color: var(--primary-blue);">0 억원</div></div>
         </div>
       </section>
       <section class="table-container">
@@ -830,11 +830,11 @@
       <section class="card-box pivot-hero-card" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF;">세부데이터 탐색</h2>
+            <h2 class="hero-title" style="color: #FFFFFF;">세부데이터 탐색</h2>
             <span style="font-size: 12px; color: var(--text-tertiary);">상단 전역 필터바(연/월/부서/채널/방송디지털/대분류/매출기준/검색)를 그대로 반영 · 아래 필드 패널은 그 위에 추가로 좁히거나 행/열/값을 배치하는 용도 · 배치를 바꾸면 즉시 재집계</span>
           </div>
           <div style="display:flex; align-items:center; gap:20px;">
-            <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 합계</div><div id="detailDataTotalAmount" style="font-size: 24px; font-weight: 800;">0.0 백만</div></div>
+            <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 합계</div><div id="detailDataTotalAmount" class="hero-metric" style="">0.0 백만</div></div>
           </div>
         </div>
       </section>
