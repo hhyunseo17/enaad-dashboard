@@ -48,7 +48,7 @@
       chartInstances.portfolio = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ // 세그먼트 분리는 라운드/spacing이 아니라 '카드 배경색 테두리'로 낸다.
         // borderRadius는 링 두께에 비해 크면 작은 조각이 호가 아니라 알약처럼 뭉개지고,
         // spacing은 조각을 바깥으로 밀어 원이 어긋나 보인다. 배경색 테두리는 형태를 건드리지 않는다.
-        data: dataVals, backgroundColor: (c) => ddArcFill(bgColors[c.dataIndex])(c), borderWidth: 0.3, borderColor: ddSurfaceColor(), borderAlign: 'inner', hoverOffset: 6,
+        data: dataVals, backgroundColor: (c) => ddArcFill(bgColors[c.dataIndex])(c), ddFlatList: bgColors, borderWidth: 0.3, borderColor: ddSurfaceColor(), borderAlign: 'inner', hoverOffset: 6,
         datalabels: {
           display: 'auto', color: '#FFFFFF', font: { family: 'Pretendard', size: 12, weight: '400' }, textStrokeColor: 'rgba(0,0,0,0.22)', textStrokeWidth: 1.5,
           formatter: (value) => `${((value / totalSum) * 100).toFixed(1)}%`

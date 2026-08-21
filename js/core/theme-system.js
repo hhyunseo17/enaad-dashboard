@@ -75,10 +75,14 @@
       // **다크에서는 같은 논리를 뒤집어 적용하지 않는다.** 한때 다크 참조를 L38까지 내렸는데,
       // 그건 라이트의 거울상일 뿐이고 화면에서는 막대가 카드에 뚫린 구멍처럼 보였다. 다크에서
       // 물러남은 '어두워지는 것'이 아니라 '옆 회색보다 덜 밝은 것'으로 충분하다.
-      // 그래서 다크는 참조 L52 · 전월 L70으로, 둘 다 대역 안에 두고 사이만 벌린다(1.77).
-      // 두 테마가 서로의 반전이 아니라는 뜻이다 — 물러나는 방식 자체가 다르다.
-      ref:       { light: '#CACED3', dark: '#7D848C' },  // 목표 · 전년동월 · MoM 전월
-      prev:      { light: '#89929F', dark: '#ACB2B9' },  // 대행사 전월
+      // **다크 값은 렌더된 밝기를 기준으로 잡아야 한다.** ddBarFill이 밑동을 +0.12 밝히므로
+      // 여기 적힌 단색은 화면에 나오는 밝기가 아니다. 이걸 놓치고 단색만 보고 올렸더니
+      // 회색 막대가 데이터 막대보다 밝아져 참조가 주인공이 돼버렸다(전월 11.11 > 당월 7.49).
+      // 밑동 기준으로 참조 3.82 < 전월 6.53 < 당월 7.49가 되도록, 그리고 참조와 전월 사이가
+      // 1.71 벌어지도록 잡았다. 두 테마가 서로의 반전이 아니라는 뜻이다 —
+      // 물러나는 방식도, 기준으로 삼는 값도 다르다.
+      ref:       { light: '#CACED3', dark: '#545A61' },  // 목표 · 전년동월 · MoM 전월
+      prev:      { light: '#89929F', dark: '#78828E' },  // 대행사 전월
       curr:      { light: '#47A0FF', dark: '#2E91FA' },  // 대행사 당월
       // 구간별 분포 합산 매출액 선. 대비를 벌려 보려고 L58까지 내렸었는데 여전히 갈색기가
       // 남았다 — 주황은 대역(L62~71) 아래로 내려가는 순간 호박색·갈색으로 읽힌다.
@@ -90,7 +94,7 @@
       // 회색 막대가 있다) 둘 다 '증가' 쪽이라 같은 계열로 읽히는 것이 맞다.
       momNew:    { light: '#33CC59', dark: '#39C65C' },
       momUp:     { light: '#87E39E', dark: '#85E09C' },
-      momFlat:   { light: '#969DA6', dark: '#ACB2B9' },
+      momFlat:   { light: '#969DA6', dark: '#78828E' },
       momDown:   { light: '#FFB347', dark: '#FAA938' },
       momStop:   { light: '#FF5A52', dark: '#FF645C' }
     };
@@ -208,6 +212,31 @@
     // 세그먼트마다 따로 그리면 층마다 띠가 생겨 오히려 지저분해진다. 영역 기준으로 하면
     // 스택 하나가 아래에서 위로 이어지는 하나의 흐름으로 읽힌다.
     // ==========================================================================
+    // 채움 팩토리가 돌려주는 함수에 '이 계열의 단색이 무엇인지'를 붙여 둔다.
+    //
+    // 범례 칩 때문이다. Chart.js는 dataset.backgroundColor를 그대로 칩에 칠하는데, 그 값이
+    // 그라데이션이면 **차트 좌표계로 정의된 그라데이션**이 작은 칩에 들어간다. 칩은 그중
+    // 자기 위치가 걸치는 구간만 보이므로 같은 계열이라도 차트마다 다른 색으로 나온다 —
+    // 세로 스택과 가로 스택은 그라데이션 축이 아예 달라서 특히 크게 어긋난다.
+    // (대행사 Top10의 빨강과 월별 추이의 빨강이 달라 보이던 원인이 이것이다.)
+    function ddFlat(hex, fn) { fn.ddFlat = hex; return fn; }
+
+    // 범례는 항상 단색으로 그린다. 막대의 그라데이션은 질감일 뿐 계열 정체성이 아니므로,
+    // 범례가 보여줘야 하는 것은 그 계열의 색 하나다.
+    const _ddGenLabels = Chart.defaults.plugins.legend.labels.generateLabels;
+    Chart.defaults.plugins.legend.labels.generateLabels = function (chart) {
+      const items = _ddGenLabels.call(this, chart);
+      items.forEach((li) => {
+        const ds = chart.data.datasets[li.datasetIndex === undefined ? 0 : li.datasetIndex];
+        if (!ds) return;
+        const bg = ds.backgroundColor;
+        // 도넛처럼 항목마다 색이 다른 경우는 dataset에 붙여 둔 배열에서 꺼낸다.
+        const flat = (bg && bg.ddFlat) || (ds.ddFlatList && ds.ddFlatList[li.index]);
+        if (flat) { li.fillStyle = flat; li.strokeStyle = flat; }
+      });
+      return items;
+    };
+
     function ddHexAlpha(hex, alpha) {
       const h = String(hex).replace('#', '');
       const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
@@ -240,7 +269,7 @@
     // 일반광고 — 이 항상 제일 물빠져 보인다.
     // Chart.js는 레이아웃 전에도 backgroundColor를 한 번 평가하므로 chartArea가 없으면 단색으로 돌려준다.
     function ddBarFill(hex, horizontal) {
-      return (ctx) => {
+      return ddFlat(hex, (ctx) => {
         const chart = ctx.chart, area = chart.chartArea;
         if (!area) return hex;
         // 그라데이션도 명도로만 만든다. 검정/흰색을 섞으면 채도가 떨어져 탁해진다(ddLift 주석 참고).
@@ -275,7 +304,7 @@
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
         return g;
-      };
+      });
     }
 
     // 스택 세그먼트 구분선 — 도넛과 같은 방식(카드 배경색 테두리)을 막대에도 쓴다.
@@ -304,7 +333,7 @@
     // 계열 구분은 유지되면서 막대와 같은 결의 입체감만 생긴다.
     // 요소 좌표는 옵션 해석 시점에 없으므로 차트 영역에서 중심·반지름을 구한다.
     function ddArcFill(hex) {
-      return (ctx) => {
+      return ddFlat(hex, (ctx) => {
         const chart = ctx.chart, area = chart.chartArea;
         if (!area) return hex;
         const cx = (area.left + area.right) / 2, cy = (area.top + area.bottom) / 2;
@@ -318,7 +347,7 @@
         g.addColorStop(0, base);
         g.addColorStop(1, tip);
         return g;
-      };
+      });
     }
 
     // 장식용 대각 그라데이션이 쓰는 색 짝.
@@ -339,14 +368,14 @@
     // 색이 계열(5대분류)을 뜻하는 차트에 쓰면 범례가 무의미해진다. 실적 막대나 광고주 수처럼
     // 계열이 하나뿐이라 색에 의미가 없는 곳에서는 순수 장식이므로 무해하고, 화면이 풍부해진다.
     function ddDuoFill(fromHex, toHex) {
-      return (ctx) => {
+      return ddFlat(fromHex, (ctx) => {
         const chart = ctx.chart, area = chart.chartArea;
         if (!area) return fromHex;
         const g = chart.ctx.createLinearGradient(area.left, area.bottom, area.right, area.top);
         g.addColorStop(0, fromHex);
         g.addColorStop(1, toHex);
         return g;
-      };
+      });
     }
 
     // 선 차트 아래 영역 채움 — 선 색에서 시작해 바닥으로 갈수록 사라진다.
