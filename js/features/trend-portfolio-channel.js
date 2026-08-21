@@ -97,7 +97,9 @@
         data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v + '개' : '' }
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: RC('line'), backgroundColor: ddAreaFill(RC('line')), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RC('line'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: RC('line'), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: RC('lineLabel'),
+            backgroundColor: ddSurfaceColor(), borderRadius: 4, padding: { top: 2, bottom: 1, left: 4, right: 4 },
+            font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         } ] },
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { family: 'Pretendard', size: 12, weight: '400' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `광고주 수: ${ctx.raw.toLocaleString()} 개사` : `합산 매출액: ${ctx.raw.toFixed(2)} 억원` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 12, weight: '400' } }, grid: { display: false } }, y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, stepSize: 1 } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
       });
