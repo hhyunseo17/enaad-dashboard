@@ -2,6 +2,10 @@
 addata.xlsx
 *.xlsx
 
+# 원본 백업 압축본 (data_backup.zip 등). 안에 xlsx가 들어 있으므로 *.xlsx 규칙만으로는
+# 걸러지지 않는다 — 확장자가 zip이라 그대로 커밋될 수 있어 별도로 차단한다.
+*.zip
+
 # OS/에디터
 .DS_Store
 Thumbs.db
