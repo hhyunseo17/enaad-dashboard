@@ -69,10 +69,11 @@
         <span>전월비 증감: <strong style="color:${diff >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'};">${diff >= 0 ? '+' : ''}${formatCurrencyKorean(diff)} (${diffRate >= 0 ? '+' : ''}${diffRate.toFixed(1)}%)</strong></span>
       `;
 
-      // 신규 → 증액 → 유지 → 감액 → 중지는 "좋음에서 나쁨으로" 가는 순서다.
-      // 예전엔 초록/파랑/회색/노랑/빨강이라 순서가 색에 드러나지 않고 색만 5개 늘었다.
-      // 초록(양) → 회색(중립) → 빨강(음)의 발산형 램프로 바꿔 순서 자체가 읽히게 한다.
-      const momColors = { 신규: RC('momNew'), 증액: RC('momUp'), 유지: RC('momFlat'), 감액: RC('momDown'), 중지: RC('momStop') };
+      // 색은 '전월'과 '당월' 두 가지만 쓴다.
+      // 예전에는 버킷(신규·증액·유지·감액·중지)마다 초록→회색→주황→빨강 발산형 램프를 줬는데,
+      // 버킷 이름은 이미 x축 라벨에 적혀 있어 색이 같은 말을 반복하고 있었다. 그 대가로 한 화면에
+      // 색상 계열이 넷 더 늘었고, 그중 초록·노랑은 다른 뜻(증가·경고)과 겹쳤다.
+      // 두 색으로 두면 옆의 대행사 비교 차트와 같은 어휘가 되어 두 차트가 한 벌로 읽힌다.
 
       const ctx = document.getElementById('chartMoM').getContext('2d');
       if (chartInstances.mom) chartInstances.mom.destroy();
@@ -87,7 +88,7 @@
             // ddBarFill()은 색 문자열이 아니라 스크립터블 '함수'를 돌려준다. 함수 배열을 넘기면
             // Chart.js가 인덱싱만 하고 호출하지 않아 색 자리에 함수 객체가 들어가고 막대가 비어 보인다.
             // 막대마다 색이 다를 때는 배열이 아니라 스크립터블 하나로 감싸서 직접 호출해야 한다.
-            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: ddFlat(RC('momFlat'), (c) => ddBarFill(momColors[orderedKeys[c.dataIndex]])(c)), borderRadius: 5, ...ddGroupSeparator(),
+            { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: ddBarFill(RC('curr')), borderRadius: 5, ...ddGroupSeparator(),
               datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             }
           ]
@@ -127,10 +128,10 @@
       let html = '';
       orderedKeys.forEach(k => {
         const b = buckets[k]; const isExpanded = !!expandedMoMCategories[k]; const bDiff = b.currSum - b.prevSum;
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 500;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 500; color: ${bDiff >= 0 ? '#4ADE80' : RC('momStop')};">${fmtDiffM(bDiff)}</td></tr>`;
+        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleMoMCategory('${k}')">${isExpanded ? '-' : '+'}</span>${k} (${b.count.toLocaleString()}개사)</strong></td><td style="text-align: right; font-weight: 500;">${fmtM(b.prevSum)}</td><td style="text-align: right; font-weight: 500; color: #93C5FD;">${fmtM(b.currSum)}</td><td style="text-align: right; font-weight: 500; color: ${bDiff >= 0 ? '#4ADE80' : RC('negative')};">${fmtDiffM(bDiff)}</td></tr>`;
         if (isExpanded) {
           b.items.forEach(item => {
-            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">${fmtM(item.prev)}</td><td style="text-align: right;">${fmtM(item.curr)}</td><td style="text-align: right; color: ${item.diff >= 0 ? '#4ADE80' : RC('momStop')};">${fmtDiffM(item.diff)}</td></tr>`;
+            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;">${item.advertiser}</td><td style="text-align: right;">${fmtM(item.prev)}</td><td style="text-align: right;">${fmtM(item.curr)}</td><td style="text-align: right; color: ${item.diff >= 0 ? '#4ADE80' : RC('negative')};">${fmtDiffM(item.diff)}</td></tr>`;
           });
         }
       });

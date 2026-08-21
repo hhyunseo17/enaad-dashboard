@@ -99,9 +99,9 @@
       const diffStr = (diffM > 0 ? '+' : '') + diffM.toLocaleString();
       if (base === 0 && curr === 0) return { rateText: '-', diffText: '-', color: CH('#8B95A1') };
       if (base === 0) return { rateText: '신규', diffText: diffStr, color: '#4ADE80' };
-      if (curr === 0) return { rateText: '-100.0%', diffText: diffStr, color: RC('momStop') };
+      if (curr === 0) return { rateText: '-100.0%', diffText: diffStr, color: RC('negative') };
       const rate = (curr - base) / base * 100;
-      return { rateText: `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`, diffText: diffStr, color: rate >= 0 ? '#4ADE80' : RC('momStop') };
+      return { rateText: `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`, diffText: diffStr, color: rate >= 0 ? '#4ADE80' : RC('negative') };
     }
 
     function renderAgencyCompPivotTable() {
