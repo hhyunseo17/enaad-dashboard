@@ -113,6 +113,12 @@
 
     Chart.register(ChartDataLabels);
 
+    // **차트 글꼴은 본문과 따로 논다.** Chart.js는 캔버스에 직접 그리므로 body의 font-family를
+    // 상속하지 않는다 — 지정하지 않으면 자체 기본값('Helvetica Neue')으로 그리고, 한글은
+    // 시스템 폰트로 떨어진다. 즉 지금까지 축·범례·데이터라벨은 본문과 다른 글꼴이었다.
+    // 본문 폰트 시범 적용과 한 세트로 여기서도 같은 값을 지정한다(layout.css의 body 참고).
+    Chart.defaults.font.family = "'IBM Plex Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif";
+
     // 범례와 플롯 영역 사이 여백.
     // Chart.js에는 '범례 아래 여백' 옵션이 없다(labels.padding은 항목 사이 간격이다).
     // 범례 박스의 fit()이 계산한 높이에 여백을 더하는 것이 표준 해법이다.

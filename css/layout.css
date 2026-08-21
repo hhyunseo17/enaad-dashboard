@@ -3,8 +3,11 @@
    ============================================================ */
     body {
       background-color: var(--bg-base); color: var(--text-primary);
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-      letter-spacing: -0.015em; line-height: 1.6; min-height: 100vh; overflow-x: hidden; width: 100%; overscroll-behavior-x: none;
+      /* IBM Plex Sans KR 시범 적용(dashboard.html의 링크와 한 세트). Pretendard는 폴백으로 남긴다. */
+      font-family: 'IBM Plex Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      /* 자간 -0.015em은 Pretendard에 맞춰 잡은 값이다. IBM Plex Sans KR은 글자 폭이 이미 좁아
+         같은 자간을 쓰면 한글이 서로 붙는다. 폰트를 되돌릴 때 이 줄도 같이 돌아가야 한다. */
+      letter-spacing: 0; line-height: 1.6; min-height: 100vh; overflow-x: hidden; width: 100%; overscroll-behavior-x: none;
     }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
