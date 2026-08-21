@@ -56,10 +56,17 @@
       const { cy, cm, py, pm, orderedKeys, buckets, totalCurr, totalPrev } = mom;
       const diff = totalCurr - totalPrev; const diffRate = totalPrev > 0 ? (diff / totalPrev * 100) : 0;
 
+      // 이 요약줄은 일반 카드(.card-box) 안에 있고 mapPivotHtml을 거치지 않는다. 즉 여기 박힌
+      // hex는 라이트에서 보정될 기회가 없다 — 다섯 값 전부가 흰 카드 위에서 무너져 있었다.
+      //   당월 라벨 #FFFFFF 1.00(완전 비가시) · 당월 합계 #60A5FA 2.54
+      //   전월 #94A3B8 2.56 · 증가 #4ADE80 1.74 · 감소 #FF3B30 3.55
+      // 테마 토큰으로 바꾸면 두 테마 모두에서 성립한다(라이트 13.94/4.02/5.43/3.48/4.69,
+      // 다크 15.48/5.70/5.62/9.79/6.15). 새 색을 고르는 대신 토큰을 쓰는 이유는, 이 줄만의
+      // 색을 따로 두면 같은 뜻의 증감 표시가 화면마다 달라지기 때문이다.
       summaryBar.innerHTML = `
-        <span><strong style="color:#FFFFFF;">${cy}년 ${cm}월(당월)</strong> 합계: <strong style="color:#60A5FA;">${formatCurrencyKorean(totalCurr)}</strong></span>
-        <span><strong style="color:#94A3B8;">${py}년 ${pm}월(전월)</strong> 합계: <strong style="color:#94A3B8;">${formatCurrencyKorean(totalPrev)}</strong></span>
-        <span>전월비 증감: <strong style="color:${diff >= 0 ? '#4ADE80' : CH('#F87171')};">${diff >= 0 ? '+' : ''}${formatCurrencyKorean(diff)} (${diffRate >= 0 ? '+' : ''}${diffRate.toFixed(1)}%)</strong></span>
+        <span><strong style="color:var(--text-primary);">${cy}년 ${cm}월(당월)</strong> 합계: <strong style="color:var(--primary-blue);">${formatCurrencyKorean(totalCurr)}</strong></span>
+        <span><strong style="color:var(--text-tertiary);">${py}년 ${pm}월(전월)</strong> 합계: <strong style="color:var(--text-tertiary);">${formatCurrencyKorean(totalPrev)}</strong></span>
+        <span>전월비 증감: <strong style="color:${diff >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'};">${diff >= 0 ? '+' : ''}${formatCurrencyKorean(diff)} (${diffRate >= 0 ? '+' : ''}${diffRate.toFixed(1)}%)</strong></span>
       `;
 
       // 신규 → 증액 → 유지 → 감액 → 중지는 "좋음에서 나쁨으로" 가는 순서다.
