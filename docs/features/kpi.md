@@ -12,7 +12,9 @@
 - `renderKPIs()` — 6개 카드 값 계산·표시(내부에서 `renderUpfrontKPI()`, `renderGoalKPI()` 호출).
 - `computeUpfrontTargetDynamic()` — 선택 연/월과 겹치는 개월 월할 계산(업프론트 계약금액용).
 - `renderUpfrontKPI()` — 업프론트 실적 합계 + 달성률 + "약 XX.XX억원(월할 추정치)".
-- `computeRevenueTargetForScope()` — 선택 연/월 스코프(미선택 시 전체)와 겹치는 `salesTargets` 전부(담당자·대분류 불문) 합산.
+- `buildGoalScopeSet()` — 목표 관련 KPI/차트/피벗이 **모두 공유하는 연-월 스코프**. 월 미선택 시 그 연도에 실적이 있는 월까지만 넣고(진행 중 연도의 9~12월 목표가 분모에 끼는 것 방지), 마지막에 **목표가 등록된 연-월만 남긴다**(`buildRegisteredTargetMonthSet()`, 월 목표 합 > 0). 목표는 2023-01~2026-12만 등록돼 있고 실적은 2019년부터 있어, 좁히지 않으면 2019~2022 실적이 분자에만 들어가 달성률이 138.3%로 부풀려졌다. 목표가 없는 기간은 달성을 따질 구간이 아니므로 **분자·분모 양쪽에서 함께 뺀다.**
+- 스코프가 비면(예: 2019~2022만 선택) 달성률을 계산하지 않는다 — KPI는 `-` + "선택 기간에 등록된 목표 없음", 두 차트는 placeholder("선택 기간에 등록된 목표가 없습니다"), 두 피벗은 같은 문구의 빈 표. 예전에는 이때 목표 없이 실적 금액만 띄워, "무엇 대비"인지 알 수 없는 숫자가 남았다.
+- `computeRevenueTargetForScope()` — 선택 연/월 스코프와 겹치는 `salesTargets` 전부(담당자·대분류 불문) 합산.
 - `computeRevenuePerformanceActualForScope()` — 본부매출+실적(취급고)+선택 연/월 스코프로 `rawData` 집계. 좌측 부서/채널/대분류 체크박스 필터와 무관(목표가 그 축으로 안 쪼개지므로, 업프론트 계약금액 집계와 동일 원칙).
 - `renderGoalKPI()` — 위 두 compute 함수로 달성률 배지(`kpiGoalAchieveBadge`)와 실적/목표 텍스트(`kpiGoalActual`/`kpiGoalSub`) 렌더 + 연간 목표 대비 진도율(`kpiGoalAnnualProgress`, `selectedYears.length === 1`일 때만 노출) 렌더. `revenueBasisMode === 'accounting'`(회계기준)이면 계산하지 않고 `-`/배지 숨김/진도율 숨김/"회계기준 목표 미제공"으로 빈칸 처리(목표가 취급고 전용이라 회계기준과 섞으면 기준이 어긋나기 때문).
 - `renderGoalTrendChart()` — `chartGoalTrend` 캔버스에 연/월 스코프의 월별 목표·실적 막대. `goalTrendMode`(`'monthly'`|`'cumulative'`, 기본 `'monthly'`, `setGoalTrendMode()`로 토글, 버튼 id `btnGoalTrendMonthly`/`btnGoalTrendCumulative`)로 월별/누적 전환. **누적은 `cumulativeByYear()`로 연도가 바뀔 때 0에서 다시 쌓는다** — 목표가 연 단위 편성이라 "연초부터 얼마나 왔는가"가 읽는 값이고, 2025+2026을 함께 볼 때 24개월을 통으로 누적하면 연도 간 비교가 불가능해지기 때문. 누적 모드에서는 범례가 "누적 목표/누적 실적", 툴팁이 "(연초부터 누적)"·"누적 달성률"로 바뀐다.
@@ -28,10 +30,13 @@
 - 연도 열 펼침: `expandedGoalTrendYearColumns` / `expandedGoalDeptYearColumns`, `toggleYearColumn('goalTrend'|'goalDept', yr)`. `expandAllYears()`는 이 둘만 `filteredData`가 아니라 `buildGoalScopeSet()`에서 연도를 뽑고 `applyFilters()`를 거치지 않는다(열 축이 목표 스코프에서 나오므로).
 - 달성률은 **실적합 ÷ 목표합**이다(개별 달성률의 평균이 아니다). 목표가 0이면 `-`. 금액 단위는 다른 피벗과 같이 백만원.
 - 회계기준이면 차트와 동일하게 "취급고 기준에서만 제공됩니다"만 표시(`renderGoalPivotUnavailable()`).
-- 엑셀 다운로드: `exportGoalPivotExcel('trend'|'dept')`. 화면의 넓은 표가 아니라 **롱 포맷**(한 행 = 연월×축 조합)으로 내보낸다 — 병합 헤더는 엑셀에서 다시 피벗을 돌릴 수 없기 때문. 금액은 **백만원 소수 1자리**로, 기존 `exportPivotExcel()` 시트들의 정수 반올림과 다르다(행이 잘게 쪼개져 정수로 버리면 합계가 8백만원까지 어긋났다). 회계기준에서는 alert로 차단.
+- 엑셀 다운로드: `exportGoalPivotExcel('trend'|'dept')`. 화면의 넓은 표가 아니라 **롱 포맷**(한 행 = 연월×축 조합)으로 내보낸다 — 병합 헤더는 엑셀에서 다시 피벗을 돌릴 수 없기 때문. 회계기준·목표 미등록 스코프에서는 alert로 차단.
 - **집계 규칙은 연결된 차트와 반드시 같아야 한다** — 스코프 `buildGoalScopeSet()`, 본부매출+실적만, 좌측 체크박스 필터 미반영. 검증: 4개 시나리오(전체/2026/2026 1~3월/2025)에서 피벗 총합계 = `computeRevenueTargetForScope()`/`computeRevenuePerformanceActualForScope()` 일치 확인.
 
-> **알려진 특성(피벗이 원인 아님)**: 연/월을 아무것도 선택하지 않으면 달성률이 138.3%로 나온다. `salesTargets`는 2023년부터만 있는데 실적은 2019년부터 있어, 목표가 없는 2019~2022 실적이 분자에만 들어가기 때문이다. KPI 카드·차트도 같은 값을 낸다. 피벗에서는 2019~2022 열의 목표가 `-`로 보여 원인이 드러난다.
+### 금액은 원 단위로 들고 있다가 표시할 때만 줄인다
+목표 피벗의 누적(`goalAddToNode`)은 **원 단위 정수**로 하고 백만원 환산은 `goalTriCells()`에서만 한다. 차트의 누적(`cumulativeByYear`)도 원 단위로 더한 뒤 마지막에 억으로 나눈다. 엑셀 export는 `목표(원)`/`실적(원)` 컬럼으로 **반올림 없이** 원 단위 정수를 낸다(기존 `exportPivotExcel()` 시트들이 백만원 정수를 쓰는 것과 다르다).
+
+축소된 단위로 쌓으면 행마다 반올림이 겹친다. 부서별 피벗은 행이 연월×부서×담당자×대분류까지 쪼개져 2026년 기준 248행인데, 백만원으로 줄여 내보냈을 때 합계가 대시보드와 **8백만원** 어긋났다(소수 1자리로도 1백만원이 남았다). 엑셀에서 다시 합산해 화면과 대조하는 표라 그 차이가 그대로 드러난다. 원 단위로 내면 오차가 정확히 0이다.
 
 ## 규칙/주의
 - 총매출/전년동기/광고주당/신규광고주 카드는 filteredData(applyFilters() 적용) 기준. 목표 대비 달성률(KPI+차트+피벗)만 예외적으로 본부매출+실적+연월 스코프 고정 집계(좌측 체크박스 필터 미반영).
