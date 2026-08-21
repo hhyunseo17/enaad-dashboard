@@ -94,7 +94,7 @@
 
       chartInstances.advBucket = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(catColor('일반광고'), catColor('IMC')), yAxisID: 'y', borderRadius: 6, order: 2,
+        data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v + '개' : '' }
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: CH('#FFB547'), backgroundColor: ddAreaFill('#FFB547'), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: CH('#FFB547'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: '#FFB547', font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
