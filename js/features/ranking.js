@@ -17,7 +17,7 @@
         const groupMap = {}; targetData.forEach(r => { groupMap[r.agency || '기타'] = (groupMap[r.agency || '기타'] || 0) + r.amount; });
         const sortedAgencies = Object.entries(groupMap).sort((a,b) => b[1] - a[1]).slice(0, 10).map(s => s[0]);
         chartLabels = sortedAgencies;
-        datasets = subCats.map(cat => ({ label: cat, data: sortedAgencies.map(agency => targetData.filter(r => r.agency === agency && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || chartColors.blue, true), borderRadius: 0, ...ddStackSeparator(true),
+        datasets = subCats.map(cat => ({ label: cat, data: sortedAgencies.map(agency => targetData.filter(r => r.agency === agency && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || catColor('기타광고'), true), borderRadius: 0, ...ddStackSeparator(true),
           datalabels: { display: (ctx) => cat === subCats[subCats.length - 1], anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' },
             formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
         }));
@@ -26,7 +26,7 @@
         targetData.forEach(r => { let grp = r.agencyGroup || '(미지정)'; groupMap[grp] = (groupMap[grp] || 0) + r.amount; });
         const topGroups = Object.entries(groupMap).sort((a,b) => b[1] - a[1]).slice(0, 10).map(g => g[0]);
         chartLabels = topGroups;
-        datasets = subCats.map(cat => ({ label: cat, data: topGroups.map(grp => targetData.filter(r => r.agencyGroup === grp && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || chartColors.blue, true), borderRadius: 0, ...ddStackSeparator(true),
+        datasets = subCats.map(cat => ({ label: cat, data: topGroups.map(grp => targetData.filter(r => r.agencyGroup === grp && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || catColor('기타광고'), true), borderRadius: 0, ...ddStackSeparator(true),
           datalabels: { display: (ctx) => cat === subCats[subCats.length - 1], anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' },
             formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
         }));
@@ -39,7 +39,7 @@
       const ctx = document.getElementById('chartRankAdvertiser').getContext('2d'); if (chartInstances.rankAdvertiser) chartInstances.rankAdvertiser.destroy();
       const targetData = filteredData.filter(r => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC'); const groupMap = {}; targetData.forEach(r => { groupMap[r.advertiser || '기타'] = (groupMap[r.advertiser || '기타'] || 0) + r.amount; });
       const sortedAdvertisers = Object.entries(groupMap).sort((a,b) => b[1] - a[1]).slice(0, 10).map(s => s[0]); const subCats = ['일반광고', 'IMC'];
-      const datasets = subCats.map(cat => ({ label: cat, data: sortedAdvertisers.map(adv => targetData.filter(r => r.advertiser === adv && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || chartColors.slate, true), borderRadius: 0, ...ddStackSeparator(true),
+      const datasets = subCats.map(cat => ({ label: cat, data: sortedAdvertisers.map(adv => targetData.filter(r => r.advertiser === adv && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill(catColor(cat) || catColor('기타광고'), true), borderRadius: 0, ...ddStackSeparator(true),
         datalabels: { display: (ctx) => cat === subCats[subCats.length - 1], anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
       }));

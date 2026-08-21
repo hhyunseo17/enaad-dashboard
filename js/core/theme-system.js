@@ -22,7 +22,8 @@
     let currentTheme = resolveInitialTheme(); // 'dark' | 'light'
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    // 차트(Chart.js) 구조색 다크→라이트 매핑. 팔레트(chartColors/categoryColors/momColors)는 두 테마 공통으로 그대로 사용.
+    // 차트(Chart.js) 구조색 다크→라이트 매핑. 계열 팔레트(categoryColors/SERIES_PALETTE)는 테마별 세트가 따로 있고,
+    // momColors는 아래 발산형 램프 항목이 담당한다.
     const CHART_COLOR_MAP = {
       '#21232A': '#E5E8EB', '#8B95A1': '#4E5968', '#B0B8C1': '#4E5968', '#F2F4F6': '#191F28',
       '#3A4258': '#D1D6DB', '#6B7280': '#8B95A1', '#60A5FA': '#0064FF', '#94A3B8': '#8B95A1',

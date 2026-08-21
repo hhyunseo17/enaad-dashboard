@@ -140,14 +140,12 @@
     // 목록에 있든 없든 이 부서들은 항상 맨 뒤(이 순서대로)
     const customDeptTailOrder = ['광고전략팀', '광고사업본부'];
 
-    const chartColors = {
-      blue: '#2563EB', cyan: '#06B6D4', green: '#22C55E', orange: '#F59E0B',
-      purple: '#8B5CF6', pink: '#EC4899', red: '#EF4444', yellow: '#FACC15',
-      indigo: '#4F46E5', teal: '#0EA5A4',
-      // 분류를 알 수 없을 때 쓰는 중립색. 계열색과 겹치지 않아야 하므로 fallback 전용으로만 쓴다.
-      slate: '#64748B'
-    };
-    const colorPaletteList = [
-      '#2563EB', '#06B6D4', '#22C55E', '#F59E0B', '#8B5CF6',
-      '#EC4899', '#4F46E5', '#0EA5A4', '#FACC15', '#EF4444'
-    ];
+    // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라
+    // 나머지 팔레트(Apple HIG 계보)와 회색·초록의 색조가 미세하게 어긋났고 — 예를 들어
+    // 초록이 #34C759(135도)와 #22C55E(142도)로 공존했다 — 정성 구분이라는 같은 역할에
+    // 팔레트가 네 벌 도는 원인이었다.
+    //   · colorPaletteList : 정의만 있고 참조하는 곳이 0곳. 삭제.
+    //   · chartColors      : 실제 쓰임은 `catColor(cat) || chartColors.blue` 폴백 5곳뿐이었다.
+    //                        그런데 그 폴백은 정체를 모르는 계열을 하필 일반광고와 같은 파랑으로
+    //                        칠했다. 폴백을 catColor('기타광고')로 바꿔 무채색으로 떨어뜨린다 —
+    //                        '기타광고'가 원래 잔여 버킷이므로 뜻도 맞는다.
