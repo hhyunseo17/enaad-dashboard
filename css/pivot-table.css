@@ -38,14 +38,21 @@
     .pivot-tree-table thead th[rowspan] { border-bottom: 2px solid var(--primary-blue); }
 
     /* Sticky 첫 열 — 위치·레이어는 th/td 공통.
-       세로선을 전부 지웠으므로 고정 열의 오른쪽 경계만 예외로 남긴다(스크롤 시 경계 인지용). */
+       세로선을 전부 지웠으므로 고정 열의 오른쪽 경계만 예외로 남긴다(스크롤 시 경계 인지용).
+
+       **헤더 쪽은 반드시 `thead tr:first-child`로 한정한다.** 구분 열의 th는 rowspan으로 헤더 전체를
+       걸치므로 둘째·셋째 헤더 행에는 DOM상 존재하지 않는다. 그래서 `th:first-child`만 쓰면 둘째 행의
+       맨 앞 셀(= 첫 월 헤더 "1월")과 셋째 행의 맨 앞 셀(= "목표")이 구분 열로 오인돼 left:0에 고정되고
+       text-align:left까지 먹는다. 가로 스크롤 시 구분 열 위로 겹쳐 올라오고, 스크롤 전에도 저 셀만
+       왼쪽 정렬돼 제 그룹에서 어긋나 보인다. 목표 피벗은 월 헤더가 colspan=3이라 이 어긋남이 특히
+       크게 드러났지만, 원인은 2줄 헤더 피벗 전부가 공유하던 규칙이다. */
     .pivot-tree-table td:first-child,
-    .pivot-tree-table th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 400; border-right: 1px solid var(--pivot-sticky-border); }
+    .pivot-tree-table thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 400; border-right: 1px solid var(--pivot-sticky-border); }
     /* 배경·글자색에는 !important를 쓰지 않는다. 렌더러가 인라인으로 넣는 행 깊이별 색이 이겨야
        하기 때문이다. 여기 값은 인라인 배경이 없는 피벗(세부데이터 등)을 위한 불투명 fallback이다
        — sticky 열은 반드시 불투명해야 아래 내용이 비쳐 보이지 않는다. */
     .pivot-tree-table td:first-child { background: var(--pivot-rowlabel-bg); color: var(--pivot-rowlabel-fg); }
-    .pivot-tree-table th:first-child { z-index: 35 !important; background: var(--pivot-header-bg-alt) !important; color: var(--pivot-header-fg) !important; text-align: left; }
+    .pivot-tree-table thead tr:first-child th:first-child { z-index: 35 !important; background: var(--pivot-header-bg-alt) !important; color: var(--pivot-header-fg) !important; text-align: left; }
 
     /* 총합계 행: 파란 블록 대신 위쪽 강조선 + 살짝 올라온 표면. 표에서 유일하게 강조되는 행이므로
        색으로 덮지 않아도 충분히 눈에 들어온다. */
