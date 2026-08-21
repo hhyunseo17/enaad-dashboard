@@ -125,7 +125,11 @@
     .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: 400; color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    /* 6장은 한 줄에 놓여야 서로 비교된다. auto-fit + minmax(260px)는 한 줄에 1640px을
+       요구해서 13인치 노트북(콘텐츠 폭 ~1230px)에서 4+2로 접혔고, 그러면 아래 두 장이
+       KPI가 아니라 별개의 섹션처럼 읽힌다. 열 수를 6으로 고정하고, 폭이 줄면 카드 여백과
+       글자 크기를 단계적으로 줄여 한 줄을 유지한다(2열로 접는 건 900px 미만에서만). */
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
     /* 좌측 파란 스트라이프를 없앴다. 원래 6가지 무지개 accent를 담던 자리인데, 무지개를 걷어낸
        뒤로는 똑같은 파란 막대 6개가 되어 의미 없이 KPI 줄에서 가장 시끄러운 요소가 됐다.
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth뿐이다. */
@@ -207,6 +211,46 @@
        max-width 쿼리는 좁은 화면 쪽이 이겨야 하므로 900 → 768 → 640 순으로 선언한다.
        (이 주석의 여는 문자가 빠져 있어 900px 블록 전체가 파서에 폐기되던 버그를 수정)
        ======================================================================== */
+
+    /* 노트북 구간 — 열 수는 6으로 유지한 채 카드 안쪽만 줄인다.
+       기준점은 서피스 프로9(기본 배율 200% → 1440×960 CSS px). 이 폭에서 콘텐츠 폭은
+       1,377px, 카드 한 장이 220px(안쪽 188px)이고 가장 긴 값인 원 단위 9~10자리
+       (예: '1,284,567,890 원' = 21px에서 166px)도 줄바꿈 없이 들어간다. 카드 여백과
+       글자를 줄이지 않으면 안쪽이 178px로 좁아져 이 값이 카드 밖으로 넘친다. */
+    @media (max-width: 1400px) {
+      .kpi-grid { gap: 12px; }
+      .kpi-card { padding: 14px 15px; gap: 8px; }
+      .kpi-value { font-size: 21px; }
+      .kpi-title { font-size: 12px; }
+      .kpi-icon { width: 26px; height: 26px; }
+      .kpi-icon svg { width: 14px; height: 14px; }
+    }
+
+    /* 6열을 유지하는 마지막 단계. 여기서도 카드 안쪽은 147px 이상이라 억원 표기와
+       9자리 원 표기는 한 줄에 들어간다. 그보다 긴 예외값은 넘치게 두지 말고 접는다. */
+    @media (max-width: 1150px) {
+      .kpi-grid { gap: 10px; }
+      .kpi-card { padding: 12px; }
+      .kpi-value { font-size: 19px; white-space: normal; }
+      .kpi-title { font-size: 11.5px; }
+      .kpi-sub { font-size: 10.5px; gap: 6px; }
+      .kpi-icon { width: 24px; height: 24px; }
+      .kpi-icon svg { width: 13px; height: 13px; }
+    }
+
+    /* 1,100px 아래로는 6열을 고집하면 카드가 160px 밑으로 눌려 값이 접히기 시작한다.
+       한 줄을 포기하는 대신 3열×2행으로 떨어뜨리고 카드 안쪽을 다시 넉넉하게 되돌린다.
+       (4+2로 접히는 형태는 남은 두 장이 별개 섹션처럼 읽히므로 쓰지 않는다.) */
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .kpi-card { padding: 16px; }
+      .kpi-value { font-size: 22px; white-space: nowrap; }
+      .kpi-title { font-size: 12.5px; }
+      .kpi-sub { font-size: 11px; gap: 8px; }
+      .kpi-icon { width: 28px; height: 28px; }
+      .kpi-icon svg { width: 14px; height: 14px; }
+    }
+
     @media (max-width: 900px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       .kpi-card { padding: 14px; }
