@@ -90,7 +90,9 @@
     .dd-field-chip-filter { background: var(--bg-card-hover); border-color: var(--accent-orange); }
     .dd-field-chip-filter > span:first-child { cursor: pointer; }
     .dd-field-chip-value { border-color: var(--accent-green); }
-    .dd-agg-select { font-size: 12px; padding: 2px 4px; background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; }
+    /* select은 body의 font-family를 상속하지 않는다(UA 기본 글꼴로 그려진다).
+       화면의 유일한 진짜 폼 컨트롤이라, 여기만 다른 글꼴로 남아 있었다. */
+    .dd-agg-select { font-family: inherit; font-size: 12px; padding: 2px 4px; background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; }
     .dd-chip-remove { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; text-align: center; border-radius: 50%; color: var(--text-tertiary); font-size: 11px; cursor: pointer; }
     .dd-chip-remove:hover { color: var(--accent-red); background: var(--accent-red-bg); }
 

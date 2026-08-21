@@ -194,7 +194,7 @@
 
       l1Keys.forEach(l1 => {
         const isL1Exp = !!expandedMgrPivot[l1];
-        html += `<tr><td class="indent-step-1" style="background:#1E293B; color:#F8FAFC; font-weight:800;"><span class="toggle-icon" onclick="toggleMgrPivotNode('${l1}')">${isL1Exp?'-':'+'}</span>${l1}</td>${genCells(tree[l1], '700')}</tr>`;
+        html += `<tr><td class="indent-step-1" style="background:#1E293B; color:#F8FAFC; font-weight:700;"><span class="toggle-icon" onclick="toggleMgrPivotNode('${l1}')">${isL1Exp?'-':'+'}</span>${l1}</td>${genCells(tree[l1], '700')}</tr>`;
         if(isL1Exp) {
           const l2Keys = Object.keys(tree[l1].subs).sort((a,b)=>tree[l1].subs[b].total - tree[l1].subs[a].total);
           l2Keys.forEach(l2 => {

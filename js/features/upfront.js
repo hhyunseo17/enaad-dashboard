@@ -129,7 +129,7 @@
               });
             }
           });
-          html += `<tr class="row-category" style="border-top: 1px solid var(--border-default);"><td class="indent-step-1" style="font-weight: 800; background: #1E293B;">${dept} 요약</td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td>`;
+          html += `<tr class="row-category" style="border-top: 1px solid var(--border-default);"><td class="indent-step-1" style="font-weight: 700; background: #1E293B;">${dept} 요약</td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td>`;
           months.forEach(m => { html += `<td style="text-align: right; font-weight: 500; background: #1E293B;">${fmtEok(dNode.months[m] || 0)}</td>`; });
           html += `<td style="text-align: right; font-weight: 500; background: #1E293B; color: #93C5FD;">${fmtEok(dNode.total)}</td></tr>`;
         }
