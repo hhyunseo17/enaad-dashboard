@@ -97,7 +97,7 @@
         data: { labels: labels, datasets: [ { type: 'bar', label: '광고주 수', data: countVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v + '개' : '' }
         }, { type: 'line', label: '합산 매출액', data: sumVals, borderColor: RC('line'), backgroundColor: ddAreaFill(RC('line')), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RC('line'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: RC('lineLabel'),
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: dataLabelTextColor(),
             backgroundColor: ddSurfaceColor(), borderRadius: 4, padding: { top: 2, bottom: 1, left: 4, right: 4 },
             font: { family: 'Pretendard', size: 11, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         } ] },
