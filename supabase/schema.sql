@@ -115,58 +115,80 @@ create index if not exists idx_raw_sales_rows_batch_bonbu on raw_sales_rows (loa
 -- CASE 분기마다 다른 배열 타입을 만들어 unnest하는 방식은 타입 통일이 깨지기 쉬워(실제로 겪은 문제),
 -- 브랜치별로 그냥 SELECT를 하나씩 쓰는 게 더 단순하고 안전하다. 마지막 조각은 항상 "원금 - 앞 조각들의
 -- 반올림 합"(나머지 방식)으로 계산해 SUM(amount_won)이 재배분 전후 정확히 보존되게 한다.
+--
+-- 알려진 미세 차이(수정 대상 아님): Postgres round()는 0에서 먼 쪽으로, JS Math.round()는 큰 쪽으로
+-- 반올림한다. 그래서 **금액이 음수이면서 배분액이 정확히 .5로 떨어지는 skylife큐톤 행**에서만
+-- 이 뷰와 data-loader.js의 getManagerSplitParts가 담당자별로 1원 차이를 낸다(예: -3,333,333 × 50%
+-- → SQL -1,666,667 / JS -1,666,666). 나머지 방식이라 합계는 양쪽 모두 보존되고, 운영 경로는
+-- Supabase 하나뿐이라 실제 영향은 xlsx로 롤백했을 때의 담당자별 1원뿐이다.
 -- ------------------------------------------------------------
 
+-- 배치 한정(src CTE): **10개 브랜치가 모두 최신 배치만 본다.** 예전에는 각 브랜치가
+-- raw_sales_rows 전체를 조건 없이 훑었다. 상위 v_sales_normalized가 load_batch_id로 좁히지만
+-- 그 조건은 조인 바깥쪽 r에만 걸리므로, split 쪽은 지금까지 적재한 **모든 배치**를 브랜치마다
+-- 다시 스캔했다. 배치는 삭제되지 않고 superseded 표시만 되므로(scripts/etl/README.md), ETL을
+-- 돌릴수록 /api/sales 응답이 느려지는 구조였다. src를 materialized로 한 번만 만들어 재사용한다.
 create or replace view v_manager_split as
-  -- 규칙 없음(기본): skylife큐톤이 아니거나, 2025/2026 규칙 대상이 아닌 모든 행 → 원본 담당자 그대로 1행
+  with src as materialized (
+    select r.*
+    from raw_sales_rows r
+    where r.load_batch_id = (select batch_id from current_batch where id = 1)
+  )
+
+  -- 규칙 없음(기본) → 원본 담당자 그대로 1행.
+  -- **아래 8개 규칙 브랜치의 여집합으로 적는다.** 예전에는 해당 조건을 따로 열거했는데, 그러다
+  -- 2026년이면서 month가 1~12 밖인 행이 어느 브랜치에도 안 잡혀 조용히 사라지는 구멍이 있었다
+  -- (data-loader.js의 getManagerSplitParts는 그 경우 원본 담당자로 폴백한다). 여집합으로 적으면
+  -- 규칙이 늘어도 "어디에도 안 걸리는 행"이 생기지 않는다.
   select r.id as raw_id, 1 as split_idx, r.manager as split_manager, r.amount_won as split_amount
-  from raw_sales_rows r
-  where r.sub_category <> 'skylife큐톤'
-     or (r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 not in ('LiveAD+', '심포니', '영업대행수수료', '장초수', '인포결합'))
-     or (r.sub_category = 'skylife큐톤' and r.year not in (2025, 2026))
+  from src r
+  where not (
+       (r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료', '장초수', '인포결합'))
+    or (r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 12)
+  )
 
   union all
   -- 2025년 LiveAD+/심포니/영업대행수수료: 박영상 50% / 남형진 50%
   select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료')
   union all
   select r.id, 2, '남형진', r.amount_won - round(r.amount_won * 0.5)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('LiveAD+', '심포니', '영업대행수수료')
 
   union all
   -- 2025년 장초수/인포결합: 박영상 65% / 김기철 35%
   select r.id, 1, '박영상', round(r.amount_won * 0.65)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합')
   union all
   select r.id, 2, '김기철', r.amount_won - round(r.amount_won * 0.65)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2025 and r.sub_category3 in ('장초수', '인포결합')
 
   union all
   -- 2026년 1~4월(소분류 무관): 박영상 50% / 남형진 50%
   select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4
   union all
   select r.id, 2, '남형진', r.amount_won - round(r.amount_won * 0.5)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 1 and 4
 
   union all
   -- 2026년 5~12월(소분류 무관): 박영상 50% / 남형진 30% / 이신우 20%
   select r.id, 1, '박영상', round(r.amount_won * 0.5)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12
   union all
   select r.id, 2, '남형진', round(r.amount_won * 0.3)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12
   union all
   select r.id, 3, '이신우', r.amount_won - round(r.amount_won * 0.5)::bigint - round(r.amount_won * 0.3)::bigint
-  from raw_sales_rows r
+  from src r
   where r.sub_category = 'skylife큐톤' and r.year = 2026 and r.month between 5 and 12;
 
 create or replace view v_sales_normalized as
