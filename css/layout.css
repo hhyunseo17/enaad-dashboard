@@ -165,7 +165,7 @@
        재정의한다. 마크업이 인라인으로 var(--text-tertiary) 등을 쓰고 있어 이 방식이면
        마크업을 건드리지 않고도 라이트 모드에서 라벨이 배경에 묻히는 문제가 해결된다. */
     .pivot-hero-card {
-      position: relative; overflow: hidden; border: 1px solid var(--border-default);
+      position: relative; overflow: hidden; border: 1px solid var(--border-card);
       color: #FFFFFF;
       --text-primary: #FFFFFF;
       --text-secondary: rgba(255, 255, 255, 0.86);
@@ -198,6 +198,56 @@
     .pivot-hero-card.hero-green  { background: linear-gradient(135deg, #182B22 0%, #1F5138 62%, #276E4A 100%); }
     .pivot-hero-card.hero-amber  { background: linear-gradient(135deg, #2C2418 0%, #5A4520 62%, #7C5D26 100%); }
     .pivot-hero-card.hero-rose   { background: linear-gradient(135deg, #2C1A22 0%, #5A2740 62%, #7C3253 100%); }
+
+    /* ── 라이트 전용 히어로 ──────────────────────────────────────────────────
+       위의 진한 그라데이션은 다크에서는 자연스럽지만, 밝은 페이지에서는 화면 맨 위에
+       검은 판 하나가 박히는 꼴이라 피벗 화면에 들어갈 때마다 눈이 한 번 조인다.
+       색 정체성(파랑/보라/청록/초록/앰버/로즈)은 그대로 두고 명도만 뒤집는다.
+
+       배경이 밝아지므로 카드 안 텍스트 토큰도 함께 뒤집어야 한다. 마크업이 인라인으로
+       var(--text-tertiary) 등을 쓰고 있어, 토큰만 다시 정의하면 마크업은 건드리지 않아도 된다.
+
+       총합계 숫자의 강조색은 **카드마다 다르므로 카드별로 재정의한다.** 기본 라이트 토큰을
+       그대로 쓰면 카드의 가장 진한 스톱 기준으로 2.73~4.36까지 떨어진다 — 화면에서 가장
+       중요한 숫자로는 빠듯하다. 각 카드의 바탕에 맞춰 4.5 이상이 되는 지점까지만 내린다.
+       (제목 #1C1C1E는 11.8~13.8, 보조 #4A4A52는 6.1~7.1로 이미 넉넉하다.) */
+    html[data-theme="light"] .pivot-hero-card {
+      color: #1C1C1E;
+      --text-primary:   #1C1C1E;
+      --text-secondary: #3A3A3E;
+      --text-tertiary:  #4A4A52;
+    }
+    /* 오른쪽 위 빛 한 겹 — 밝은 판에서는 10% 흰색이 보이지 않으므로 올린다. */
+    html[data-theme="light"] .pivot-hero-card::after {
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.60), transparent 68%);
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-blue {
+      background: linear-gradient(135deg, #F4F8FF 0%, #E4EEFF 62%, #CFE0FF 100%);
+      --primary-blue: #005FC7;   /* 3.01 → 4.55 */
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-violet {
+      background: linear-gradient(135deg, #F8F5FF 0%, #ECE5FF 62%, #DCD0FF 100%);
+      --accent-purple: #4A48D3;  /* 3.90 → 4.59 */
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-teal {
+      background: linear-gradient(135deg, #F2FAFA 0%, #E0F3F2 62%, #CBE9E7 100%);
+      --accent-cyan: #026BA1;    /* 3.19 → 4.52 */
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-green {
+      background: linear-gradient(135deg, #F3FAF6 0%, #E1F4E9 62%, #CDEBD9 100%);
+      --accent-green: #147537;   /* 2.73 → 4.54 */
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-amber {
+      background: linear-gradient(135deg, #FFFAF0 0%, #FFF1DC 62%, #FFE4BC 100%);
+      --accent-orange: #9B5808;  /* 3.01 → 4.50 */
+    }
+    html[data-theme="light"] .pivot-hero-card.hero-rose {
+      background: linear-gradient(135deg, #FFF6F9 0%, #FFE8EF 62%, #FBD4E1 100%);
+      --accent-pink: #BD1759;    /* 4.36 → 4.55 */
+    }
+    /* 세부데이터 화면의 히어로에는 hero-* 계열 클래스가 없다(배경 없이 텍스트만).
+       라이트에서 흰 카드 위에 놓이므로 위의 텍스트 토큰만 적용되면 된다 — 예전에는
+       제목이 #FFFFFF로 박혀 있어 이 카드에서 글자가 통째로 사라져 있었다. */
 
     .card-box { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; transition: all 0.2s ease; }
     .card-box.clickable { cursor: pointer; }
