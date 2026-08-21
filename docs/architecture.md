@@ -96,6 +96,17 @@ features/*.js    →  filteredData/rawData를 읽어 차트·피벗 렌더
 - **프론트/백 경계 = data-loader.js.** `js/core/state.js`의 `DATA_SOURCE_MODE`('xlsx'|'supabase')로 전환. 두 경로 모두 `rawData`/`filteredData` shape을 동일하게 유지하는 게 계약(contract) — features/*는 무수정.
 - Supabase 접근은 반드시 `/api/*` 프록시(Pages 배포 시 `functions/api/*.js`, Zero Trust 보호 범위 안) 경유. 브라우저가 Supabase(`*.supabase.co`)에 anon key로 직접 쿼리하지 않는다.
 
+### `/api/sales` 응답은 컬럼 별칭(2자)을 쓴다 — 두 파일을 함께 고칠 것
+`v_bonbu_sales`는 26,000행대라 응답 시간의 상당 부분이 **페이로드 바이트 수에 딸려 온다**(뷰 계산 자체는 0.2~0.3초, 클라이언트의 parse+매핑은 합계 0.1초로 무시 가능). 그런데 `select=*` 응답 21.98MB 중 **14.64MB(67%)가 행마다 반복되는 컬럼 이름**이었고 값은 7.34MB뿐이었다. 그래서 PostgREST 별칭(`select=ms:month_str,…`)으로 키를 2자로 줄이고, 프론트가 읽지 않는 5개 컬럼(`load_batch_id`/`is_bonbu`/`is_excluded`/`excluded_reason`/`raw_id`)은 아예 뺀다.
+
+실측(8쌍 교차): 23.15MB → 12.08MB, 총 소요 2,121ms → 1,629ms(평균 23%). 페이로드는 절반이 됐으나 시간은 그만큼 줄지 않는다 — 왕복 지연과 뷰 계산이라는 고정 비용이 남는다. **회차 편차가 ±30%(Supabase 공유 인스턴스)이므로 이 수치를 다시 잴 때는 반드시 교차 반복 측정할 것.** 단발 측정은 38%로도 14%로도 나온다. 남은 1.6초를 더 줄이려면 페이로드를 깎기보다 배치 단위 엣지 캐시(데이터는 ETL 컷오버 때만 바뀐다)로 왕복 자체를 없애는 편이 효과가 크다.
+
+- 별칭 표의 원본: `shared/supabase-proxy.mjs`의 `SALES_COLUMN_ALIASES`
+- 대응 매핑: `js/core/data-loader.js`의 `mapRowFromSupabase()`
+- **빌드 도구가 없어 두 파일이 상수를 공유할 수 없다.** 한쪽만 고치면 전 컬럼이 조용히 `undefined`가 되므로(금액 0, 문자열 undefined인 대시보드는 원인 추적이 어렵다) `assertSalesRowShape()`가 첫 행의 키를 검사해 에러 배너로 즉시 실패시킨다. 컬럼을 추가·변경할 때는 세 곳(별칭표·매핑·`SALES_EXPECTED_KEYS`)을 모두 손댈 것.
+- `bonbu_revenue_status`(`bs`)는 이 뷰에서 항상 `'본부매출'`이라 뺄 수 있지만 **일부러 남긴다.** 모든 집계가 이 값으로 본부매출을 판정하므로(CLAUDE.md 절대원칙 1) 클라이언트가 지어내는 상수로 바꾸면 그 가드가 형해화된다.
+- 나머지 세 엔드포인트(`upfront-contracts`/`targets`/`latest-batch`)는 응답이 0.3MB 미만이라 `select=*` 그대로 둔다.
+
 ## 검증 (빌드 도구 없음)
 - 문법: 각 js 파일 `node --check`.
 - 전역 참조 무결성: 수정 파일이 참조하는 전역변수/함수가 state.js·다른 파일에 실제 존재하는지 grep 대조.

@@ -15,6 +15,46 @@
 const SUPABASE_PAGE_SIZE = 30000;
 const PAGE_CONCURRENCY = 4; // 데이터가 더 늘어나 여러 페이지가 필요해지는 경우를 대비한 안전판(순차 대기 방지)
 
+// ------------------------------------------------------------
+// v_bonbu_sales 응답 컬럼 별칭 — /api/sales 페이로드 축소용.
+//
+// 이 뷰는 26,000행대라 응답 시간의 상당 부분이 페이로드 바이트 수에 딸려 온다(뷰 계산 자체는
+// 0.2~0.3초). 그런데 `select=*` 응답 21.98MB 중 **14.64MB(67%)가 행마다 반복되는 컬럼 이름**이었다.
+// 값은 7.34MB뿐이다. 그래서 PostgREST 별칭(`select=별칭:컬럼`)으로 키 이름을 2자로 줄인다.
+//
+// 실측(8쌍 교차, 순서 편향 제거): 23.15MB → 12.08MB, 총 소요 2,121ms → 1,629ms(평균 기준 23%,
+// 최소 기준 27%, 중앙 기준 19%). 페이로드는 절반이 됐지만 시간은 그만큼 줄지 않는다 — 왕복 지연과
+// 뷰 계산이라는 고정 비용이 남기 때문이다. 회차 편차가 ±30%에 달하므로(Supabase 공유 인스턴스)
+// 이 값을 다시 잴 때는 반드시 교차 반복 측정할 것. 단발 측정은 38%로도, 14%로도 나온다.
+// 값 동일성은 879,714개 필드 전수 대조로 select=* 와 완전히 일치함을 확인했다.
+//
+// 여기서 빠진 컬럼(load_batch_id / is_bonbu / is_excluded / excluded_reason / raw_id)은
+// 프론트가 읽지 않는다. 앞의 셋은 v_bonbu_sales 정의상 항상 상수(true/false/null)라
+// 행마다 실어 보낼 이유가 없다. bonbu_revenue_status(bs)도 이 뷰에서는 항상 '본부매출'이지만
+// **일부러 남긴다** — 모든 집계가 이 값으로 본부매출을 판정하기 때문에(CLAUDE.md 절대원칙 1)
+// 클라이언트가 지어내는 상수로 바꾸면 그 가드가 형해화된다. 0.94MB는 그 대가로 지불한다.
+//
+// ⚠ 이 표를 고치면 js/core/data-loader.js의 mapRowFromSupabase()도 반드시 같이 고칠 것.
+//    빌드 도구가 없어 두 파일이 상수를 공유할 수 없다. 어긋나면 조용히 undefined가 되므로
+//    data-loader 쪽에 키 존재 여부 검증(assertSalesRowShape)을 두었다.
+// ------------------------------------------------------------
+const SALES_COLUMN_ALIASES = {
+  id: 'id', ms: 'month_str', yr: 'year', mo: 'month',
+  dp: 'dept', mg: 'manager', ad: 'advertiser', ag: 'agency', gg: 'agency_group',
+  ch: 'channel', iu: 'industry', bd: 'broad_digital',
+  co: 'category_original', sc: 'sub_category', s3: 'sub_category3',
+  nn: 'one_n_flag', cr: 'category_reclassified', rb: 'revenue_basis', bs: 'bonbu_revenue_status',
+  rm: 'remark', aw: 'amount_won', uf: 'is_upfront',
+  cy: 'contract_start_y', cm: 'contract_start_m', ey: 'contract_end_y', em: 'contract_end_m',
+  cs: 'contract_start_date', ce: 'contract_end_date',
+  ck: 'upfront_contract_amount_eok', cw: 'contract_amount_won', gn: 'gross_net_flag',
+  ua: 'upfront_advertiser_raw', un: 'upfront_note',
+};
+
+const SALES_SELECT = Object.entries(SALES_COLUMN_ALIASES)
+  .map(([alias, column]) => (alias === column ? column : `${alias}:${column}`))
+  .join(',');
+
 function authHeaders(env) {
   return {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -22,8 +62,8 @@ function authHeaders(env) {
   };
 }
 
-function pageUrl(env, viewName, offset) {
-  return `${env.SUPABASE_URL}/rest/v1/${viewName}?select=*&limit=${SUPABASE_PAGE_SIZE}&offset=${offset}`;
+function pageUrl(env, viewName, offset, select) {
+  return `${env.SUPABASE_URL}/rest/v1/${viewName}?select=${encodeURIComponent(select)}&limit=${SUPABASE_PAGE_SIZE}&offset=${offset}`;
 }
 
 async function assertOk(res, viewName) {
@@ -51,8 +91,8 @@ function returnedCountFromContentRange(res) {
   return end - start + 1;
 }
 
-async function fetchPageJson(env, viewName, offset) {
-  const res = await fetch(pageUrl(env, viewName, offset), { headers: authHeaders(env) });
+async function fetchPageJson(env, viewName, offset, select = '*') {
+  const res = await fetch(pageUrl(env, viewName, offset, select), { headers: authHeaders(env) });
   await assertOk(res, viewName);
   return res.json();
 }
@@ -63,8 +103,8 @@ async function fetchPageJson(env, viewName, offset) {
 // 다시 문자열로 만드는 과정 없이 Supabase 응답 바디를 그대로 스트리밍 전달한다 — 26,000행 규모에서
 // 이 파싱+재직렬화 비용이 로딩 시간의 상당 부분을 차지했다(체감 3초 이상). 페이지가 꽉 찬 경우(더
 // 있을 수 있음)에만 파싱해서 이어지는 페이지를 병렬 배치로 채운다.
-export async function proxyView(env, viewName) {
-  const firstRes = await fetch(pageUrl(env, viewName, 0), { headers: authHeaders(env) });
+export async function proxyView(env, viewName, select = '*') {
+  const firstRes = await fetch(pageUrl(env, viewName, 0, select), { headers: authHeaders(env) });
   await assertOk(firstRes, viewName);
   const returnedCount = returnedCountFromContentRange(firstRes);
 
@@ -83,7 +123,7 @@ export async function proxyView(env, viewName) {
   let more = firstPage.length >= SUPABASE_PAGE_SIZE;
   while (more) {
     const batchOffsets = Array.from({ length: PAGE_CONCURRENCY }, (_, i) => offset + i * SUPABASE_PAGE_SIZE);
-    const pages = await Promise.all(batchOffsets.map((o) => fetchPageJson(env, viewName, o)));
+    const pages = await Promise.all(batchOffsets.map((o) => fetchPageJson(env, viewName, o, select)));
     pages.forEach((page) => all.push(...page));
     more = pages[pages.length - 1].length >= SUPABASE_PAGE_SIZE;
     offset += PAGE_CONCURRENCY * SUPABASE_PAGE_SIZE;
@@ -119,7 +159,8 @@ export function jsonResponse(payload) {
 export async function handleSalesRequest(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   try {
-    return await proxyView(env, 'v_bonbu_sales');
+    // 별칭 select — 응답 키는 SALES_COLUMN_ALIASES의 짧은 이름이다(위 주석 참고).
+    return await proxyView(env, 'v_bonbu_sales', SALES_SELECT);
   } catch (err) {
     return proxyErrorResponse(err);
   }

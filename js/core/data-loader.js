@@ -333,6 +333,7 @@
     }
 
     function processSupabaseRows(salesRows, upfrontRows, targetRows) {
+      assertSalesRowShape(salesRows); // 여기서 던지면 fetchDataSupabase()의 .catch가 에러 배너로 표시한다
       rawData = salesRows.map(mapRowFromSupabase);
       upfrontContracts = (upfrontRows || []).map(mapUpfrontContractFromSupabase);
       salesTargets = (targetRows || []).map(mapSalesTargetFromSupabase);
@@ -341,28 +342,55 @@
       finalizeLoadedData();
     }
 
-    // DB row(snake_case) → 기존 rawData row shape(camelCase) 매핑. features/*.js는 이 shape에만 의존하므로 무수정.
+    // /api/sales 응답 키(별칭 2자) → 기존 rawData row shape(camelCase) 매핑.
+    // features/*.js는 이 shape에만 의존하므로 무수정.
+    //
+    // ⚠ 짧은 키는 shared/supabase-proxy.mjs의 SALES_COLUMN_ALIASES가 정하며, 그 파일의 주석에
+    //    배경(페이로드 21.98MB 중 14.64MB가 반복되는 컬럼 이름이었다)이 적혀 있다. 빌드 도구가
+    //    없어 두 파일이 상수를 공유할 수 없으므로 **한쪽을 고치면 다른 쪽도 반드시 같이 고칠 것.**
+    //    어긋나면 전 컬럼이 조용히 undefined가 되므로 assertSalesRowShape()로 첫 행을 검사한다.
+    //    별칭: ms=month_str yr=year mo=month dp=dept mg=manager ad=advertiser ag=agency
+    //         gg=agency_group ch=channel iu=industry bd=broad_digital co=category_original
+    //         sc=sub_category s3=sub_category3 nn=one_n_flag cr=category_reclassified
+    //         rb=revenue_basis bs=bonbu_revenue_status rm=remark aw=amount_won uf=is_upfront
+    //         cy/cm=contract_start_y/m ey/em=contract_end_y/m cs/ce=contract_start/end_date
+    //         ck=upfront_contract_amount_eok cw=contract_amount_won gn=gross_net_flag
+    //         ua=upfront_advertiser_raw un=upfront_note
     function mapRowFromSupabase(r) {
       return {
-        id: r.id, monthStr: r.month_str, year: r.year, month: r.month,
-        dept: r.dept, manager: r.manager,
-        advertiser: r.advertiser, agency: r.agency, agencyGroup: r.agency_group, channel: r.channel, industry: r.industry,
-        broadDigital: r.broad_digital, categoryOriginal: r.category_original, subCategory: r.sub_category, subCategory3: r.sub_category3,
-        oneNFlag: r.one_n_flag, categoryReclassified: r.category_reclassified, revenueBasis: r.revenue_basis, bonbuRevenueStatus: r.bonbu_revenue_status,
-        remark: r.remark, amount: Number(r.amount_won) || 0,
-        isUpfront: r.is_upfront,
-        contractStartYM: (r.contract_start_y && r.contract_start_m) ? { y: r.contract_start_y, m: r.contract_start_m } : null,
-        contractEndYM: (r.contract_end_y && r.contract_end_m) ? { y: r.contract_end_y, m: r.contract_end_m } : null,
-        contractStartDate: r.contract_start_date ? new Date(r.contract_start_date + 'T00:00:00Z') : null,
-        contractEndDate: r.contract_end_date ? new Date(r.contract_end_date + 'T00:00:00Z') : null,
-        contractAmountText: buildContractAmountText(r.upfront_contract_amount_eok, r.gross_net_flag),
-        contractAmountWon: Number(r.contract_amount_won) || 0, grossNetFlag: r.gross_net_flag || '',
-        // upfront_advertiser_raw는 스키마상 nullable이다(NOT NULL/DEFAULT 없음). 지금은 ETL이
+        id: r.id, monthStr: r.ms, year: r.yr, month: r.mo,
+        dept: r.dp, manager: r.mg,
+        advertiser: r.ad, agency: r.ag, agencyGroup: r.gg, channel: r.ch, industry: r.iu,
+        broadDigital: r.bd, categoryOriginal: r.co, subCategory: r.sc, subCategory3: r.s3,
+        oneNFlag: r.nn, categoryReclassified: r.cr, revenueBasis: r.rb, bonbuRevenueStatus: r.bs,
+        remark: r.rm, amount: Number(r.aw) || 0,
+        isUpfront: r.uf,
+        contractStartYM: (r.cy && r.cm) ? { y: r.cy, m: r.cm } : null,
+        contractEndYM: (r.ey && r.em) ? { y: r.ey, m: r.em } : null,
+        contractStartDate: r.cs ? new Date(r.cs + 'T00:00:00Z') : null,
+        contractEndDate: r.ce ? new Date(r.ce + 'T00:00:00Z') : null,
+        contractAmountText: buildContractAmountText(r.ck, r.gn),
+        contractAmountWon: Number(r.cw) || 0, grossNetFlag: r.gn || '',
+        // upfront_advertiser_raw(ua)는 스키마상 nullable이다(NOT NULL/DEFAULT 없음). 지금은 ETL이
         // 광고주로 채워 주지만, null이 한 번이라도 들어오면 업프론트 피벗이 예외 없이 조용히
         // 망가진다 — 광고주 노드 키가 전부 문자열 "null"이 되어 서로 다른 광고주가 한 행으로
         // 뭉개진다. xlsx 경로(위 upfrontAdvertiser)와 같은 폴백을 둬서 두 경로의 shape을 맞춘다.
-        upfrontAdvertiser: r.upfront_advertiser_raw || r.advertiser || '(미지정)', upfrontRemark: r.upfront_note || ''
+        upfrontAdvertiser: r.ua || r.ad || '(미지정)', upfrontRemark: r.un || ''
       };
+    }
+
+    // 프록시의 별칭 표와 위 매핑이 어긋났을 때 조용히 전 컬럼 undefined로 흘러가는 것을 막는다.
+    // (금액이 0으로, 문자열이 undefined로 채워진 대시보드는 "데이터가 이상하다"로만 보이고
+    //  원인을 찾기 어렵다. 첫 행 한 번만 검사하므로 비용은 사실상 없다.)
+    const SALES_EXPECTED_KEYS = ['id', 'ms', 'yr', 'mo', 'dp', 'mg', 'ad', 'ag', 'gg', 'ch', 'iu', 'bd',
+      'co', 'sc', 's3', 'nn', 'cr', 'rb', 'bs', 'rm', 'aw', 'uf', 'cy', 'cm', 'ey', 'em', 'cs', 'ce',
+      'ck', 'cw', 'gn', 'ua', 'un'];
+    function assertSalesRowShape(salesRows) {
+      if (!Array.isArray(salesRows) || salesRows.length === 0) return;
+      const missing = SALES_EXPECTED_KEYS.filter(k => !(k in salesRows[0]));
+      if (missing.length === 0) return;
+      throw new Error(`/api/sales 응답 컬럼이 예상과 다릅니다(누락: ${missing.join(', ')}). `
+        + 'shared/supabase-proxy.mjs의 SALES_COLUMN_ALIASES와 data-loader.js의 mapRowFromSupabase를 대조해 주세요.');
     }
 
     function mapUpfrontContractFromSupabase(c) {
