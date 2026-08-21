@@ -58,23 +58,23 @@
           labels: topGroups,
           datasets: [
             { label: `전년동월(${py}.${cm})`, data: topGroups.map(g => getVal(prevYearMap, g)), backgroundColor: ddBarFill(RC('ref')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
             { label: `전월(${pmY}.${pmM})`, data: topGroups.map(g => getVal(prevMonthMap, g)), backgroundColor: ddBarFill(RC('prev')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             },
             { label: `당월(${cy}.${cm})`, data: topGroups.map(g => getVal(currMap, g)), backgroundColor: ddBarFill(RC('curr')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { family: 'Pretendard', size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 10, weight: '400' }, formatter: (v) => v > 0 ? v.toFixed(1) : '' }
             }
           ]
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { family: 'Pretendard', size: 12, weight: '400' } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: '400' } } },
             tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unitLabel}` } }
           },
-          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + (agencyCompMetricMode === 'revenue' ? '억' : '') } }), x: { ticks: { color: CH('#F2F4F6'), font: { family: 'Pretendard', size: 11, weight: '400' } }, grid: { display: false } } }
+          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + (agencyCompMetricMode === 'revenue' ? '억' : '') } }), x: { ticks: { color: CH('#F2F4F6'), font: { size: 11, weight: '400' } }, grid: { display: false } } }
         }
       });
     }

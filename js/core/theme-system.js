@@ -117,7 +117,25 @@
     // 상속하지 않는다 — 지정하지 않으면 자체 기본값('Helvetica Neue')으로 그리고, 한글은
     // 시스템 폰트로 떨어진다. 즉 지금까지 축·범례·데이터라벨은 본문과 다른 글꼴이었다.
     // 본문 폰트 시범 적용과 한 세트로 여기서도 같은 값을 지정한다(layout.css의 body 참고).
+    //
+    // **차트 옵션에 family를 직접 적지 말 것.** 예전에는 features/*.js의 축·범례·데이터라벨
+    // 40곳에 `font: { family: 'Pretendard', ... }`가 박혀 있었고, 그게 이 기본값을 덮었다.
+    // 그래서 본문만 새 글꼴로 바뀌고 차트는 통째로 예전 글꼴로 남았다. 전부 지웠으니
+    // 이제 글꼴은 이 한 줄로만 정해진다 — size와 weight만 각 차트에서 지정한다.
     Chart.defaults.font.family = "'IBM Plex Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif";
+
+    // **웹폰트가 늦게 도착하면 캔버스는 스스로 다시 그리지 않는다.** HTML 텍스트는 폰트가
+    // 로드되는 순간 자동으로 갈아입지만, 차트는 그릴 때 쓴 글꼴로 픽셀이 굳는다. 그래서
+    // 첫 화면에서 본문만 새 글꼴이고 차트는 폴백으로 남는 일이 생긴다(다음 필터 조작 때
+    // 재생성되면서 뒤늦게 바뀐다). 폰트 로딩이 끝나면 살아 있는 차트를 한 번 갱신한다.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        Object.keys(chartInstances || {}).forEach((k) => {
+          const c = chartInstances[k];
+          if (c && typeof c.update === 'function') c.update('none');
+        });
+      }).catch(() => {});
+    }
 
     // 범례와 플롯 영역 사이 여백.
     // Chart.js에는 '범례 아래 여백' 옵션이 없다(labels.padding은 항목 사이 간격이다).
