@@ -88,9 +88,30 @@
       const ctx = document.getElementById('chartAdvBucket').getContext('2d'); if (chartInstances.advBucket) chartInstances.advBucket.destroy();
       const targetData = filteredData.filter(r => isAdvMetricEligible(r));
       const advMonthMap = {}; targetData.forEach(r => { const key = r.monthStr + '||' + r.advertiser; advMonthMap[key] = (advMonthMap[key] || 0) + r.amount; });
-      const buckets = { '1억 이상': { count: 0, sum: 0 }, '0.5~1억원': { count: 0, sum: 0 }, '0.4~0.5억원': { count: 0, sum: 0 }, '0.3~0.4억원': { count: 0, sum: 0 }, '0.2~0.3억원': { count: 0, sum: 0 }, '0.1~0.2억원': { count: 0, sum: 0 }, '0.1억원 미만': { count: 0, sum: 0 } };
+      // x축 순서 = 이 객체의 키 순서. **작은 구간에서 큰 구간으로 오름차순**이라 1억 이상이 맨 오른쪽에 온다.
+      // 구간별 피벗(detail-pivots.js의 bucketTierOrder)은 반대로 큰 금액이 위다 — 표는 첫 줄이
+      // 제일 큰 것이어야 읽히고, 축은 왼쪽에서 오른쪽으로 커져야 읽히기 때문이라 일부러 다르게 둔다.
+      // 아래 분류 if 체인은 값으로 구간을 고르므로 이 키 순서와 무관하다.
+      const buckets = { '0.1억원 미만': { count: 0, sum: 0 }, '0.1~0.2억원': { count: 0, sum: 0 }, '0.2~0.3억원': { count: 0, sum: 0 }, '0.3~0.4억원': { count: 0, sum: 0 }, '0.4~0.5억원': { count: 0, sum: 0 }, '0.5~1억원': { count: 0, sum: 0 }, '1억 이상': { count: 0, sum: 0 } };
       Object.values(advMonthMap).forEach(amount => { if (amount > 0) { let bKey = ''; if (amount >= 100000000) bKey = '1억 이상'; else if (amount >= 50000000) bKey = '0.5~1억원'; else if (amount >= 40000000) bKey = '0.4~0.5억원'; else if (amount >= 30000000) bKey = '0.3~0.4억원'; else if (amount >= 20000000) bKey = '0.2~0.3억원'; else if (amount >= 10000000) bKey = '0.1~0.2억원'; else bKey = '0.1억원 미만'; buckets[bKey].count++; buckets[bKey].sum += amount; } });
       const labels = Object.keys(buckets); const countVals = labels.map(k => buckets[k].count); const sumVals = labels.map(k => buckets[k].sum / 1e8);
+
+      // 꺾은선(광고주 수)이 쓰는 y1은 숨은 축이라 눈금은 아무 데도 안 보인다. 그래서 범위를
+      // 자유롭게 잡아 **선이 앉는 높이만** 정할 수 있다.
+      //
+      // 0부터 시작하면 구간이 잘게 쪼개지는 오른쪽 끝에서 선이 바닥에 붙는다 — 광고주 수가
+      // 한 자리로 떨어지는 구간에서 선이 x축과 겹쳐 읽히고, 그 위 막대와도 뒤엉킨다.
+      // 축 아래쪽에 음수 여백을 두어 가장 낮은 점이 차트 높이의 LINE_FLOOR 아래로는
+      // 내려오지 않게 한다.
+      // (선이 이미 높이 떠 있으면 min은 0에 머문다 — 필요할 때만 밀어 올린다.)
+      //
+      // 위쪽 여백도 25%에서 10%로 줄인다. 광고주 수가 가장 많은 구간은 매출도 가장 큰 구간이라
+      // 봉우리와 제일 높은 막대가 같은 자리에서 만나는데, 25%로는 둘이 3px까지 붙어 선의
+      // 데이터라벨이 막대 라벨에 밀려 사라졌다. 여백을 줄이면 봉우리가 그만큼 위로 올라가
+      // 막대 꼭대기와 벌어진다. 위로 넘칠 걱정은 없다 — layout.padding.top 32px이 받아 준다.
+      const LINE_FLOOR = 0.28;
+      const y1Max = Math.max(...countVals, 1) * 1.10;
+      const y1Min = Math.min(0, (Math.min(...countVals) - LINE_FLOOR * y1Max) / (1 - LINE_FLOOR));
 
       chartInstances.advBucket = new Chart(ctx, {
         type: 'bar',
@@ -107,7 +128,7 @@
         options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { size: 12, weight: '400' } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `합산 매출액: ${ctx.raw.toFixed(2)} 억원` : `광고주 수: ${ctx.raw.toLocaleString()} 개사` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: '400' } }, grid: { display: false } },
           // 보이는 축(y)은 막대를 따라간다. 이제 억 단위라 stepSize:1을 뺐다 — 개수일 때는 눈금을
           // 정수로 묶는 값이었지만 억에 그대로 두면 1억 간격으로 눈금이 박혀 축이 뭉갠다.
-          y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), y1: { type: 'linear', position: 'right', grace: '25%', display: false } } }
+          y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), y1: { type: 'linear', position: 'right', min: y1Min, max: y1Max, display: false } } }
       });
     }
 
