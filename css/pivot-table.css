@@ -92,6 +92,19 @@
     .toggle-icon:hover,
     .year-toggle-btn:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--text-on-accent); }
 
+    /* 열 헤더 클릭 정렬 — 누를 수 있다는 것만 알리고 평소엔 조용히 둔다. */
+    .pivot-tree-table th[data-pvsort] { cursor: pointer; }
+    .pivot-tree-table th[data-pvsort]:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    /* 행 라벨 우클릭 메뉴 — 그 레벨의 필드에만 걸리는 정렬. */
+    .pv-row-menu { display: none; position: fixed; z-index: 200; min-width: 150px; padding: 4px;
+      background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); font-size: 12px; }
+    .pv-row-menu-title { padding: 5px 8px; color: var(--text-tertiary); font-size: 11px; }
+    .pv-row-menu-item { padding: 6px 8px; border-radius: 4px; color: var(--text-primary); cursor: pointer; white-space: nowrap; }
+    .pv-row-menu-item:hover { background: var(--bg-card-hover); }
+    .pv-row-menu-item.is-on { color: var(--primary-blue); font-weight: 500; }
+
     .pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .page-info { font-size: 12px; color: var(--text-tertiary); }
 

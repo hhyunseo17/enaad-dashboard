@@ -211,6 +211,12 @@
 
     // 깊이별 헤더 행. 자기 깊이에서 끝나는 열(소계 등)은 남은 헤더 행을 rowspan으로 덮는다.
     function pvRenderColumnHeaderRows(visibleColumns, colFields, opt) {
+      const cs = opt.cfg && opt.cfg.colSort;
+      const mark = (pk) => (cs && cs.pathKey === pk) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      // class가 아니라 data 속성으로 표시한다 — H.subtotal 등이 이미 class를 갖고 있어서 class를
+      // 한 번 더 붙이면 같은 속성이 두 번 나오고 파서가 뒤엣것을 통째로 버린다. 그래서 정렬 표시가
+      // 조용히 사라졌었다(onclick은 남고 클래스만 없어져 눈에 잘 안 띈다).
+      const click = (pk) => ` data-pvsort="1" onclick="pvSortByColumn('${opt.presetKey}','${pvEsc(pk)}')"`;
       const L = colFields.length;
       const H = opt.header;
       const rows = [];
@@ -224,10 +230,10 @@
             const span = L - depth > 1 ? ` rowspan="${L - depth}"` : '';
             if (col.isSubtotal) {
               const label = `${pvFormatFieldValue(col.groupField, col.groupValue)} 요약`;
-              cells.push(`<th${span}${H.subtotal}>${label}</th>`);
+              cells.push(`<th${span}${H.subtotal}${click(col.pathKey)}>${label}${mark(col.pathKey)}</th>`);
             } else {
               const label = pvFormatFieldValue(colFields[depth], col.path[col.path.length - 1]);
-              cells.push(`<th${span}${H.leaf}>${label}</th>`);
+              cells.push(`<th${span}${H.leaf}${click(col.pathKey)}>${label}${mark(col.pathKey)}</th>`);
             }
             i++;
           } else {
@@ -495,6 +501,63 @@
       },
     };
 
+    const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
+
+    // 열 헤더 클릭 — 같은 열을 다시 누르면 방향이 뒤집힌다. 처음 누르면 큰 값부터.
+    function pvSortByColumn(viewKey, pathKey) {
+      const cfg = pvConfigFor(viewKey);
+      const cur = cfg.colSort;
+      cfg.colSort = (cur && cur.pathKey === pathKey && cur.dir === 'desc') ? { pathKey, dir: 'asc' } : { pathKey, dir: 'desc' };
+      PIVOT_PRESETS[viewKey].render();
+    }
+    function pvClearColumnSort(viewKey) {
+      const cfg = pvConfigFor(viewKey);
+      if (!cfg.colSort) return;
+      cfg.colSort = null;
+      PIVOT_PRESETS[viewKey].render();
+    }
+
+    // 행 라벨 우클릭 메뉴 — 그 레벨의 필드에만 적용된다.
+    function pvOpenRowSortMenu(ev, viewKey, depth) {
+      ev.preventDefault(); ev.stopPropagation();
+      const cfg = pvConfigFor(viewKey);
+      const field = cfg.rows[depth];
+      if (!field) return false;
+      const isYm = (field === 'year' || field === 'month');
+      const items = [
+        ['value:desc', '값 큰 순'], ['value:asc', '값 작은 순'],
+        ['label:asc', isYm ? '오름차순' : '이름 오름차순'], ['label:desc', isYm ? '내림차순' : '이름 내림차순'],
+      ];
+      if (PV_FIELD_ORDER_SORTER[field]) items.push(['preset:asc', '기본 순서'], ['preset:desc', '기본 순서 역순']);
+      items.push(['', '기본으로']);
+      const cur = (cfg.sorts && cfg.sorts[field]) ? `${cfg.sorts[field].by}:${cfg.sorts[field].dir}` : '';
+
+      let el = document.getElementById('pvRowSortMenu');
+      if (!el) { el = document.createElement('div'); el.id = 'pvRowSortMenu'; el.className = 'pv-row-menu'; document.body.appendChild(el); }
+      el.innerHTML = `<div class="pv-row-menu-title">${detailDataFieldLabel(field)} 정렬</div>`
+        + items.map(([v, t]) => `<div class="pv-row-menu-item${v === cur ? ' is-on' : ''}" onclick="pvPickRowSort('${viewKey}','${pvEsc(field)}','${v}')">${t}</div>`).join('');
+      el.style.display = 'block';
+      // 화면 밖으로 나가지 않게 살짝 당긴다.
+      const w = 150, h = el.offsetHeight || 200;
+      el.style.left = Math.min(ev.clientX, window.innerWidth - w - 8) + 'px';
+      el.style.top = Math.min(ev.clientY, window.innerHeight - h - 8) + 'px';
+      setTimeout(() => document.addEventListener('click', pvCloseRowSortMenu, { once: true }), 0);
+      return false;
+    }
+    function pvCloseRowSortMenu() {
+      const el = document.getElementById('pvRowSortMenu');
+      if (el) el.style.display = 'none';
+    }
+    function pvPickRowSort(viewKey, field, val) {
+      pvCloseRowSortMenu();
+      const cfg = pvConfigFor(viewKey);
+      if (!cfg.sorts) cfg.sorts = {};
+      if (!val) delete cfg.sorts[field];
+      else { const [by, dir] = val.split(':'); cfg.sorts[field] = { by, dir }; }
+      cfg.colSort = null; // 레벨별로 정하겠다는 뜻이므로 전 레벨 공통 정렬은 푼다
+      PIVOT_PRESETS[viewKey].render();
+    }
+
     // 인라인 onclick에서 부르는 토글 — 프리셋 키를 같이 넘겨 뷰마다 함수를 새로 만들지 않는다.
     function togglePvRowNode(presetKey, pathKey) {
       const preset = PIVOT_PRESETS[presetKey]; if (!preset) return;
@@ -553,8 +616,23 @@
       const hasMore = depth + 1 < rowFields.length;
       const primary = valueDefs[0];
       const nodeTotal = (n) => pvComputeMetric(n.metrics[PV_ROWTOTAL], primary);
-      const sorter = pvRowSorterFor(preset, rowFields[depth], cfg);
-      const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, nodeTotal(node.children[a]), nodeTotal(node.children[b])));
+
+      // 열 헤더를 눌러 건 정렬이 있으면 그 열 값으로, 없으면 필드별 규칙으로 정렬한다.
+      // 열 기준은 **모든 레벨에 같이** 걸린다 — 헤더는 하나인데 행 계층은 여럿이라 달리 나눌 수가 없다.
+      // 레벨마다 다르게 두고 싶으면 행 라벨 우클릭(필드별 설정)을 쓴다.
+      const cs = cfg && cfg.colSort;
+      const sortCol = cs ? (cs.pathKey === PV_GRAND ? PV_GRAND : visibleColumns.find(c => c.pathKey === cs.pathKey)) : null;
+      let keys;
+      if (sortCol) {
+        const val = (n) => sortCol === PV_GRAND
+          ? nodeTotal(n)
+          : pvComputeMetric(pvMergeMetrics(n, sortCol.leafKeys), primary);
+        const sign = cs.dir === 'asc' ? 1 : -1;
+        keys = Object.keys(node.children).sort((a, b) => sign * (val(node.children[a]) - val(node.children[b])));
+      } else {
+        const sorter = pvRowSorterFor(preset, rowFields[depth], cfg);
+        keys = Object.keys(node.children).sort((a, b) => sorter(a, b, nodeTotal(node.children[a]), nodeTotal(node.children[b])));
+      }
 
       keys.forEach(k => {
         const child = node.children[k];
@@ -568,7 +646,10 @@
         const shown = pvFormatFieldValue(rowFields[depth], k);
         const label = st.labelWrap ? st.labelWrap(toggle + shown, hasMore) : (toggle + shown);
 
-        let html = `<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}" style="${st.label}">${label}</td>`;
+        // 우클릭하면 **이 레벨의 필드**에 대한 정렬 메뉴가 뜬다. 열 헤더 클릭은 전 레벨 공통이라
+        // 레벨별로 다르게 두려면 이쪽이 유일한 길이다.
+        const menu = ` oncontextmenu="return pvOpenRowSortMenu(event,'${preset.key}',${depth})"`;
+        let html = `<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}"${menu} style="${st.label}">${label}</td>`;
         visibleColumns.forEach(col => {
           const m = pvMergeMetrics(child, col.leafKeys);
           // 소계·총합계 칸 색은 클래스가 아니라 인라인이다 — pv-num-sum/pv-num-total은
@@ -618,12 +699,13 @@
         columns: p.columns.slice(),
         values: p.values.map((v) => ({ id: detailDataValueIdCounter++, field: v.field, agg: v.agg })),
         sorts: {},
+        colSort: null,
       };
     }
     function pvIsConfigDefault(viewKey) {
       const p = PIVOT_PRESETS[viewKey], c = pvConfigFor(viewKey);
       const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-      return c.filters.length === 0 && Object.keys(c.sorts || {}).length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
+      return c.filters.length === 0 && !c.colSort && Object.keys(c.sorts || {}).length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
         && c.values.length === p.values.length && c.values.every((v, i) => v.field === p.values[i].field && v.agg === p.values[i].agg);
     }
     // 빌더 사이드바 접기/펼치기. 일반 피벗은 조회가 목적이라 기본은 접힘이다.
@@ -703,9 +785,11 @@
       const visibleColumns = pvBuildVisibleColumns(liveCombos, colFields, expandedCols, opt);
       const headerRows = pvRenderColumnHeaderRows(visibleColumns, colFields, opt);
 
-      const h1 = `<th rowspan="${colFields.length}"${preset.header.label}>구분</th>`
+      const cs = cfg.colSort;
+      const grandMark = (cs && cs.pathKey === PV_GRAND) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const h1 = `<th rowspan="${colFields.length}"${preset.header.label} data-pvsort="1" onclick="pvClearColumnSort('${viewKey}')" title="열 기준 정렬 해제">구분${cs ? ' ↺' : ''}</th>`
         + headerRows[0]
-        + `<th rowspan="${colFields.length}"${preset.header.total}>총합계</th>`;
+        + `<th rowspan="${colFields.length}"${preset.header.total} data-pvsort="1" onclick="pvSortByColumn('${viewKey}','${PV_GRAND}')">총합계${grandMark}</th>`;
       document.getElementById(preset.dom.head1).innerHTML = mapPivotHtml(h1);
       document.getElementById(preset.dom.head2).innerHTML = mapPivotHtml(headerRows[1] || '');
 
