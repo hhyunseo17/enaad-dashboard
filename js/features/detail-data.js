@@ -426,19 +426,17 @@
       }).join('');
     }
 
-    // 행/열 well은 **순서가 곧 위계**다(앞이 상위). 칩만 나열하면 그게 보이지 않아서 순번을 붙이고,
-    // 드래그 중에는 어느 칩 앞에 끼워지는지 왼쪽 막대로 미리 보여준다 — onDetailDataChipDrop이
-    // 대상 칩 "앞"에 삽입하기 때문에 표시도 왼쪽이어야 한다.
+    // 행/열 well은 **순서가 곧 위계**다(위가 상위). 칩을 세로로 쌓아 두었으므로 위아래 순서가
+    // 그대로 위계라, 따로 번호를 붙이지 않는다. 드래그 중에는 어느 칩 앞에 끼워지는지
+    // 그 칩 위쪽 틈에 가로선으로 미리 보여준다(onDetailDataChipDrop이 대상 "앞"에 삽입).
     function renderDetailDataWellFieldChips(wellName, fieldKeys) {
-      const ordered = (wellName === 'rows' || wellName === 'columns');
-      return fieldKeys.map((key, i) => {
+      return fieldKeys.map(key => {
         const label = detailDataFieldLabel(key);
-        const order = ordered ? `<span class="dd-chip-order">${i + 1}</span>` : '';
         return `<div class="dd-field-chip dd-field-chip-placed" draggable="true" data-field="${key}"
           ondragstart="onDetailDataDragStart(event,'${key}')" ondragend="onDetailDataDragEnd(event)"
           ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
           ondrop="onDetailDataChipDrop(event,'${wellName}','${key}')">
-          ${order}<span>${label}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
+          <span>${label}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
         </div>`;
       }).join('');
     }

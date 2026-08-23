@@ -122,7 +122,7 @@
     .dd-field-chip { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); cursor: grab; user-select: none; word-break: keep-all; }
     .dd-field-chip:active { cursor: grabbing; }
     /* well 안에서는 칩이 한 줄을 꽉 채우므로 space-between이면 라벨이 가운데로 밀린다.
-       순번·라벨은 왼쪽에 붙이고 ✕만 오른쪽 끝으로 보낸다. */
+       라벨은 왼쪽에 붙이고 ✕만 오른쪽 끝으로 보낸다. */
     .dd-well-body .dd-field-chip { justify-content: flex-start; }
     .dd-well-body .dd-chip-remove { margin-left: auto; }
     .dd-field-chip.dd-dragging { opacity: 0.4; }
@@ -137,10 +137,6 @@
     .dd-chip-remove { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; text-align: center; border-radius: 50%; color: var(--text-tertiary); font-size: 11px; cursor: pointer; }
     .dd-chip-remove:hover { color: var(--accent-red); background: var(--accent-red-bg); }
 
-    /* 행/열 well에서 순서가 곧 위계다(1이 최상위). 번호가 없으면 칩이 그냥 나열된 것으로 보인다. */
-    .dd-chip-order { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-      width: 16px; height: 16px; border-radius: 50%; background: var(--primary-blue); color: var(--text-on-accent);
-      font-size: 10px; font-weight: 600; }
     /* 드래그 중 "여기 들어간다"는 표시 — 칩 **사이의 빈 틈**을 가로지르는 선을 하나 긋는다.
        칩 안쪽 그림자로도 해봤는데 '이 칩이 선택됨'으로 읽혀서 삽입 위치로 안 보였다.
        칩이 세로로 쌓이므로 선도 가로다. onDetailDataChipDrop이 대상 칩 **앞**에 끼워 넣으므로
