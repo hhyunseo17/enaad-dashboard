@@ -9,7 +9,9 @@
       { key: 'advertiser', label: '광고주' }, { key: 'agency', label: '대행사' }, { key: 'agencyGroup', label: '대행사그룹' },
       { key: 'categoryReclassified', label: '대분류' },
       { key: 'subCategory', label: '중분류' }, { key: 'subCategory3', label: '소분류' },
-      { key: 'channel', label: '채널' }, { key: 'industry', label: '업종' }, { key: 'broadDigital', label: '방송/디지털' },
+      // industry는 소스의 '업종대분류' 하나만 담는다(data-loader.js·scripts/etl/transform.mjs 모두 동일,
+      // DB에도 industry 컬럼 하나뿐). 중분류·소분류는 적재되지 않으므로 라벨로 범위를 분명히 해 둔다.
+      { key: 'channel', label: '채널' }, { key: 'industry', label: '업종대분류' }, { key: 'broadDigital', label: '방송/디지털' },
       { key: 'revenueBasis', label: '회계계정' }, { key: 'isUpfront', label: '업프론트여부' },
       { key: 'amount', label: '금액' }
     ];
