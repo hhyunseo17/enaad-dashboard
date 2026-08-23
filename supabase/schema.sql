@@ -64,7 +64,9 @@ create table if not exists raw_sales_rows (
   agency_raw                    text not null default '(미지정)',       -- 원본 '대행사'
   agency_group_raw              text not null default '(미지정)',       -- 원본 '대행사그룹'|'대행사 그룹'|'대행사' 폴백
   channel_raw                   text not null default '(미지정)',       -- 원본 '채널'|'매체' 폴백
-  industry                      text not null default '(미지정)',
+  industry                      text not null default '(미지정)',       -- 원본 '업종대분류'
+  industry_mid                  text not null default '(미지정)',       -- 원본 '업종중분류'
+  industry_sub                  text not null default '(미지정)',       -- 원본 '업종소분류'
   broad_digital                 text not null default '기타',
 
   category_original             text not null default '기타',           -- 원본 '대분류'
@@ -236,6 +238,8 @@ select
   end as channel,
 
   r.industry,
+  r.industry_mid,
+  r.industry_sub,
   r.broad_digital,
   r.category_original,
   r.sub_category,

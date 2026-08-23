@@ -206,6 +206,7 @@
               id: idxCounter++, monthStr: monthStr, year: y, month: m,
               dept: deptVal, manager: part.manager,
               advertiser: adv, agency: agy, agencyGroup: grpDisp, channel: normalizedChannel, industry: (r['업종대분류'] || '(미지정)').toString().trim(),
+              industryMid: (r['업종중분류'] || '(미지정)').toString().trim(), industrySub: (r['업종소분류'] || '(미지정)').toString().trim(),
               broadDigital: broadDigitalVal, categoryOriginal: rawCategory, subCategory: rawSubCategory || '일반', subCategory3: rawSubCategory3,
               oneNFlag: oneNFlag, categoryReclassified: reclassifiedCat, revenueBasis: revBasis, bonbuRevenueStatus: isBonbuVal,
               remark: r['비고'], amount: part.amount,
@@ -371,7 +372,8 @@
     //    없어 두 파일이 상수를 공유할 수 없으므로 **한쪽을 고치면 다른 쪽도 반드시 같이 고칠 것.**
     //    어긋나면 전 컬럼이 조용히 undefined가 되므로 assertSalesRowShape()로 첫 행을 검사한다.
     //    별칭: ms=month_str yr=year mo=month dp=dept mg=manager ad=advertiser ag=agency
-    //         gg=agency_group ch=channel iu=industry bd=broad_digital co=category_original
+    //         gg=agency_group ch=channel iu=industry i2=industry_mid i3=industry_sub
+    //         bd=broad_digital co=category_original
     //         sc=sub_category s3=sub_category3 nn=one_n_flag cr=category_reclassified
     //         rb=revenue_basis bs=bonbu_revenue_status rm=remark aw=amount_won uf=is_upfront
     //         cy/cm=contract_start_y/m ey/em=contract_end_y/m cs/ce=contract_start/end_date
@@ -381,7 +383,7 @@
       return {
         id: r.id, monthStr: r.ms, year: r.yr, month: r.mo,
         dept: r.dp, manager: r.mg,
-        advertiser: r.ad, agency: r.ag, agencyGroup: r.gg, channel: r.ch, industry: r.iu,
+        advertiser: r.ad, agency: r.ag, agencyGroup: r.gg, channel: r.ch, industry: r.iu, industryMid: r.i2, industrySub: r.i3,
         broadDigital: r.bd, categoryOriginal: r.co, subCategory: r.sc, subCategory3: r.s3,
         oneNFlag: r.nn, categoryReclassified: r.cr, revenueBasis: r.rb, bonbuRevenueStatus: r.bs,
         remark: r.rm, amount: Number(r.aw) || 0,
@@ -552,7 +554,7 @@
 
     function exportToExcel() {
       if (tableDisplayData.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
-      const exportRows = tableDisplayData.map(r => ({ '귀속월': r.monthStr, '부서': r.dept, '담당자': r.manager, '광고주': r.advertiser, '대행사': r.agency, '대행사그룹': r.agencyGroup, '채널': r.channel, '업종대분류': r.industry, '방송/디지털': r.broadDigital, '대분류': r.categoryReclassified, '매출기준': r.revenueBasis, '금액': r.amount }));
+      const exportRows = tableDisplayData.map(r => ({ '귀속월': r.monthStr, '부서': r.dept, '담당자': r.manager, '광고주': r.advertiser, '대행사': r.agency, '대행사그룹': r.agencyGroup, '채널': r.channel, '업종대분류': r.industry, '업종중분류': r.industryMid, '업종소분류': r.industrySub, '방송/디지털': r.broadDigital, '대분류': r.categoryReclassified, '매출기준': r.revenueBasis, '금액': r.amount }));
       const ws = XLSX.utils.json_to_sheet(exportRows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'KT_ENA_본부매출내역'); XLSX.writeFile(wb, `KT_ENA_광고매출내역_${revenueBasisMode}_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 

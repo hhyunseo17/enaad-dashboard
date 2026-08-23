@@ -63,11 +63,17 @@
     // 시작하고(getDetailDataBaseRows()가 filteredData를 기준으로 삼음), 아래쪽 드래그앤드롭 필터는 전역 필터바가
     // 커버하지 못하는 추가 필드(담당자/대행사그룹/중분류/소분류/업종/회계계정/업프론트여부와, 전역 검색과 별개로 더
     // 좁히고 싶을 수 있는 대행사/광고주)만을 위한 보조 수단이다.
+    // 값도 비워 둔 채 시작한다. 예전에는 '합계 : 금액'을 미리 넣어 뒀는데, 빈 화면에서 무엇부터
+    // 해야 하는지 알려주지 못하면서(행·열은 비어 있다) 값 하나만 이미 놓여 있어 오히려 어중간했다.
+    // 이제 세 영역이 모두 비어 있고 각 well이 "필드를 끌어 놓으세요"로 같은 말을 한다.
+    // sorts/colSort는 다른 피벗과 같은 형태다(js/features/pivot-builder.js가 이 형태를 읽는다).
     let detailDataConfig = {
       filters: [],
       rows: [],
       columns: [],
-      values: [{ id: 0, field: 'amount', agg: 'sum' }]
+      values: [],
+      sorts: {},
+      colSort: null
     };
     let detailDataValueIdCounter = 1; // 다음에 추가될 값(values) 항목의 id — 같은 필드를 여러 번 넣어도 개별 항목으로 구분하기 위함
     let expandedDetailDataPivot = {};

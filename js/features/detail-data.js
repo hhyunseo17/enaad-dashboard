@@ -9,9 +9,11 @@
       { key: 'advertiser', label: '광고주' }, { key: 'agency', label: '대행사' }, { key: 'agencyGroup', label: '대행사그룹' },
       { key: 'categoryReclassified', label: '대분류' },
       { key: 'subCategory', label: '중분류' }, { key: 'subCategory3', label: '소분류' },
-      // industry는 소스의 '업종대분류' 하나만 담는다(data-loader.js·scripts/etl/transform.mjs 모두 동일,
-      // DB에도 industry 컬럼 하나뿐). 중분류·소분류는 적재되지 않으므로 라벨로 범위를 분명히 해 둔다.
-      { key: 'channel', label: '채널' }, { key: 'industry', label: '업종대분류' }, { key: 'broadDigital', label: '방송/디지털' },
+      // 업종은 소스에 대·중·소 세 컬럼이 있고 셋 다 적재한다(scripts/etl/transform.mjs → raw_sales_rows
+      // industry/industry_mid/industry_sub → 프록시 iu/i2/i3 → data-loader industry/industryMid/industrySub).
+      { key: 'channel', label: '채널' },
+      { key: 'industry', label: '업종대분류' }, { key: 'industryMid', label: '업종중분류' }, { key: 'industrySub', label: '업종소분류' },
+      { key: 'broadDigital', label: '방송/디지털' },
       { key: 'revenueBasis', label: '회계계정' }, { key: 'isUpfront', label: '업프론트여부' },
       { key: 'amount', label: '금액' }
     ];
@@ -116,9 +118,14 @@
         if (!colComboMap.has(key)) colComboMap.set(key, combo);
       });
       if (colFieldDefs.length === 0) colComboMap.set('__TOTAL__', []);
+      // 열 값 정렬은 일반 피벗과 같은 규칙을 쓴다(pivot-builder.js) — 연은 최근부터, 월은 숫자 순.
+      // 문자열 비교만 하면 월이 1, 10, 11, 12, 2… 순으로 깨진다. 사용자가 헤더 우클릭으로 고른
+      // 방향(cfg.sorts)도 여기서 함께 반영된다.
+      const cfg = ddCfg();
       const colCombos = [...colComboMap.values()].sort((a, b) => {
         for (let i = 0; i < Math.max(a.length, b.length); i++) {
-          const c = String(a[i] ?? '').localeCompare(String(b[i] ?? ''), 'ko');
+          const key = colFieldDefs[i] ? colFieldDefs[i].key : '';
+          const c = pvCompareFieldValues(key, a[i] ?? '', b[i] ?? '', pvColumnDir(key, cfg));
           if (c !== 0) return c;
         }
         return 0;
@@ -180,7 +187,8 @@
 
     // 행과 동일한 "기본 접힘" 규칙: 열 필드의 1레벨(값) 자체는 항상 보이고, 그 하위 레벨은 expandedDetailDataColPivot에
     // 펼쳐진 경로만 재귀 진입 — 접힌 그룹은 leafKeys를 그대로 들고 있는 병합 열 1개로 축약된다.
-    function walkDetailDataColumnNode(node, depth, path, colFieldDefsLen, visibleColumns) {
+    function walkDetailDataColumnNode(node, depth, path, colFieldDefs, visibleColumns) {
+      const colFieldDefsLen = colFieldDefs.length;
       const isLastDepth = depth === colFieldDefsLen;
       if (isLastDepth) {
         visibleColumns.push({ path: path.slice(), leafKeys: node.leafKeys, canToggle: false, isExpanded: false, pathKey: path.join('||') });
@@ -192,23 +200,33 @@
         visibleColumns.push({ path: path.slice(), leafKeys: node.leafKeys, canToggle: true, isExpanded: false, pathKey });
         return;
       }
-      const childVals = [...node.children.keys()].sort((a, b) => String(a).localeCompare(String(b), 'ko'));
-      childVals.forEach(v => walkDetailDataColumnNode(node.children.get(v), depth + 1, path.concat(v), colFieldDefsLen, visibleColumns));
+      const key = colFieldDefs[depth] ? colFieldDefs[depth].key : '';
+      const dir = pvColumnDir(key, ddCfg());
+      const childVals = [...node.children.keys()].sort((a, b) => pvCompareFieldValues(key, a, b, dir));
+      childVals.forEach(v => walkDetailDataColumnNode(node.children.get(v), depth + 1, path.concat(v), colFieldDefs, visibleColumns));
     }
 
     // 실제로 렌더링될 열(펼쳐진 leaf 또는 접힌 병합 그룹) 목록을 반환.
-    function buildDetailDataVisibleColumns(colCombos, colFieldDefsLen) {
-      if (colFieldDefsLen === 0) return [{ path: [], leafKeys: ['__TOTAL__'], canToggle: false, isExpanded: false, pathKey: '' }];
+    function buildDetailDataVisibleColumns(colCombos, colFieldDefs) {
+      if (colFieldDefs.length === 0) return [{ path: [], leafKeys: ['__TOTAL__'], canToggle: false, isExpanded: false, pathKey: '' }];
       const tree = buildDetailDataColumnValueTree(colCombos);
       const visibleColumns = [];
-      const topVals = [...tree.children.keys()].sort((a, b) => String(a).localeCompare(String(b), 'ko'));
-      topVals.forEach(v => walkDetailDataColumnNode(tree.children.get(v), 1, [v], colFieldDefsLen, visibleColumns));
+      const key = colFieldDefs[0].key;
+      const dir = pvColumnDir(key, ddCfg());
+      const topVals = [...tree.children.keys()].sort((a, b) => pvCompareFieldValues(key, a, b, dir));
+      topVals.forEach(v => walkDetailDataColumnNode(tree.children.get(v), 1, [v], colFieldDefs, visibleColumns));
       return visibleColumns;
     }
 
     // visibleColumns 기준 depth별 그룹핑 헤더 행 <th> 배열 반환. 접힌 그룹은 자기 depth에서 남은 헤더 행 전부를 rowspan으로 덮고 토글 아이콘을 붙인다.
     function renderDetailDataColumnHeaderRows(visibleColumns, colFieldDefs, valuesPerCol) {
       const colFieldDefsLen = colFieldDefs.length;
+      const cs = ddCfg().colSort;
+      const mark = (pk) => (cs && cs.pathKey === pk) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      // 다른 피벗과 같은 조작 — 좌클릭은 '이 열 값으로 행 정렬', 우클릭은 그 열 기준 정렬 + 축 나열 순서.
+      // class가 아니라 data 속성으로 표시하는 이유는 pivot-builder.js의 같은 자리 주석 참고.
+      const sortAttrs = (pk, depth, label) => ` data-pvsort="1" onclick="pvSortByColumn('detailData','${ddEsc(pk)}')"`
+        + ` oncontextmenu="return pvOpenColMenu(event,'detailData',${depth},'${ddEsc(pk)}','${ddEsc(label)}')"`;
       const rowsHtml = [];
       for (let depth = 0; depth < colFieldDefsLen; depth++) {
         const cells = []; let i = 0;
@@ -217,16 +235,18 @@
           if (col.path.length <= depth) { i++; continue; } // 앞선 depth에서 이미 rowspan으로 덮인 열 — 건너뜀
           if (col.path.length - 1 === depth) {
             const rowspan = colFieldDefsLen - depth;
-            const toggle = col.canToggle ? `<span class="toggle-icon" onclick="toggleDetailDataColNode('${ddEsc(col.pathKey)}')">${col.isExpanded ? '-' : '+'}</span>` : '';
+            // 접기 아이콘이 헤더 정렬까지 같이 일으키지 않도록 여기서 이벤트를 끊는다.
+            const toggle = col.canToggle ? `<span class="toggle-icon" onclick="event.stopPropagation(); toggleDetailDataColNode('${ddEsc(col.pathKey)}')">${col.isExpanded ? '-' : '+'}</span>` : '';
             const label = ddFormatFieldValue(colFieldDefs[depth].key, col.path[col.path.length - 1]);
-            cells.push(`<th colspan="${valuesPerCol}" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${toggle}${label}</th>`);
+            cells.push(`<th colspan="${valuesPerCol}" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;"${sortAttrs(col.pathKey, depth, label)}>${toggle}${label}${mark(col.pathKey)}</th>`);
             i++;
           } else {
             const prefix = col.path.slice(0, depth + 1);
             let span = 0; let j = i;
             while (j < visibleColumns.length && visibleColumns[j].path.length > depth && ddArraysEqual(visibleColumns[j].path.slice(0, depth + 1), prefix)) { span++; j++; }
             const label = ddFormatFieldValue(colFieldDefs[depth].key, prefix[depth]);
-            cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;">${label}</th>`);
+            // 그룹 헤더는 한 칸에 값이 여러 개라 '이 열 기준'이 성립하지 않는다 — 축 순서만 받는다.
+            cells.push(`<th colspan="${span * valuesPerCol}" style="text-align:center;" oncontextmenu="return pvOpenColMenu(event,'detailData',${depth},'','${ddEsc(label)}')">${label}</th>`);
             i = j;
           }
         }
@@ -252,10 +272,31 @@
       return merged;
     }
 
+    // 세부데이터는 프리셋(=필드별 기본 정렬표)이 없다. 빈 프리셋을 주면 pvRowSorterFor가
+    // 연·월은 시간 순, 나머지는 값 큰 순이라는 기본값으로 떨어진다 — 지금까지의 동작과 같다.
+    const DD_NO_PRESET_SORTERS = { fieldSorters: {} };
+
     function renderDetailDataNodeRows(node, rowFieldDefs, depth, ancestorPath, visibleColumns, valueDefs, out) {
       const hasMore = depth + 1 < rowFieldDefs.length;
-      const sortMetric = (childNode) => computeDetailDataMetric(childNode.metrics.__ROWTOTAL__, valueDefs[0]);
-      const keys = Object.keys(node.children).sort((a, b) => sortMetric(node.children[b]) - sortMetric(node.children[a]));
+      const cfg = ddCfg();
+      const primary = valueDefs[0];
+      const sortMetric = (childNode) => computeDetailDataMetric(childNode.metrics.__ROWTOTAL__, primary);
+
+      // 열 헤더를 눌러 건 정렬이 있으면 그 열 값으로, 없으면 필드별 규칙으로(pivot-builder.js).
+      // 열 기준은 모든 레벨에 같이 걸린다 — 레벨마다 다르게 두려면 행 라벨 우클릭을 쓴다.
+      const cs = cfg.colSort;
+      const sortCol = cs ? (cs.pathKey === PV_GRAND ? PV_GRAND : visibleColumns.find(c => c.pathKey === cs.pathKey)) : null;
+      let keys;
+      if (sortCol) {
+        const val = (n) => sortCol === PV_GRAND ? sortMetric(n)
+          : computeDetailDataMetric(mergeDetailDataMetrics(n, sortCol.leafKeys), primary);
+        const sign = cs.dir === 'asc' ? 1 : -1;
+        keys = Object.keys(node.children).sort((a, b) => sign * (val(node.children[a]) - val(node.children[b])));
+      } else {
+        const sorter = pvRowSorterFor(DD_NO_PRESET_SORTERS, rowFieldDefs[depth].key, cfg);
+        keys = Object.keys(node.children).sort((a, b) => sorter(a, b, sortMetric(node.children[a]), sortMetric(node.children[b])));
+      }
+
       keys.forEach(k => {
         const child = node.children[k];
         const path = ancestorPath.concat(k);
@@ -263,7 +304,8 @@
         const isExpanded = !!expandedDetailDataPivot[pathKey];
         const indentClass = `indent-step-${Math.min(depth + 1, 5)}`;
         const toggle = hasMore ? `<span class="toggle-icon" onclick="toggleDetailDataNode('${ddEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
-        let html = `<tr><td class="${indentClass}">${toggle}${ddFormatFieldValue(rowFieldDefs[depth].key, k)}</td>`;
+        const menu = ` oncontextmenu="return pvOpenRowSortMenu(event,'detailData',${depth})"`;
+        let html = `<tr><td class="${indentClass}"${menu}>${toggle}${ddFormatFieldValue(rowFieldDefs[depth].key, k)}</td>`;
         visibleColumns.forEach(col => {
           const m = mergeDetailDataMetrics(child, col.leafKeys);
           valueDefs.forEach(v => { html += `<td style="text-align:right;">${fmtDetailDataMetricCell(computeDetailDataMetric(m, v), v.agg)}</td>`; });
@@ -572,7 +614,7 @@
 
       const baseRows = getDetailDataBaseRows();
       const { root, colCombos } = buildDetailDataTree(baseRows, rowFieldDefs, colFieldDefs, valueDefs);
-      const visibleColumns = buildDetailDataVisibleColumns(colCombos, colFieldDefs.length);
+      const visibleColumns = buildDetailDataVisibleColumns(colCombos, colFieldDefs);
 
       const multiValue = valueDefs.length > 1;
       const valuesPerCol = multiValue ? valueDefs.length : 1;
@@ -594,15 +636,18 @@
         const lastIdx = rows.length - 1;
         valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:11px; font-weight:500; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
       }
+      const ddCs = ddCfg().colSort;
+      const grandMark = (ddCs && ddCs.pathKey === PV_GRAND) ? (ddCs.dir === 'asc' ? ' ▲' : ' ▼') : '';
       if (groupRows.length > 0) {
-        rows[0].push(`<th colspan="${valuesPerCol}" rowspan="${groupRows.length}" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:500;">총합계</th>`);
+        rows[0].push(`<th colspan="${valuesPerCol}" rowspan="${groupRows.length}" style="background:#1E40AF !important; color:#FFFFFF !important; font-weight:500;" data-pvsort="1" onclick="pvSortByColumn('detailData','${PV_GRAND}')" oncontextmenu="return pvOpenColMenu(event,'detailData',-1,'${PV_GRAND}','총합계')">총합계${grandMark}</th>`);
       }
       const headDepth = Math.max(rows.length, 1);
 
       let headHtml = '';
       for (let d = 0; d < headDepth; d++) {
         headHtml += '<tr>';
-        if (d === 0) headHtml += `<th rowspan="${headDepth}" style="text-align:left; vertical-align:middle;">${rowLabel}</th>`;
+        // 구분 열은 행 축을 대표하는 자리다 — 좌클릭은 열 기준 정렬 해제, 우클릭은 첫 단계의 정렬.
+        if (d === 0) headHtml += `<th rowspan="${headDepth}" style="text-align:left; vertical-align:middle;" data-pvsort="1" onclick="pvClearColumnSort('detailData')" oncontextmenu="return pvOpenRowSortMenu(event,'detailData',0)" title="클릭: 열 기준 정렬 해제 · 우클릭: 첫 단계 정렬">${rowLabel}${ddCs ? ' ↺' : ''}</th>`;
         headHtml += (rows[d] || []).join('');
         headHtml += '</tr>';
       }

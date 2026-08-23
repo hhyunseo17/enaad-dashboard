@@ -599,6 +599,17 @@
         layoutId: 'upfrontPivotLayout', builderBtn: 'upfrontPivotBuilderBtn',
         builderDom: { fieldList:'upfrontDdFieldList', rows:'upfrontDdWellRowsBody' },
       },
+
+      // 세부데이터는 자기 렌더러(detail-data.js)와 자기 config(detailDataConfig)를 그대로 쓴다.
+      // 여기 등록하는 이유는 정렬 메뉴·열 정렬이 뷰 키만 보고 도는 공용 코드이기 때문이다.
+      // **builderDom을 두지 않는다** — 두면 pvBuilderCtx()가 걸려서 자기 패널을 남의 것으로 착각한다.
+      detailData: {
+        custom: true,
+        rows: [], columns: [], values: [],
+        expandedRows: () => expandedDetailDataPivot,
+        expandedCols: () => expandedDetailDataColPivot,
+        render: () => renderDetailDataPivot(),
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -897,6 +908,8 @@
     // 동일하게 맞춰서(rows/columns는 필드 키 배열, values는 {id,field,agg}) 빌더 패널 코드를 공유한다.
     // ==========================================================================
     function pvConfigFor(viewKey) {
+      // 세부데이터만 예외 — 프리셋(=처음 모양)이라는 것이 없는 화면이라 자기 config를 그대로 쓴다.
+      if (viewKey === 'detailData') return detailDataConfig;
       if (!pivotConfigs[viewKey]) pvResetConfig(viewKey);
       return pivotConfigs[viewKey];
     }

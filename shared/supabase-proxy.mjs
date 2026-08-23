@@ -41,7 +41,7 @@ const PAGE_CONCURRENCY = 4; // 데이터가 더 늘어나 여러 페이지가 �
 const SALES_COLUMN_ALIASES = {
   id: 'id', ms: 'month_str', yr: 'year', mo: 'month',
   dp: 'dept', mg: 'manager', ad: 'advertiser', ag: 'agency', gg: 'agency_group',
-  ch: 'channel', iu: 'industry', bd: 'broad_digital',
+  ch: 'channel', iu: 'industry', i2: 'industry_mid', i3: 'industry_sub', bd: 'broad_digital',
   co: 'category_original', sc: 'sub_category', s3: 'sub_category3',
   nn: 'one_n_flag', cr: 'category_reclassified', rb: 'revenue_basis', bs: 'bonbu_revenue_status',
   rm: 'remark', aw: 'amount_won', uf: 'is_upfront',

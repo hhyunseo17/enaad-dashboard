@@ -87,6 +87,8 @@ export function transformRow(r, sourceRowNo) {
     agency_group_raw: s(r['대행사그룹']) || s(r['대행사 그룹']) || s(r['대행사']) || '(미지정)',
     channel_raw: s(r['채널']) || s(r['매체']) || '(미지정)',
     industry: s(r['업종대분류']) || '(미지정)',
+    industry_mid: s(r['업종중분류']) || '(미지정)',
+    industry_sub: s(r['업종소분류']) || '(미지정)',
     broad_digital: s(r['방송디지털']) || s(r['방송/디지털']) || '기타',
     category_original: s(r['대분류']) || '기타',
     sub_category: s(r['중분류']) || '(미지정)',
