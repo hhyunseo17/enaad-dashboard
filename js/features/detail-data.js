@@ -65,11 +65,14 @@
       return value ? value.toLocaleString('ko-KR') : '-';
     }
 
-    // 행/열 트리의 그룹 라벨 표시용 — 연/월은 숫자 그대로가 아니라 "2026년"/"1월"로 표기.
+    // 행/열 트리의 그룹 라벨과 필터 목록 표시용 — 연/월은 "2026년"/"1월", 업프론트여부는 true/false 대신
+    // 사람이 읽는 말로. **표시만 바꾼다** — 접힘 상태 키와 필터 선택값은 원래 값 그대로여야 한다.
+    // (js/features/pivot-builder.js의 pvFormatFieldValue가 같은 표를 들고 있다. 한쪽을 고치면 같이 고칠 것.)
     function ddFormatFieldValue(fieldKey, rawValue) {
       if (rawValue === '(미지정)') return rawValue;
       if (fieldKey === 'year') return `${rawValue}년`;
       if (fieldKey === 'month') return `${rawValue}월`;
+      if (fieldKey === 'isUpfront') return String(rawValue) === 'true' ? '업프론트' : '업프론트 미계약';
       return rawValue;
     }
 
@@ -538,7 +541,7 @@
         if (isOpen) {
           const values = getDetailDataFieldUniqueValues(f.field);
           popover = `<div class="dd-filter-popover" onclick="event.stopPropagation();">${values.map(v =>
-            `<label class="dd-filter-popover-item"><input type="checkbox" ${f.selected.includes(String(v)) ? 'checked' : ''} onchange="toggleDetailDataFilterValue('${ddEsc(f.field)}','${ddEsc(String(v))}')"> ${String(v)}</label>`
+            `<label class="dd-filter-popover-item"><input type="checkbox" ${f.selected.includes(String(v)) ? 'checked' : ''} onchange="toggleDetailDataFilterValue('${ddEsc(f.field)}','${ddEsc(String(v))}')"> ${ddFormatFieldValue(f.field, String(v))}</label>`
           ).join('')}</div>`;
         }
         return `<div class="dd-field-chip dd-field-chip-filter" draggable="true" data-field="${f.field}"

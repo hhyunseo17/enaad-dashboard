@@ -44,11 +44,14 @@
 
     function pvEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
 
-    // 열 값 표시: 연/월은 숫자 그대로가 아니라 "2026년"/"1월"로 적는다.
+    // 행·열 값 표시. 연/월은 숫자 그대로가 아니라 "2026년"/"1월"로, 업프론트여부는 true/false 대신
+    // 사람이 읽는 말로 적는다. **표시만 바꾼다** — 접힘 상태 키와 필터 선택값은 원래 값 그대로여야 한다.
+    // (js/features/detail-data.js의 ddFormatFieldValue가 같은 표를 들고 있다. 한쪽을 고치면 같이 고칠 것.)
     function pvFormatFieldValue(fieldKey, rawValue) {
       if (rawValue === '(미지정)') return rawValue;
       if (fieldKey === 'year') return `${rawValue}년`;
       if (fieldKey === 'month') return `${rawValue}월`;
+      if (fieldKey === 'isUpfront') return String(rawValue) === 'true' ? '업프론트' : '업프론트 미계약';
       return rawValue;
     }
 
