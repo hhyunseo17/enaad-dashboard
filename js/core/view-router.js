@@ -36,14 +36,14 @@
     function hideAllViews() { document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active')); }
     const VIEW_CONFIG = {
       main: { containerId: 'mainDashboardView', title: '광고사업본부 매출 분석 대시보드', showBreadcrumb: false, render: () => { applyFilters(); } },
-      category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 수주 실적 분석', showBreadcrumb: true, render: () => renderCategoryPivotTable() },
+      category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 분석', showBreadcrumb: true, render: () => renderCategoryPivotTable() },
       dept: { containerId: 'deptPivotView', title: '부서별 / 항목별 (대·중분류) 월별 분석', showBreadcrumb: true, render: () => renderDeptPivotTable() },
-      manager: { containerId: 'managerPivotView', title: '부서별 / 담당자별 / 대분류 / 광고주 상세 분석', showBreadcrumb: true, render: () => renderManagerPivotTable() },
+      manager: { containerId: 'managerPivotView', title: '부서별 / 담당자별 / 대분류 / 광고주 분석', showBreadcrumb: true, render: () => renderManagerPivotTable() },
       goalTrendPivot: { containerId: 'goalTrendPivotView', title: '월별 목표 대비 실적 (대분류별)', showBreadcrumb: true, render: () => renderGoalTrendPivotTable() },
       goalDeptPivot: { containerId: 'goalDeptPivotView', title: '부서별 / 담당자별 목표 대비 실적', showBreadcrumb: true, render: () => renderGoalDeptPivotTable() },
       channel: { containerId: 'channelPivotView', title: '연도별 / 채널별 통합 분석', showBreadcrumb: true, render: () => { renderChannelPivotTable(); document.getElementById('pivotHeaderTitle').innerText = document.getElementById('headerMainTitle').innerText; } },
       bucket: { containerId: 'bucketPivotView', title: '월단위 광고주 금액 구간별 분포', showBreadcrumb: true, render: () => renderBucketPivotTable() },
-      advertiser: { containerId: 'advertiserPivotView', title: '광고주별 ➔ 대분류 월별 실적 (전체 광고주)', showBreadcrumb: true, render: () => renderAdvertiserPivotTable() },
+      advertiser: { containerId: 'advertiserPivotView', title: '광고주별 ➔ 대분류 월별 실적', showBreadcrumb: true, render: () => renderAdvertiserPivotTable() },
       agency: { containerId: 'agencyPivotView', title: '대행사그룹 ➔ 대행사 ➔ 광고주 월별 실적', showBreadcrumb: true, render: () => renderAgencyPivotTable() },
       momPivot: { containerId: 'momPivotView', title: '전월대비 광고주 증감 상세', showBreadcrumb: true, render: () => renderMoMPivotTable() },
       agencyCompPivot: { containerId: 'agencyCompPivotView', title: '주요 대행사 전년·전월 비교 상세', showBreadcrumb: true, render: () => renderAgencyCompPivotTable() },

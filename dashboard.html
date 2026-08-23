@@ -630,9 +630,12 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 style="font-size: 16px; font-weight: 600;">부서별 항목 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('dept', true)">모든 연도 월 펼치기 (-)</button>
-            <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button><button class="btn btn-sm" id="deptPivotResetBtn" onclick="pvResetPivot('dept')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="deptPivotBuilderBtn" onclick="pvToggleBuilder('dept')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('dept')">📥 피벗 엑셀 다운로드</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="deptPivotResetBtn" onclick="pvResetPivot('dept')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="deptPivotBuilderBtn" onclick="pvToggleBuilder('dept')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('dept')">📥 피벗 엑셀 다운로드</button>
+          </div>
         </div>
         <section class="dd-layout dd-layout-collapsed" id="deptPivotLayout">
           <div class="dd-main">
@@ -690,9 +693,12 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 style="font-size: 16px; font-weight: 600;">담당자별 5계층 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('mgr', true)">모든 연도 월 펼치기 (-)</button>
-            <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button><button class="btn btn-sm" id="mgrPivotResetBtn" onclick="pvResetPivot('manager')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="mgrPivotBuilderBtn" onclick="pvToggleBuilder('manager')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('mgr')">📥 피벗 엑셀 다운로드</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="mgrPivotResetBtn" onclick="pvResetPivot('manager')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="mgrPivotBuilderBtn" onclick="pvToggleBuilder('manager')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('mgr')">📥 피벗 엑셀 다운로드</button>
+          </div>
         </div>
         <section class="dd-layout dd-layout-collapsed" id="mgrPivotLayout">
           <div class="dd-main">
@@ -817,9 +823,12 @@
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
             <button class="btn btn-sm" onclick="expandAllYears('channel', true)">모든 연도 펼치기</button>
-            <button class="btn btn-sm" onclick="expandAllYears('channel', false)">모든 연도 접기</button><button class="btn btn-sm" id="chPivotResetBtn" onclick="pvResetPivot('channel')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="chPivotBuilderBtn" onclick="pvToggleBuilder('channel')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-sm" onclick="expandAllYears('channel', false)">모든 연도 접기</button>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('channel')">📥 피벗 엑셀 다운로드</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="chPivotResetBtn" onclick="pvResetPivot('channel')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="chPivotBuilderBtn" onclick="pvToggleBuilder('channel')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('channel')">📥 피벗 엑셀 다운로드</button>
+          </div>
         </div>
         <section class="dd-layout dd-layout-collapsed" id="chPivotLayout">
           <div class="dd-main">
@@ -859,7 +868,7 @@
     <div id="bucketPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-amber" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 class="hero-title">일반광고+IMC 기준 구간별 분석</h2></div>
+          <div><h2 class="hero-title">월단위 광고주 금액 구간별 분포</h2></div>
           <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">총 누적 매출</div><div id="bucketPivotTotalAmount" class="hero-metric" style=" color: var(--accent-orange);">0 백만</div></div>
         </div>
       </section>
@@ -877,13 +886,14 @@
     <div id="advertiserPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-violet" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 class="hero-title">광고주별 ➔ 대분류 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div><h2 class="hero-title">광고주별 ➔ 대분류 월별 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
           <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="advertiserPivotTotalAmount" class="hero-metric" style=" color: var(--accent-purple);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
-          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('advertiser', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('advertiser', false)">접기</button><button class="btn btn-sm" id="advPivotResetBtn" onclick="pvResetPivot('advertiser')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="advPivotBuilderBtn" onclick="pvToggleBuilder('advertiser')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('advertiser', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('advertiser', false)">접기</button></div>
+          <div style="display:flex; align-items:center; gap:8px;"><button class="btn btn-sm" id="advPivotResetBtn" onclick="pvResetPivot('advertiser')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="advPivotBuilderBtn" onclick="pvToggleBuilder('advertiser')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
         </div>
         <section class="dd-layout dd-layout-collapsed" id="advPivotLayout">
           <div class="dd-main">
@@ -918,13 +928,14 @@
     <div id="agencyPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-teal" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div><h2 class="hero-title">대행사그룹 ➔ 대행사 ➔ 광고주 월별 매출 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
+          <div><h2 class="hero-title">대행사그룹 ➔ 대행사 ➔ 광고주 월별 실적</h2><span style="font-size: 12px; color: var(--text-tertiary);">일반광고+IMC 기준</span></div>
           <div style="text-align: right;"><div style="font-size: 12px; color: var(--text-tertiary);">합계</div><div id="agencyPivotTotalAmount" class="hero-metric" style=" color: var(--accent-cyan);">0 백만</div></div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
-          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('agency', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('agency', false)">접기</button><button class="btn btn-sm" id="agyPivotResetBtn" onclick="pvResetPivot('agency')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="agyPivotBuilderBtn" onclick="pvToggleBuilder('agency')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('agency', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('agency', false)">접기</button></div>
+          <div style="display:flex; align-items:center; gap:8px;"><button class="btn btn-sm" id="agyPivotResetBtn" onclick="pvResetPivot('agency')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="agyPivotBuilderBtn" onclick="pvToggleBuilder('agency')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
         </div>
         <section class="dd-layout dd-layout-collapsed" id="agyPivotLayout">
           <div class="dd-main">

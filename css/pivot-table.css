@@ -134,6 +134,9 @@
     /* select은 body의 font-family를 상속하지 않는다(UA 기본 글꼴로 그려진다).
        화면의 유일한 진짜 폼 컨트롤이라, 여기만 다른 글꼴로 남아 있었다. */
     .dd-agg-select { font-family: inherit; font-size: 12px; padding: 2px 4px; background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; }
+    /* 행/열 칩의 정렬 선택. 라벨과 ✕ 사이에 들어가므로 폭을 최소로 잡는다. */
+    .dd-sort-select { font-family: inherit; font-size: 11px; padding: 1px 2px; margin-left: auto; background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-default); border-radius: 4px; cursor: pointer; max-width: 76px; }
+    .dd-well-body .dd-sort-select + .dd-chip-remove { margin-left: 4px; }
     .dd-chip-remove { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; text-align: center; border-radius: 50%; color: var(--text-tertiary); font-size: 11px; cursor: pointer; }
     .dd-chip-remove:hover { color: var(--accent-red); background: var(--accent-red-bg); }
 

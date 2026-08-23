@@ -34,14 +34,22 @@
 
     // 열 축 정렬 규칙. 여기 없는 필드는 한국어 로케일 문자열 비교.
     // **월을 문자열로 비교하면 1, 10, 11, 12, 2, 3… 순이 된다.** 연도는 최근이 왼쪽에 오도록 내림차순.
-    const PV_FIELD_SORT = {
-      year: (a, b) => Number(b) - Number(a),
+    // 비교자는 **항상 오름차순**으로 정의하고 방향은 따로 곱한다 — 그래야 사용자가 고른
+    // 오름/내림이 필드 종류와 무관하게 같은 뜻이 된다.
+    const PV_FIELD_SORT_ASC = {
+      year: (a, b) => Number(a) - Number(b),
       month: (a, b) => Number(a) - Number(b),
     };
-    function pvCompareFieldValues(fieldKey, a, b) {
-      const f = PV_FIELD_SORT[fieldKey];
-      if (f) return f(a, b);
-      return String(a).localeCompare(String(b), 'ko');
+    // 기본 방향. 연도만 최근이 왼쪽에 오도록 내림차순이고 나머지는 오름차순이다.
+    const PV_FIELD_DEFAULT_DIR = { year: 'desc' };
+    function pvColumnDir(fieldKey, cfg) {
+      const s = cfg && cfg.sorts && cfg.sorts[fieldKey];
+      return (s && s.dir) || PV_FIELD_DEFAULT_DIR[fieldKey] || 'asc';
+    }
+    function pvCompareFieldValues(fieldKey, a, b, dir) {
+      const f = PV_FIELD_SORT_ASC[fieldKey];
+      const r = f ? f(a, b) : String(a).localeCompare(String(b), 'ko');
+      return dir === 'desc' ? -r : r;
     }
 
     // 행 정렬자. 프리셋이 레벨마다 하나씩 고른다. total은 그 노드의 행 전체 합계(PV_ROWTOTAL 기준).
@@ -78,7 +86,7 @@
     // rowFields/colFields 깊이만큼 재귀 그룹핑하며 valueDefs별 집계를 함께 누적한다.
     // rowFallbacks[i]는 i번째 행 필드가 비었을 때 쓸 이름이다. 원본 렌더러가 `r.subCategory || '일반'`
     // 식으로 각자 다른 기본값을 쓰고 있어서(항목별은 기타/일반/일반) 그걸 그대로 받는다.
-    function pvBuildTree(rows, rowFields, colFields, valueDefs, rowFallbacks) {
+    function pvBuildTree(rows, rowFields, colFields, valueDefs, rowFallbacks, cfg) {
       const empty = (v) => (v === undefined || v === null || v === '');
       const norm = (v) => empty(v) ? '(미지정)' : v;
       const normRow = (v, i) => empty(v) ? ((rowFallbacks && rowFallbacks[i]) || '(미지정)') : v;
@@ -94,7 +102,7 @@
       if (colFields.length === 0) colComboMap.set(PV_ALLCOL, []);
       const colCombos = [...colComboMap.values()].sort((a, b) => {
         for (let i = 0; i < Math.max(a.length, b.length); i++) {
-          const c = pvCompareFieldValues(colFields[i], a[i] ?? '', b[i] ?? '');
+          const c = pvCompareFieldValues(colFields[i], a[i] ?? '', b[i] ?? '', pvColumnDir(colFields[i], cfg));
           if (c !== 0) return c;
         }
         return 0;
@@ -180,7 +188,7 @@
       const expanded = opt.columnDefaultExpanded ? (expandedCols[pathKey] !== false) : !!expandedCols[pathKey];
 
       if (expanded) {
-        const childVals = [...node.children.keys()].sort((a, b) => pvCompareFieldValues(colFields[depth], a, b));
+        const childVals = [...node.children.keys()].sort((a, b) => pvCompareFieldValues(colFields[depth], a, b, pvColumnDir(colFields[depth], opt.cfg)));
         childVals.forEach(v => pvWalkColumnNode(node.children.get(v), depth + 1, path.concat(v), colFields, expandedCols, opt, out));
       }
       if (hasSubtotal) {
@@ -194,7 +202,7 @@
       if (colFields.length === 0) return [{ path: [], leafKeys: [PV_ALLCOL], isSubtotal: false, pathKey: '' }];
       const tree = pvBuildColumnValueTree(colCombos);
       const out = [];
-      const topVals = [...tree.children.keys()].sort((a, b) => pvCompareFieldValues(colFields[0], a, b));
+      const topVals = [...tree.children.keys()].sort((a, b) => pvCompareFieldValues(colFields[0], a, b, pvColumnDir(colFields[0], opt.cfg)));
       topVals.forEach(v => pvWalkColumnNode(tree.children.get(v), 1, [v], colFields, expandedCols, opt, out));
       return out;
     }
@@ -520,16 +528,32 @@
 
     // 정렬은 **레벨 번호가 아니라 필드**에 붙는다. 사용자가 축 순서를 바꿔도 부서는 팀 순서,
     // 채널은 편성 순서를 그대로 따라가야 하기 때문이다. 프리셋에 없는 필드는 값 내림차순.
-    function pvRowSorterFor(preset, field) {
+    // 필드가 스스로 갖는 고정 순서(프리셋과 무관하다 — 부서는 어디서나 팀 번호순이다).
+    const PV_FIELD_ORDER_SORTER = { dept: 'deptOrder', categoryReclassified: 'categoryOrder', channel: 'channelOrder' };
+    function pvRowSorterFor(preset, field, cfg) {
+      // 이름순은 **필드를 아는** 비교자로 만든다. 연·월을 문자로 비교하면 1, 10, 11, 12, 2… 가 된다.
+      const byLabel = (dir) => (a, b) => pvCompareFieldValues(field, a, b, dir === 'desc' ? 'desc' : 'asc');
+      const s = cfg && cfg.sorts && cfg.sorts[field];
+      if (s) {
+        const flip = (fn) => (a, b, ta, tb) => -fn(a, b, ta, tb);
+        if (s.by === 'value') return s.dir === 'asc' ? PV_ROW_SORTERS.valueAsc : PV_ROW_SORTERS.valueDesc;
+        if (s.by === 'label') return byLabel(s.dir);
+        if (s.by === 'preset' && PV_FIELD_ORDER_SORTER[field]) {
+          const base = PV_ROW_SORTERS[PV_FIELD_ORDER_SORTER[field]];
+          return s.dir === 'asc' ? base : flip(base);
+        }
+      }
+      // 연·월이 행에 오면 매출순이 아니라 시간 순이 기본이다(연은 최근부터, 월은 1월부터).
+      if (PV_FIELD_SORT_ASC[field]) return byLabel(PV_FIELD_DEFAULT_DIR[field] || 'asc');
       const name = (preset.fieldSorters && preset.fieldSorters[field]) || 'valueDesc';
       return PV_ROW_SORTERS[name] || PV_ROW_SORTERS.valueDesc;
     }
 
-    function pvRenderRows(node, preset, depth, ancestorPath, visibleColumns, valueDefs, expandedRows, out, rowFields) {
+    function pvRenderRows(node, preset, depth, ancestorPath, visibleColumns, valueDefs, expandedRows, out, rowFields, cfg) {
       const hasMore = depth + 1 < rowFields.length;
       const primary = valueDefs[0];
       const nodeTotal = (n) => pvComputeMetric(n.metrics[PV_ROWTOTAL], primary);
-      const sorter = pvRowSorterFor(preset, rowFields[depth]);
+      const sorter = pvRowSorterFor(preset, rowFields[depth], cfg);
       const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, nodeTotal(node.children[a]), nodeTotal(node.children[b])));
 
       keys.forEach(k => {
@@ -540,7 +564,9 @@
         const st = preset.depthStyles[Math.min(depth, preset.depthStyles.length - 1)];
         const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('${preset.key}','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
         const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
-        const label = st.labelWrap ? st.labelWrap(toggle + k, hasMore) : (toggle + k);
+        // 표시용 이름만 바꾼다 — 접힘 상태 키(pathKey)는 원래 값 그대로여야 한다.
+        const shown = pvFormatFieldValue(rowFields[depth], k);
+        const label = st.labelWrap ? st.labelWrap(toggle + shown, hasMore) : (toggle + shown);
 
         let html = `<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}" style="${st.label}">${label}</td>`;
         visibleColumns.forEach(col => {
@@ -553,7 +579,7 @@
         html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child), primary.agg)}</td></tr>`;
         out.push(html);
 
-        if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out, rowFields);
+        if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out, rowFields, cfg);
       });
     }
 
@@ -591,12 +617,13 @@
         rows: p.rows.slice(),
         columns: p.columns.slice(),
         values: p.values.map((v) => ({ id: detailDataValueIdCounter++, field: v.field, agg: v.agg })),
+        sorts: {},
       };
     }
     function pvIsConfigDefault(viewKey) {
       const p = PIVOT_PRESETS[viewKey], c = pvConfigFor(viewKey);
       const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-      return c.filters.length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
+      return c.filters.length === 0 && Object.keys(c.sorts || {}).length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
         && c.values.length === p.values.length && c.values.every((v, i) => v.field === p.values[i].field && v.agg === p.values[i].agg);
     }
     // 빌더 사이드바 접기/펼치기. 일반 피벗은 조회가 목적이라 기본은 접힘이다.
@@ -655,7 +682,7 @@
         return;
       }
 
-      const { root, colCombos } = pvBuildTree(rows, rowFields, colFields, valueDefs, fallbacks);
+      const { root, colCombos } = pvBuildTree(rows, rowFields, colFields, valueDefs, fallbacks, cfg);
 
       // 금액이 0뿐인 열(월)은 만들지 않는다 — 원본 렌더러가 `amount > 0`인 월만 헤더에 넣던 것과 같다.
       const primary = valueDefs[0];
@@ -670,6 +697,7 @@
         toggleDepth: preset.toggleDepth,
         presetKey: viewKey,
         expandedCols,
+        cfg,
         header: preset.header,
       };
       const visibleColumns = pvBuildVisibleColumns(liveCombos, colFields, expandedCols, opt);
@@ -682,7 +710,7 @@
       document.getElementById(preset.dom.head2).innerHTML = mapPivotHtml(headerRows[1] || '');
 
       const out = [];
-      pvRenderRows(root, preset, 0, [], visibleColumns, valueDefs, expandedRows, out, rowFields);
+      pvRenderRows(root, preset, 0, [], visibleColumns, valueDefs, expandedRows, out, rowFields, cfg);
 
       let body = out.join('');
       body += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
