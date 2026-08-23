@@ -132,6 +132,72 @@ export async function proxyView(env, viewName, select = '*') {
   return jsonResponse(all);
 }
 
+// ------------------------------------------------------------
+// 엣지 캐시 — /api/sales의 왕복을 없애기 위한 것.
+//
+// 페이로드를 별칭으로 절반(23MB→12MB)까지 깎아도 1.6초가 남았다. 남은 비용은 바이트가 아니라
+// 왕복 지연과 뷰 계산이라는 고정비라서, 더 깎는 게 아니라 아예 다시 묻지 않는 쪽이 답이다.
+// 데이터는 ETL 컷오버 때만 바뀌므로 배치 단위로는 불변이다.
+//
+// **무효화 로직을 두지 않는다.** 프론트가 `?batch=<id>`를 붙여 요청하고, 컷오버로 ID가 바뀌면
+// URL이 달라져 새 키가 자연히 미스 난다. 옛 객체는 LRU로 밀려난다. 대안으로 검토했던 두 가지는
+// 버렸다 — (a) ETL이 purge를 호출하는 방식은 수동 실행이라 한 번 빼먹으면 낡은 숫자를 조용히
+// 계속 보여준다. (b) 서버가 매 요청마다 배치 ID를 조회해 키를 만드는 방식은 캐시가 맞아도
+// Supabase 왕복이 하나 남아 목표치(0.2초대)를 그 자체로 다 먹는다.
+//
+// 되돌리는 방법이 세 겹이다. 안쪽부터:
+//   1) 프론트가 `?batch=`를 안 붙이면 아래 handleSalesRequest가 캐시 경로를 건너뛴다
+//      (js/core/state.js의 USE_EDGE_CACHE = false — 배포 한 줄).
+//   2) Pages 환경변수 EDGE_CACHE_DISABLED=1 — 재배포 없이 즉시.
+//   3) 이 커밋 revert.
+//
+// 인증은 캐시보다 앞에 있다: Cloudflare Access가 Pages Function 앞단에서 검사하므로 인증된
+// 요청만 여기 도달하고, caches.default는 이 함수 안에서만 접근하는 서버 측 캐시다. 다만
+// 브라우저로 내려보내는 헤더는 public이 아니라 private으로 바꿔 공용 프록시에 남지 않게 한다
+// (캐시에 넣을 때는 public이어야 한다 — Cache API가 private 응답을 저장하지 않는다).
+// ------------------------------------------------------------
+const SALES_CACHE_MAX_AGE = 31536000; // 1년. URL에 배치 ID가 있어 사실상 불변이다.
+const LATEST_BATCH_CACHE_MAX_AGE = 60; // 배치 변경 감지가 최대 이만큼 늦어진다. ETL이 수동이라 무해하다.
+
+function edgeCacheDisabled(env) {
+  return String((env && env.EDGE_CACHE_DISABLED) || '') === '1';
+}
+
+// 인증 쿠키·헤더가 키에 섞이지 않도록 URL만으로 합성 GET 요청을 만든다.
+function edgeCacheKey(request) {
+  return new Request(new URL(request.url).toString(), { method: 'GET' });
+}
+
+function browserResponse(res, maxAge, state) {
+  return new Response(res.body, {
+    status: res.status,
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Cache-Control': `private, max-age=${maxAge}`,
+      'X-Edge-Cache': state, // 실측·디버깅용. HIT/MISS/OFF.
+    },
+  });
+}
+
+async function withEdgeCache(env, request, waitUntil, maxAge, produce) {
+  if (!request || edgeCacheDisabled(env) || typeof caches === 'undefined') {
+    return browserResponse(await produce(), 0, 'OFF');
+  }
+  const cache = caches.default;
+  const key = edgeCacheKey(request);
+  const hit = await cache.match(key);
+  if (hit) return browserResponse(hit, maxAge, 'HIT');
+
+  const fresh = await produce();
+  if (!fresh.ok) return fresh; // 실패 응답은 캐시하지 않는다.
+  const forCache = new Response(fresh.clone().body, {
+    headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Cache-Control': `public, max-age=${maxAge}` },
+  });
+  const put = cache.put(key, forCache);
+  if (waitUntil) waitUntil(put); else await put;
+  return browserResponse(fresh, maxAge, 'MISS');
+}
+
 export function missingEnvResponse() {
   console.error('Supabase 프록시 설정 누락: SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 환경변수에 없음');
   return new Response(JSON.stringify({ error: '서버 설정 오류로 데이터를 불러올 수 없습니다.' }), {
@@ -156,11 +222,15 @@ export function jsonResponse(payload) {
   });
 }
 
-export async function handleSalesRequest(env) {
+export async function handleSalesRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   try {
     // 별칭 select — 응답 키는 SALES_COLUMN_ALIASES의 짧은 이름이다(위 주석 참고).
-    return await proxyView(env, 'v_bonbu_sales', SALES_SELECT);
+    const produce = () => proxyView(env, 'v_bonbu_sales', SALES_SELECT);
+    // ?batch=가 없으면 캐시를 타지 않고 예전과 똑같이 동작한다 — 프론트 쪽 폴백 경로.
+    const hasBatch = request ? new URL(request.url).searchParams.has('batch') : false;
+    if (!hasBatch) return await produce();
+    return await withEdgeCache(env, request, waitUntil, SALES_CACHE_MAX_AGE, produce);
   } catch (err) {
     return proxyErrorResponse(err);
   }
@@ -184,11 +254,13 @@ export async function handleTargetsRequest(env) {
   }
 }
 
-export async function handleLatestBatchRequest(env) {
+export async function handleLatestBatchRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   try {
-    const rows = await fetchPageJson(env, 'v_latest_batch_info', 0);
-    return jsonResponse(rows[0] || null);
+    // 이 조회가 /api/sales보다 앞에 서게 되었으므로(프론트가 배치 ID를 알아야 URL을 만든다)
+    // 여기에도 짧은 TTL을 건다. 이게 없으면 캐시 히트에도 Supabase 왕복이 하나 남는다.
+    const produce = async () => jsonResponse((await fetchPageJson(env, 'v_latest_batch_info', 0))[0] || null);
+    return await withEdgeCache(env, request, waitUntil, LATEST_BATCH_CACHE_MAX_AGE, produce);
   } catch (err) {
     return proxyErrorResponse(err);
   }

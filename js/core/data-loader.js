@@ -312,7 +312,22 @@
         return res.json();
       });
 
-      Promise.all([fetchJson('/api/sales'), fetchJson('/api/upfront-contracts'), fetchJson('/api/targets'), fetchJson('/api/latest-batch')])
+      // /api/sales만 배치 ID를 URL에 달고 나간다 — 그래야 엣지가 배치 단위로 캐시할 수 있다
+      // (shared/supabase-proxy.mjs 참고). 그래서 이 하나만 latest-batch 뒤로 직렬화되고,
+      // 나머지 둘은 예전처럼 병렬로 함께 나간다. /api/latest-batch 자체도 엣지에서 60초 캐시된다.
+      //
+      // 업프론트·목표는 캐시하지 않는다. 응답이 0.3MB 미만이라 얻을 게 적고, 특히 sales_targets는
+      // 배치와 무관하게(ETL 없이) 수정될 수 있어서 배치 ID를 키로 삼으면 낡은 값이 고착된다.
+      const batchInfoPromise = fetchJson('/api/latest-batch');
+      const salesPromise = batchInfoPromise
+        .then(info => {
+          const q = (USE_EDGE_CACHE && info && info.batch_id) ? `?batch=${encodeURIComponent(info.batch_id)}` : '';
+          return fetchJson('/api/sales' + q);
+        })
+        // latest-batch가 실패해도 매출 조회까지 같이 죽이지는 않는다 — 캐시 없이 그냥 받아온다.
+        .catch(() => fetchJson('/api/sales'));
+
+      Promise.all([salesPromise, fetchJson('/api/upfront-contracts'), fetchJson('/api/targets'), batchInfoPromise.catch(() => null)])
         .then(([salesRows, upfrontRows, targetRows, batchInfo]) => {
           processSupabaseRows(salesRows, upfrontRows, targetRows);
           lastSeenBatchId = batchInfo ? batchInfo.batch_id : lastSeenBatchId;

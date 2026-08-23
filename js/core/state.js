@@ -7,6 +7,11 @@
     // 'supabase': /api/* 프록시(Pages Functions, functions/api/*.js)를 거쳐 Supabase v_bonbu_sales/upfront_contracts 조회.
     // 문제 생기면 이 한 줄을 'xlsx'로 되돌리는 배포만으로 즉시 롤백 가능.
     const DATA_SOURCE_MODE = 'supabase';
+    // /api/sales에 `?batch=<배치ID>`를 붙일지 여부. 붙이면 Cloudflare 엣지가 배치 단위로 응답을
+    // 캐시해 왕복 자체가 사라진다(shared/supabase-proxy.mjs 참고). false로 두면 파라미터가 빠지고
+    // 서버도 캐시 경로를 건너뛰어 예전과 동일하게 동작한다 — 되돌리기 1단계.
+    // (서버 쪽 즉시 차단은 Pages 환경변수 EDGE_CACHE_DISABLED=1.)
+    const USE_EDGE_CACHE = true;
     let lastSeenBatchId = null; // Supabase 모드에서 배치 변경 감지 폴링에 사용
     let rawData = [];
     let filteredData = [];

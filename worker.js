@@ -29,20 +29,22 @@
 
 import { handleSalesRequest, handleUpfrontContractsRequest, handleTargetsRequest, handleLatestBatchRequest } from './shared/supabase-proxy.mjs';
 
-async function handleApiRequest(env, pathname) {
-  if (pathname === '/api/sales') return handleSalesRequest(env);
+// request/waitUntil은 엣지 캐시용이다(shared/supabase-proxy.mjs). 캐시를 쓰지 않는 두
+// 엔드포인트는 예전처럼 env만 받는다.
+async function handleApiRequest(env, pathname, request, waitUntil) {
+  if (pathname === '/api/sales') return handleSalesRequest(env, request, waitUntil);
   if (pathname === '/api/upfront-contracts') return handleUpfrontContractsRequest(env);
   if (pathname === '/api/targets') return handleTargetsRequest(env);
-  if (pathname === '/api/latest-batch') return handleLatestBatchRequest(env);
+  if (pathname === '/api/latest-batch') return handleLatestBatchRequest(env, request, waitUntil);
   return new Response('Not found', { status: 404 });
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
-      return handleApiRequest(env, url.pathname);
+      return handleApiRequest(env, url.pathname, request, ctx ? ctx.waitUntil.bind(ctx) : null);
     }
 
     let key = decodeURIComponent(url.pathname.replace(/^\//, ''));

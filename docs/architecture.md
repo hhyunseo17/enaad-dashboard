@@ -99,13 +99,33 @@ features/*.js    →  filteredData/rawData를 읽어 차트·피벗 렌더
 ### `/api/sales` 응답은 컬럼 별칭(2자)을 쓴다 — 두 파일을 함께 고칠 것
 `v_bonbu_sales`는 26,000행대라 응답 시간의 상당 부분이 **페이로드 바이트 수에 딸려 온다**(뷰 계산 자체는 0.2~0.3초, 클라이언트의 parse+매핑은 합계 0.1초로 무시 가능). 그런데 `select=*` 응답 21.98MB 중 **14.64MB(67%)가 행마다 반복되는 컬럼 이름**이었고 값은 7.34MB뿐이었다. 그래서 PostgREST 별칭(`select=ms:month_str,…`)으로 키를 2자로 줄이고, 프론트가 읽지 않는 5개 컬럼(`load_batch_id`/`is_bonbu`/`is_excluded`/`excluded_reason`/`raw_id`)은 아예 뺀다.
 
-실측(8쌍 교차): 23.15MB → 12.08MB, 총 소요 2,121ms → 1,629ms(평균 23%). 페이로드는 절반이 됐으나 시간은 그만큼 줄지 않는다 — 왕복 지연과 뷰 계산이라는 고정 비용이 남는다. **회차 편차가 ±30%(Supabase 공유 인스턴스)이므로 이 수치를 다시 잴 때는 반드시 교차 반복 측정할 것.** 단발 측정은 38%로도 14%로도 나온다. 남은 1.6초를 더 줄이려면 페이로드를 깎기보다 배치 단위 엣지 캐시(데이터는 ETL 컷오버 때만 바뀐다)로 왕복 자체를 없애는 편이 효과가 크다.
+실측(8쌍 교차): 23.15MB → 12.08MB, 총 소요 2,121ms → 1,629ms(평균 23%). 페이로드는 절반이 됐으나 시간은 그만큼 줄지 않는다 — 왕복 지연과 뷰 계산이라는 고정 비용이 남는다. **회차 편차가 ±30%(Supabase 공유 인스턴스)이므로 이 수치를 다시 잴 때는 반드시 교차 반복 측정할 것.** 단발 측정은 38%로도 14%로도 나온다. 남은 1.6초는 페이로드가 아니라 왕복 자체라서, 아래 엣지 캐시로 없앤다.
 
 - 별칭 표의 원본: `shared/supabase-proxy.mjs`의 `SALES_COLUMN_ALIASES`
 - 대응 매핑: `js/core/data-loader.js`의 `mapRowFromSupabase()`
 - **빌드 도구가 없어 두 파일이 상수를 공유할 수 없다.** 한쪽만 고치면 전 컬럼이 조용히 `undefined`가 되므로(금액 0, 문자열 undefined인 대시보드는 원인 추적이 어렵다) `assertSalesRowShape()`가 첫 행의 키를 검사해 에러 배너로 즉시 실패시킨다. 컬럼을 추가·변경할 때는 세 곳(별칭표·매핑·`SALES_EXPECTED_KEYS`)을 모두 손댈 것.
 - `bonbu_revenue_status`(`bs`)는 이 뷰에서 항상 `'본부매출'`이라 뺄 수 있지만 **일부러 남긴다.** 모든 집계가 이 값으로 본부매출을 판정하므로(CLAUDE.md 절대원칙 1) 클라이언트가 지어내는 상수로 바꾸면 그 가드가 형해화된다.
 - 나머지 세 엔드포인트(`upfront-contracts`/`targets`/`latest-batch`)는 응답이 0.3MB 미만이라 `select=*` 그대로 둔다.
+
+### `/api/sales` 배치 단위 엣지 캐시 — 무효화 로직이 없는 것이 설계다
+데이터는 ETL 컷오버 때만 바뀐다. 그래서 프론트가 `/api/sales?batch=<배치ID>`로 요청하고, 프록시가 그 URL을 키로 `caches.default`에 응답을 통째로 넣는다. **컷오버로 배치 ID가 바뀌면 URL이 달라져 새 키가 자연히 미스 나므로 무효화 코드가 아예 필요 없다.** 옛 객체는 LRU로 밀려난다.
+
+검토 후 버린 두 안:
+- **ETL이 purge 호출**: ETL이 수동 실행이라 한 번 빼먹으면 낡은 숫자를 조용히 계속 보여준다. Cloudflare API 토큰 관리도 늘어난다.
+- **서버가 매 요청마다 배치 ID를 조회해 키 생성**: 캐시가 맞아도 Supabase 왕복이 하나 남아 목표치를 그 자체로 다 먹는다.
+
+대가로 `/api/latest-batch`가 `/api/sales`보다 앞에 서게 됐다(프론트가 ID를 알아야 URL을 만든다). 그래서 거기에도 **60초 TTL**을 건다 — 배치 변경 감지가 최대 그만큼 늦어지지만 ETL이 수동이라 무해하다. `upfront-contracts`/`targets`는 병렬 그대로다.
+
+- **`sales_targets`는 캐시하지 않는다.** 배치와 무관하게(ETL 없이) 수정될 수 있어서 배치 ID를 키로 삼으면 낡은 값이 고착된다.
+- **인증이 캐시보다 앞이다.** Cloudflare Access가 Pages Function 앞단에서 검사하므로 인증된 요청만 도달하고, `caches.default`는 함수 안에서만 접근하는 서버 측 캐시다. 브라우저로 나가는 헤더는 `private`으로 바꿔 공용 프록시에 남지 않게 한다(캐시에 넣는 사본만 `public` — Cache API가 `private` 응답을 저장하지 않는다).
+- **응답 헤더 `X-Edge-Cache`**(`HIT`/`MISS`/`OFF`)로 동작을 확인할 수 있다.
+
+**되돌리는 방법 세 겹** (안쪽부터):
+1. `js/core/state.js`의 `USE_EDGE_CACHE = false` — `?batch=`가 빠지고 서버도 캐시 경로를 건너뛴다(배포 한 줄).
+2. Pages 환경변수 `EDGE_CACHE_DISABLED=1` — **재배포 없이 즉시**.
+3. 해당 커밋 revert.
+
+핸들러가 `env` 외에 `request`(캐시 키)와 `waitUntil`(응답 후 백그라운드 `cache.put`)을 받으므로, 시그니처를 바꿀 때는 `shared/supabase-proxy.mjs`·`functions/api/sales.js`·`functions/api/latest-batch.js`·`worker.js`를 함께 볼 것.
 
 ## 검증 (빌드 도구 없음)
 - 문법: 각 js 파일 `node --check`.
