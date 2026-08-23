@@ -20,7 +20,8 @@ KT ENA 광고사업본부(광고전략팀)의 광고 매출 분석용 내부 대
 | 세부데이터(자유 피벗 빌더) | `js/features/detail-data.js` | `docs/features/detail-data.md` |
 | 메인 개요 차트 (트렌드/포트폴리오/채널) | `js/features/trend-portfolio-channel.js` | `docs/features/trend-portfolio-channel.md` |
 | 랭킹 차트 (Top10 대행사·광고주 / 부서별 / 담당자별) | `js/features/ranking.js` | `docs/features/ranking.md` |
-| 상세 피벗 (항목/부서/담당자/채널/광고주/대행사별) | `js/features/detail-pivots.js` | `docs/features/detail-pivots.md` |
+| 상세 피벗 (항목/부서/담당자/채널/광고주/대행사별) | `js/features/detail-pivots.js` — **항목별은 `js/features/pivot-builder.js`의 `PIVOT_PRESETS.category`로 이관됨** | `docs/features/detail-pivots.md` |
+| 피벗 엔진 (행 N단계 × 열 N단계 × 값 복수, 프리셋) | `js/features/pivot-builder.js` | `docs/features/detail-pivots.md` |
 | KPI 카드 (총매출/전년비/광고주당/신규/업프론트) | `js/features/kpi.js` | `docs/features/kpi.md` |
 | 목표 대비 실적 (차트 2종 + 피벗 2종) | `js/features/kpi.js` | `docs/features/kpi.md` |
 | 차트 스타일·색·폰트·범례 | 해당 `features/*.js`의 chart options, 또는 `js/core/theme-system.js` | `docs/features/<관련>.md` |

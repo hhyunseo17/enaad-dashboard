@@ -40,6 +40,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/core/data-loader.js           연결·파싱·정규화 + export/유틸
   js/core/filters.js               체크박스/필터/applyFilters()
   js/features/shared-helpers.js    신규광고주 판별, 차트 모드 토글
+  js/features/pivot-builder.js     피벗 엔진 + PIVOT_PRESETS (detail-pivots보다 먼저)
   js/features/detail-pivots.js     항목/부서/담당자/채널/광고주/대행사 피벗
   js/features/kpi.js               KPI 카드 + 업프론트 목표(월할)
   js/features/trend-portfolio-channel.js

@@ -12,6 +12,11 @@
     // 서버도 캐시 경로를 건너뛰어 예전과 동일하게 동작한다 — 되돌리기 1단계.
     // (서버 쪽 즉시 차단은 Pages 환경변수 EDGE_CACHE_DISABLED=1.)
     const USE_EDGE_CACHE = true;
+    // 일반 피벗을 공용 엔진(js/features/pivot-builder.js)으로 그릴지 여부.
+    // false로 두면 detail-pivots.js의 기존 렌더러가 그대로 돈다 — 두 경로 모두 코드가 살아 있고,
+    // 접힘 상태(expandedCatPivot / expandedCatYearColumns)도 키 형식이 같아 껐다 켜도 이어진다.
+    // 현재 엔진으로 넘어간 것은 항목별 피벗 하나뿐이다.
+    const USE_PIVOT_ENGINE = true;
     let lastSeenBatchId = null; // Supabase 모드에서 배치 변경 감지 폴링에 사용
     let rawData = [];
     let filteredData = [];

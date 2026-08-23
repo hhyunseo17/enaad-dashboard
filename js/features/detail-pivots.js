@@ -2,7 +2,11 @@
 // js/features/detail-pivots.js
 // 상세 피벗: 항목/부서/담당자/채널/광고주/대행사별
 // ============================================================
+    // 이 피벗은 공용 엔진으로 옮겼다(js/features/pivot-builder.js의 PIVOT_PRESETS.category).
+    // 아래 원본은 **되돌리기 장치로 남겨 둔다** — state.js의 USE_PIVOT_ENGINE을 false로 하면
+    // 즉시 이 코드가 다시 돈다. 엔진이 여섯 피벗을 모두 흡수하고 한동안 문제가 없으면 지운다.
     function renderCategoryPivotTable() {
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('category'); return; }
       const targetData = filteredData;
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
       const yearMonthsMap = {};
