@@ -22,6 +22,22 @@
     // numeric 없이는 '광고주10'이 '광고주9'보다 앞에 온다(문자 하나씩 비교하므로).
     const PV_COLLATE = { numeric: true, sensitivity: 'base' };
 
+    // 엑셀과 같은 무리 순서로 나눈다: (주)… 같은 기호 → 숫자 → 영문 → 한글.
+    // localeCompare('ko')만 쓰면 한글이 영문보다 앞에 와서 엑셀과 반대가 된다.
+    function pvNameRank(s) {
+      const ch = String(s == null ? '' : s).trim().charAt(0);
+      if (!ch) return 9;
+      if (ch >= '0' && ch <= '9') return 1;
+      if (/[A-Za-z]/.test(ch)) return 2;
+      if (/[\uAC00-\uD7A3\u3131-\u318E]/.test(ch)) return 3; // 한글 음절과 자모
+      return 0; // 괄호·기호 등은 맨 앞
+    }
+    function pvCompareNames(a, b) {
+      const ra = pvNameRank(a), rb = pvNameRank(b);
+      if (ra !== rb) return ra - rb;
+      return String(a).localeCompare(String(b), 'ko', PV_COLLATE);
+    }
+
     const PV_ROWTOTAL = '__ROWTOTAL__';   // 열 구분과 무관한 행 전체 합계용 버킷
     const PV_SUBTOTAL = '__SUBTOTAL__';   // 그룹 소계 열을 잎(leaf)처럼 다루기 위한 표식
     const PV_ALLCOL = '__TOTAL__';        // 열 필드가 없을 때의 단일 버킷
@@ -52,7 +68,7 @@
     }
     function pvCompareFieldValues(fieldKey, a, b, dir) {
       const f = PV_FIELD_SORT_ASC[fieldKey];
-      const r = f ? f(a, b) : String(a).localeCompare(String(b), 'ko', PV_COLLATE);
+      const r = f ? f(a, b) : pvCompareNames(a, b);
       return dir === 'desc' ? -r : r;
     }
 
@@ -60,8 +76,8 @@
     const PV_ROW_SORTERS = {
       valueDesc: (a, b, ta, tb) => tb - ta,
       valueAsc: (a, b, ta, tb) => ta - tb,
-      labelAsc: (a, b) => String(a).localeCompare(String(b), 'ko', PV_COLLATE),
-      labelDesc: (a, b) => String(b).localeCompare(String(a), 'ko', PV_COLLATE),
+      labelAsc: (a, b) => pvCompareNames(a, b),
+      labelDesc: (a, b) => pvCompareNames(b, a),
       deptOrder: (a, b) => compareDeptOrder(a, b),                 // shared-helpers.js
       categoryOrder: (a, b) => pvOrderListCompare(categoryOrderList, a, b), // state.js
       channelOrder: (a, b) => pvOrderListCompare(PV_CHANNEL_ORDER, a, b),
@@ -72,7 +88,7 @@
       if (ia !== -1 && ib !== -1) return ia - ib;
       if (ia !== -1) return -1;
       if (ib !== -1) return 1;
-      return String(a).localeCompare(String(b), 'ko', PV_COLLATE);
+      return pvCompareNames(a, b);
     }
 
     // ==========================================================================
@@ -222,7 +238,10 @@
       // 조용히 사라졌었다(onclick은 남고 클래스만 없어져 눈에 잘 안 띈다).
       const click = (pk) => ` data-pvsort="1" onclick="pvSortByColumn('${opt.presetKey}','${pvEsc(pk)}')"`;
       // 좌클릭은 '이 열 값으로 행 정렬', 우클릭은 '이 축의 순서'. 서로 다른 일이라 갈라 둔다.
-      const order = (dep) => ` oncontextmenu="return pvOpenColOrderMenu(event,'${opt.presetKey}',${dep})"`;
+      // 우클릭은 행 라벨에서든 열 헤더에서든 "여기 기준으로 정렬"이어야 뜻이 같다.
+      // 값이 있는 열이면 그 열 기준 행 정렬을 먼저 보여주고, 그 아래에 축 나열 순서를 붙인다.
+      // 그룹 헤더(연도)는 한 칸에 값이 여러 개라 "이 열 기준"이 성립하지 않으므로 축 순서만.
+      const menu = (orderDepth, pathKey, label) => ` oncontextmenu="return pvOpenColMenu(event,'${opt.presetKey}',${orderDepth},'${pvEsc(pathKey || '')}','${pvEsc(label)}')"`;
       const L = colFields.length;
       const H = opt.header;
       const rows = [];
@@ -238,10 +257,10 @@
               const label = `${pvFormatFieldValue(col.groupField, col.groupValue)} 요약`;
               // 소계 칸도 우클릭을 받는다 — 연도를 접으면 화면에 보이는 열 제목이 이것뿐이라,
               // 여기서 안 되면 "열 순서가 안 먹는다"가 된다. 소계는 한 단계 위 그룹(연)에 속한다.
-              cells.push(`<th${span}${H.subtotal}${click(col.pathKey)}${depth > 0 ? order(depth - 1) : ''}>${label}${mark(col.pathKey)}</th>`);
+              cells.push(`<th${span}${H.subtotal}${click(col.pathKey)}${menu(depth - 1, col.pathKey, label)}>${label}${mark(col.pathKey)}</th>`);
             } else {
               const label = pvFormatFieldValue(colFields[depth], col.path[col.path.length - 1]);
-              cells.push(`<th${span}${H.leaf}${click(col.pathKey)}${order(depth)}>${label}${mark(col.pathKey)}</th>`);
+              cells.push(`<th${span}${H.leaf}${click(col.pathKey)}${menu(depth, col.pathKey, label)}>${label}${mark(col.pathKey)}</th>`);
             }
             i++;
           } else {
@@ -257,7 +276,7 @@
               const expanded = opt.columnDefaultExpanded ? (opt.expandedCols[key] !== false) : !!opt.expandedCols[key];
               toggle = `<span class="year-toggle-btn" onclick="togglePvColNode('${opt.presetKey}','${pvEsc(value)}')">${expanded ? '-' : '+'}</span> `;
             }
-            cells.push(`<th colspan="${span}"${H.group}${order(depth)}>${toggle}${label}</th>`);
+            cells.push(`<th colspan="${span}"${H.group}${menu(depth, '', label)}>${toggle}${label}</th>`);
             i = j;
           }
         }
@@ -540,15 +559,32 @@
       return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
         items.map(([v, t]) => [t, v === cur, `pvPickRowSort('${viewKey}','${pvEsc(field)}','${v}')`]));
     }
-    // 열 헤더 우클릭 — 그 축(연/월 등)의 나열 순서. 행 정렬과는 다른 것이라 메뉴도 따로 둔다.
-    function pvOpenColOrderMenu(ev, viewKey, depth) {
+    // 열 헤더 우클릭. 값이 있는 열이면 "그 열 기준 행 정렬"이 먼저고, 그 아래에 축 나열 순서를 둔다.
+    // orderDepth < 0 이면 축이 없는 열(총합계)이라 값 정렬만 나온다.
+    function pvOpenColMenu(ev, viewKey, orderDepth, pathKey, label) {
       const cfg = pvConfigFor(viewKey);
-      const field = cfg.columns[depth];
-      if (!field) return true;
-      const cur = (cfg.sorts && cfg.sorts[field]) ? cfg.sorts[field].dir : null;
-      return pvShowMenu(ev, `${detailDataFieldLabel(field)} 열 순서`, [
-        ['asc', '오름차순', cur === 'asc'], ['desc', '내림차순', cur === 'desc'],
-      ].map(([v, t, on]) => [t, on, `pvPickColOrder('${viewKey}','${pvEsc(field)}','${v}')`]));
+      const items = [];
+      if (pathKey) {
+        const cs = cfg.colSort;
+        const on = (d) => !!(cs && cs.pathKey === pathKey && cs.dir === d);
+        items.push(['값 내림차순', on('desc'), `pvSetColumnSort('${viewKey}','${pvEsc(pathKey)}','desc')`]);
+        items.push(['값 오름차순', on('asc'), `pvSetColumnSort('${viewKey}','${pvEsc(pathKey)}','asc')`]);
+      }
+      const field = orderDepth >= 0 ? cfg.columns[orderDepth] : null;
+      if (field) {
+        const dir = (cfg.sorts && cfg.sorts[field]) ? cfg.sorts[field].dir : null;
+        items.push([`${detailDataFieldLabel(field)} 열 순서`, false, '']); // 구획 제목(클릭 안 됨)
+        items.push(['오름차순', dir === 'asc', `pvPickColOrder('${viewKey}','${pvEsc(field)}','asc')`]);
+        items.push(['내림차순', dir === 'desc', `pvPickColOrder('${viewKey}','${pvEsc(field)}','desc')`]);
+      }
+      if (!items.length) return true;
+      return pvShowMenu(ev, label, items);
+    }
+    // 방향을 명시해 거는 열 정렬(메뉴용). 헤더 좌클릭은 pvSortByColumn이 토글로 처리한다.
+    function pvSetColumnSort(viewKey, pathKey, dir) {
+      pvCloseRowSortMenu();
+      pvConfigFor(viewKey).colSort = { pathKey, dir };
+      PIVOT_PRESETS[viewKey].render();
     }
     function pvPickColOrder(viewKey, field, dir) {
       pvCloseRowSortMenu();
@@ -557,14 +593,15 @@
       if (!dir) delete cfg.sorts[field]; else cfg.sorts[field] = { by: 'label', dir };
       PIVOT_PRESETS[viewKey].render();
     }
-
     // 메뉴 하나를 두 곳(행 라벨·열 헤더)이 나눠 쓴다. items: [표시문구, 현재값여부, onclick식]
     function pvShowMenu(ev, title, items) {
       ev.preventDefault(); ev.stopPropagation();
       let el = document.getElementById('pvRowSortMenu');
       if (!el) { el = document.createElement('div'); el.id = 'pvRowSortMenu'; el.className = 'pv-row-menu'; document.body.appendChild(el); }
       el.innerHTML = `<div class="pv-row-menu-title">${title}</div>`
-        + items.map(([t, on, fn]) => `<div class="pv-row-menu-item${on ? ' is-on' : ''}" onclick="${fn}">${t}</div>`).join('');
+        + items.map(([t, on, fn]) => fn
+            ? `<div class="pv-row-menu-item${on ? ' is-on' : ''}" onclick="${fn}">${t}</div>`
+            : `<div class="pv-row-menu-sep">${t}</div>`).join('');
       el.style.display = 'block';
       const w = 160, h = el.offsetHeight || 200;
       el.style.left = Math.min(ev.clientX, window.innerWidth - w - 8) + 'px';
@@ -816,9 +853,12 @@
 
       const cs = cfg.colSort;
       const grandMark = (cs && cs.pathKey === PV_GRAND) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
-      const h1 = `<th rowspan="${colFields.length}"${preset.header.label} data-pvsort="1" onclick="pvClearColumnSort('${viewKey}')" title="열 기준 정렬 해제">구분${cs ? ' ↺' : ''}</th>`
+      // 구분 열은 행 축을 대표하는 자리다. 좌클릭은 열 기준 정렬 해제, 우클릭은 **첫 단계**의 정렬.
+      // 더 아래 단계는 그 행 라벨을 직접 우클릭하면 된다 — 여기에 전 단계를 다 넣으면
+      // 담당자별 5단계에서 메뉴가 스무 줄을 넘는다.
+      const h1 = `<th rowspan="${colFields.length}"${preset.header.label} data-pvsort="1" onclick="pvClearColumnSort('${viewKey}')" oncontextmenu="return pvOpenRowSortMenu(event,'${viewKey}',0)" title="클릭: 열 기준 정렬 해제 · 우클릭: 첫 단계 정렬">구분${cs ? ' ↺' : ''}</th>`
         + headerRows[0]
-        + `<th rowspan="${colFields.length}"${preset.header.total} data-pvsort="1" onclick="pvSortByColumn('${viewKey}','${PV_GRAND}')">총합계${grandMark}</th>`;
+        + `<th rowspan="${colFields.length}"${preset.header.total} data-pvsort="1" onclick="pvSortByColumn('${viewKey}','${PV_GRAND}')" oncontextmenu="return pvOpenColMenu(event,'${viewKey}',-1,'${PV_GRAND}','총합계')">총합계${grandMark}</th>`;
       document.getElementById(preset.dom.head1).innerHTML = mapPivotHtml(h1);
       document.getElementById(preset.dom.head2).innerHTML = mapPivotHtml(headerRows[1] || '');
 

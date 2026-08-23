@@ -104,6 +104,9 @@
     .pv-row-menu-item { padding: 6px 8px; border-radius: 4px; color: var(--text-primary); cursor: pointer; white-space: nowrap; }
     .pv-row-menu-item:hover { background: var(--bg-card-hover); }
     .pv-row-menu-item.is-on { color: var(--primary-blue); font-weight: 500; }
+    /* 메뉴 안의 구획 제목 — 클릭 대상이 아니다. 값 정렬과 축 순서를 갈라 준다. */
+    .pv-row-menu-sep { margin-top: 4px; padding: 6px 8px 3px; border-top: 1px solid var(--border-default);
+      color: var(--text-tertiary); font-size: 11px; }
 
     .pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .page-info { font-size: 12px; color: var(--text-tertiary); }
