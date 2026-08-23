@@ -524,21 +524,9 @@
     }
 
     // ── 우클릭 메뉴 ──────────────────────────────────────────────────────────
+    const GOAL_SORT_METRICS = [['a', '실적'], ['t', '목표'], ['rate', '달성률', '높은', '낮은']];
     function goalOpenRowSortMenu(ev, viewKey, depth) {
-      const cfg = pvConfigFor(viewKey);
-      const field = cfg.rows[depth];
-      if (!field) return true;
-      const cur = (cfg.sorts && cfg.sorts[field]) ? `${cfg.sorts[field].by}:${cfg.sorts[field].dir}` : '';
-      const isYm = (field === 'year' || field === 'month');
-      const items = [
-        ['a:desc', '실적 큰 순'], ['a:asc', '실적 작은 순'],
-        ['t:desc', '목표 큰 순'], ['t:asc', '목표 작은 순'],
-        ['rate:desc', '달성률 높은 순'], ['rate:asc', '달성률 낮은 순'],
-        ['label:asc', isYm ? '오름차순' : '이름 오름차순'], ['label:desc', isYm ? '내림차순' : '이름 내림차순'],
-      ];
-      if (GOAL_FIELD_ORDER_SORTER[field]) items.push(['preset:asc', '기본 순서'], ['preset:desc', '기본 순서 역순']);
-      return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
-        items.map(([v, t]) => [t, v === cur, `goalPickRowSort('${viewKey}','${pvEsc(field)}','${v}')`]));
+      return pvOpenMetricRowSortMenu(ev, viewKey, depth, GOAL_SORT_METRICS, 'goalPickRowSort', GOAL_FIELD_ORDER_SORTER);
     }
     function goalPickRowSort(viewKey, field, val) {
       pvCloseRowSortMenu();

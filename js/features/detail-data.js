@@ -43,7 +43,13 @@
       return !c || !c.allowedFields || c.allowedFields.has(fieldKey);
     }
 
-    function detailDataFieldLabel(key) { const f = DETAIL_DATA_FIELDS.find(x => x.key === key); return f ? f.label : key; }
+    // 특정 화면에서만 쓰는 필드는 공용 목록에 넣지 않고 여기에만 이름을 둔다 — 세부데이터와 여섯 피벗의
+    // 필드 목록이 그 화면에서만 의미 있는 항목으로 길어지지 않게 하기 위함이다.
+    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주' };
+    function detailDataFieldLabel(key) {
+      const f = DETAIL_DATA_FIELDS.find(x => x.key === key);
+      return f ? f.label : (DD_EXTRA_FIELD_LABELS[key] || key);
+    }
     function ddEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
     function getDetailDataAggOptions(field) { return field === 'amount' ? ['sum', 'avg', 'count', 'distinct'] : ['count', 'distinct']; }
     function getDetailDataValueLabel(v) { return `${DETAIL_DATA_AGG_LABELS[v.agg] || v.agg} : ${detailDataFieldLabel(v.field)}`; }
@@ -429,10 +435,14 @@
     // hidden: 이 패널에서 아예 내보내지 않을 필드. 일반 피벗은 매출기준(revenueBasis)을 감춘다 —
     // 상단 필터바의 취급고/회계 토글이 이미 그 축을 정하고 있어서, 축에 놓아 봐야
     // 취급고에서는 '실적' 한 줄만 나오고 회계에서는 두 줄이 나오는 게 전부다.
-    // allowed: 이 패널이 받아들이는 필드 화이트리스트(목표 피벗). null이면 제한 없음.
-    function renderDetailDataFieldListHtml(cfg, hidden, allowed) {
+    // list: 이 패널이 내보낼 필드 키 배열(화이트리스트가 있는 뷰 — 목표·대행사비교·업프론트).
+    //       주어진 순서 그대로 나온다. null이면 공용 목록 전체에서 hidden만 뺀다.
+    function renderDetailDataFieldListHtml(cfg, hidden, list) {
       const placed = getDetailDataPlacedFields(cfg);
-      return DETAIL_DATA_FIELDS.filter(f => !(hidden && hidden.has(f.key)) && !(allowed && !allowed.has(f.key))).map(f => {
+      const allowed = !!list;
+      const fields = list ? list.map(k => ({ key: k, label: detailDataFieldLabel(k) }))
+                          : DETAIL_DATA_FIELDS.filter(f => !(hidden && hidden.has(f.key)));
+      return fields.map(f => {
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
         // 화이트리스트가 있는 패널(목표 피벗)에는 필터 well 자체가 없으므로 이 안내를 붙이지 않는다 —
         // 게다가 그 표는 좌측 상세필터를 반영하지 않아(달성률 왜곡 방지) 문구가 사실과 어긋난다.
@@ -534,7 +544,7 @@
       const rowEl = el(dom.rows);
       const valEl = el(dom.values);
       const placeholder = `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields, ctx && ctx.allowedFields);
+      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields, (ctx && ctx.fieldList) || null);
       // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 cfg.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
       if (filterBarEl) filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
       if (filterWellEl) filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', (cfg.filters || []).map(f => f.field)) || placeholder;

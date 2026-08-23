@@ -1042,8 +1042,13 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllAgencyCompNodes(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllAgencyCompNodes(false)">접기</button></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-sm" id="agencyCompPivotResetBtn" onclick="pvResetPivot('agencyCompPivot')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="agencyCompPivotBuilderBtn" onclick="pvToggleBuilder('agencyCompPivot')" title="행 위계를 바꿔 표를 다시 구성합니다 (열은 전년·전월·당월 고정)"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;">
+        <section class="dd-layout dd-layout-collapsed" id="agencyCompPivotLayout">
+          <div class="dd-main">
+            <div class="table-wrapper" style="max-height: 700px;">
           <table class="data-table pivot-tree-table" id="agencyCompPivotTable">
             <thead>
               <tr id="agencyCompPivotHeaderRow">
@@ -1060,6 +1065,19 @@
             <tbody id="agencyCompPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <!-- 열은 세 기간 비교로 고정이라 행 well 하나만 둔다. 연·월은 목록에 없다 —
+               세 기간이 서로 다른 연월에서 오므로 그것으로 행을 가르면 비교가 성립하지 않는다. -->
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="agencyCompDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells" style="grid-template-columns: minmax(0, 1fr);">
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="agencyCompDdWellRowsBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -1101,8 +1119,13 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllUpfrontNodes(true)">펼치기</button><button class="btn btn-sm" onclick="expandAllUpfrontNodes(false)">접기</button></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-sm" id="upfrontPivotResetBtn" onclick="pvResetPivot('upfrontPivot')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="upfrontPivotBuilderBtn" onclick="pvToggleBuilder('upfrontPivot')" title="행 위계를 바꿔 표를 다시 구성합니다 (열은 선택 연도의 월 고정)"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;">
+        <section class="dd-layout dd-layout-collapsed" id="upfrontPivotLayout">
+          <div class="dd-main">
+            <div class="table-wrapper" style="max-height: 700px;">
           <table class="data-table pivot-tree-table" id="upfrontPivotTable">
             <thead>
               <tr id="upfrontPivotHeaderRow">
@@ -1115,6 +1138,18 @@
             <tbody id="upfrontPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <!-- 연도 1개 선택이 전제이고 월이 이미 열 축이라 행 well 하나만 둔다. -->
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="upfrontDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells" style="grid-template-columns: minmax(0, 1fr);">
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="upfrontDdWellRowsBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 

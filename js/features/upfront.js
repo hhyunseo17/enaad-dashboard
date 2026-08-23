@@ -7,53 +7,68 @@
       const cy = selectedYears[0];
       const rows = filteredData.filter(r => r.isUpfront && r.year === cy);
       const months = [...new Set(rows.map(r => r.month))].sort((a,b) => a - b);
+      return { cy, months, rows };
+    }
 
-      const tree = {};
+    // 계약 참조를 노드에 모은다. 계약 식별 키는 계약기간(연-월)만 사용한다 — 같은 기간에 GROSS/NET 행이
+    // 별도로 존재해도 동일 계약이므로 금액 텍스트가 달라도 병합한다(data-loader.js의 contractMap과 같은
+    // 그룹핑 기준, 대원칙 6).
+    function upAddContract(node, r) {
+      if (!r.contractAmountText) return;
+      const periodKey = (r.contractStartYM ? r.contractStartYM.y + '-' + r.contractStartYM.m : '') + '~' + (r.contractEndYM ? r.contractEndYM.y + '-' + r.contractEndYM.m : '');
+      const baseText = r.contractAmountText.replace(' (NET)', '');
+      // (NET) 표기는 GROSS/NET 컬럼이 아니라 업프론트 비고란에 "net"이 명시된 경우에만 붙인다.
+      const remarkHasNet = /net/i.test(r.upfrontRemark || '');
+      const existing = node.contractByPeriod[periodKey];
+      if (!existing) {
+        node.contractByPeriod[periodKey] = { baseText: baseText, hasNet: remarkHasNet, start: r.contractStartDate, end: r.contractEndDate };
+      } else {
+        if (remarkHasNet) existing.hasNet = true;
+        if (r.contractStartDate && (!existing.start || r.contractStartDate < existing.start)) existing.start = r.contractStartDate;
+        if (r.contractEndDate && (!existing.end || r.contractEndDate > existing.end)) existing.end = r.contractEndDate;
+      }
+    }
+
+    // 행 축을 배열로 받는 트리. 노드마다 월별 금액·합계·계약 참조를 누적한다.
+    // **계약 병합 단위는 노드다.** 행 위계를 바꾸면 병합 단위도 바뀌므로 계약금액·시작일·종료일의
+    // 표시값이 정당하게 달라진다(오류가 아니다).
+    function upBuildTree(rows, rowFields) {
+      const makeNode = () => ({ months: {}, total: 0, contractByPeriod: {}, children: {} });
+      const root = makeNode();
       rows.forEach(r => {
-        const dept = r.dept; const adv = r.upfrontAdvertiser; const agy = r.agency;
-        if (!tree[dept]) tree[dept] = { months: {}, total: 0, advertisers: {} };
-        tree[dept].months[r.month] = (tree[dept].months[r.month] || 0) + r.amount;
-        tree[dept].total += r.amount;
-
-        const advKey = adv;
-        if (!tree[dept].advertisers[advKey]) tree[dept].advertisers[advKey] = { months: {}, total: 0, agencies: {}, contractByPeriod: {} };
-        const advNode = tree[dept].advertisers[advKey];
-        advNode.months[r.month] = (advNode.months[r.month] || 0) + r.amount;
-        advNode.total += r.amount;
-        if (r.contractAmountText) {
-          // 계약 식별 키는 계약기간(연-월)만 사용한다. 같은 기간에 GROSS/NET 행이 별도로 존재해도
-          // 동일 계약이므로 금액 텍스트가 달라도 병합 — data-loader.js의 contractMap과 동일한 그룹핑 기준(원칙 6).
-          const periodKey = (r.contractStartYM ? r.contractStartYM.y + '-' + r.contractStartYM.m : '') + '~' + (r.contractEndYM ? r.contractEndYM.y + '-' + r.contractEndYM.m : '');
-          const baseText = r.contractAmountText.replace(' (NET)', '');
-          // (NET) 표기는 GROSS/NET 컬럼이 아니라 업프론트 비고란에 "net"이 명시된 경우에만 붙인다.
-          const remarkHasNet = /net/i.test(r.upfrontRemark || '');
-          const existing = advNode.contractByPeriod[periodKey];
-          if (!existing) {
-            advNode.contractByPeriod[periodKey] = { baseText, hasNet: remarkHasNet, start: r.contractStartDate, end: r.contractEndDate };
-          } else {
-            if (remarkHasNet) existing.hasNet = true;
-            if (r.contractStartDate && (!existing.start || r.contractStartDate < existing.start)) existing.start = r.contractStartDate;
-            if (r.contractEndDate && (!existing.end || r.contractEndDate > existing.end)) existing.end = r.contractEndDate;
-          }
-        }
-
-        if (!advNode.agencies[agy]) advNode.agencies[agy] = { months: {}, total: 0 };
-        advNode.agencies[agy].months[r.month] = (advNode.agencies[agy].months[r.month] || 0) + r.amount;
-        advNode.agencies[agy].total += r.amount;
+        let n = root;
+        const touch = (node) => {
+          node.months[r.month] = (node.months[r.month] || 0) + r.amount;
+          node.total += r.amount;
+          upAddContract(node, r);
+        };
+        touch(n);
+        rowFields.forEach(f => {
+          const raw = r[f];
+          const v = (raw === undefined || raw === null || raw === '') ? '(미지정)' : String(raw);
+          if (!n.children[v]) n.children[v] = makeNode();
+          n = n.children[v]; touch(n);
+        });
       });
-
-      return { cy, months, tree };
+      return root;
     }
 
     function openUpfrontPivotView() { switchView('upfrontPivot'); }
-    function toggleUpfrontDeptNode(dept) { expandedUpfrontDepts[dept] = !expandedUpfrontDepts[dept]; renderUpfrontPivotTable(); }
-    function toggleUpfrontAdvertiserNode(dept, adv) { const key = dept + '||' + adv; expandedUpfrontAdvertisers[key] = !expandedUpfrontAdvertisers[key]; renderUpfrontPivotTable(); }
+    // 행 토글은 일반 피벗과 공용(togglePvRowNode)이다. 아래 둘은 예전 표기를 위한 래퍼.
+    function toggleUpfrontDeptNode(dept) { togglePvRowNode('upfrontPivot', dept); }
+    function toggleUpfrontAdvertiserNode(dept, adv) { togglePvRowNode('upfrontPivot', dept + '||' + adv); }
     function expandAllUpfrontNodes(state) {
       const data = computeUpfrontPivotData(); if (!data) return;
-      Object.keys(data.tree).forEach(dept => {
-        expandedUpfrontDepts[dept] = state;
-        Object.keys(data.tree[dept].advertisers).forEach(adv => { expandedUpfrontAdvertisers[dept + '||' + adv] = state; });
-      });
+      const map = PIVOT_PRESETS.upfrontPivot.expandedRows();
+      const rowFields = pvConfigFor('upfrontPivot').rows;
+      (function walk(node, path, depth) {
+        if (depth >= rowFields.length - 1) return; // 잎은 펼칠 것이 없다
+        Object.keys(node.children).forEach(k => {
+          const p = path.concat(k);
+          map[p.join('||')] = state;
+          walk(node.children[k], p, depth + 1);
+        });
+      })(upBuildTree(data.rows, rowFields), [], 0);
       renderUpfrontPivotTable();
     }
 
@@ -78,68 +93,117 @@
       return merged;
     }
 
+    // 깊이별 셀 색. 원본이 인라인으로 넣던 값 그대로다(mapPivotHtml의 치환 키라 표기를 바꾸지 말 것).
+    const UP_STYLES = [
+      { rowClass: 'row-channel', label: '', wrap: (s) => `<strong>${s}</strong>`,
+        num: 'text-align: right; font-weight: 400;', total: 'text-align: right; font-weight: 500; color: #60A5FA;' },
+      { rowClass: 'row-category', label: 'background: #151C2C; color: #CBD5E1;',
+        num: 'text-align: right;', total: 'text-align: right; font-weight: 400; color: #93C5FD;' },
+      { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
+        num: 'text-align: right;', total: 'text-align: right;' },
+      { rowClass: '', label: 'background:#0D1117; color:#64748B;', num: 'text-align: right;', total: 'text-align: right;' },
+      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:12px;', num: 'text-align: right;', total: 'text-align: right;' },
+    ];
+
+    function upOpenRowSortMenu(ev, depth) {
+      return pvOpenMetricRowSortMenu(ev, 'upfrontPivot', depth, [['total', '금액']], 'pvPickMetricRowSort');
+    }
+
+    // 한 노드의 계약 참조를 화면 문구로. 병합 단위가 노드이므로 어느 위계에 놓이느냐에 따라 달라진다.
+    function upContractCells(node) {
+      const raw = Object.values(node.contractByPeriod).map(c => ({ text: c.baseText + (c.hasNet ? ' (NET)' : ''), start: c.start, end: c.end }));
+      const contracts = mergeContractRefs(raw);
+      if (contracts.length === 0) return { text: '-', start: null, end: null };
+      return {
+        text: contracts.map(c => c.text).join(', '),
+        start: contracts.reduce((min, c) => (!min || (c.start && c.start < min)) ? c.start : min, null),
+        end: contracts.reduce((max, c) => (!max || (c.end && c.end > max)) ? c.end : max, null),
+      };
+    }
+
     function renderUpfrontPivotTable() {
       const data = computeUpfrontPivotData();
       const tbody = document.getElementById('upfrontPivotTableBody');
+      const cfg = pvConfigFor('upfrontPivot');
+      renderPvBuilderPanel('upfrontPivot');
+      const resetBtn = document.getElementById('upfrontPivotResetBtn');
+      if (resetBtn) resetBtn.style.display = pvIsConfigDefault('upfrontPivot') ? 'none' : '';
       if (!data) { document.getElementById('upfrontPivotHeaderRow').innerHTML = `<th style="text-align: left;">구분</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`; tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-secondary);">연도를 1개만 선택하면 표시됩니다.</td></tr>`; document.getElementById('upfrontPivotTotalAmount').innerText = `0 억원`; return; }
 
-      const { cy, months, tree } = data;
+      const { cy, months, rows } = data;
+      const rowFields = cfg.rows;
       document.getElementById('upfrontPivotTitle').innerText = `업프론트 실적 현황 (${cy}년)`;
 
-      let headerHtml = `<th style="text-align: left;">구분</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
+      // 계약금액·기간 열은 **업프론트광고주가 행 축에 있을 때만** 둔다. 계약은 그 광고주 단위로 맺어지므로,
+      // 축에서 빠지면 어느 줄에 붙여야 할지가 없어진다(부서 줄에 계약금액을 적으면 여러 계약이 뭉개진다).
+      const contractDepth = rowFields.indexOf('upfrontAdvertiser');
+      const contractCols = contractDepth >= 0;
+      let headerHtml = `<th style="text-align: left;" oncontextmenu="return upOpenRowSortMenu(event,0)" title="우클릭: 첫 단계 정렬">구분</th>`;
+      if (contractCols) headerHtml += `<th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
       months.forEach(m => { headerHtml += `<th style="text-align: right;">${m}월</th>`; });
       headerHtml += `<th style="text-align: right;">총합계</th>`;
       document.getElementById('upfrontPivotHeaderRow').innerHTML = mapPivotHtml(headerHtml);
 
       const fmtEok = (won) => { const v = won / 1e8; if (!v) return '-'; return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      const blanks = (bg) => contractCols ? `<td${bg}></td><td${bg}></td><td${bg}></td>` : '';
 
-      const depts = Object.keys(tree).sort(compareDeptOrder);
-      let grandTotal = 0; const grandMonthTotals = {}; months.forEach(m => { grandMonthTotals[m] = 0; });
+      if (rowFields.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${1 + (contractCols ? 3 : 0) + months.length + 1}" style="text-align:center; padding: 40px; color: var(--text-secondary);">행 영역에 필드를 놓으세요</td></tr>`;
+        document.getElementById('upfrontPivotTotalAmount').innerText = `0 억원`;
+        return;
+      }
 
-      let html = '';
-      depts.forEach(dept => {
-        const dNode = tree[dept]; const isDeptExpanded = !!expandedUpfrontDepts[dept];
-        grandTotal += dNode.total; months.forEach(m => { grandMonthTotals[m] += (dNode.months[m] || 0); });
+      const root = upBuildTree(rows, rowFields);
+      const expandedRows = PIVOT_PRESETS.upfrontPivot.expandedRows();
+      const out = [];
 
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleUpfrontDeptNode('${dept.replace(/'/g,"\\'")}')">${isDeptExpanded ? '-' : '+'}</span>${dept}</strong></td><td></td><td></td><td></td>`;
-        months.forEach(m => { html += `<td style="text-align: right; font-weight: 400;">${fmtEok(dNode.months[m] || 0)}</td>`; });
-        html += `<td style="text-align: right; font-weight: 500; color: #60A5FA;">${fmtEok(dNode.total)}</td></tr>`;
+      const monthCells = (node, style) => months.map(m => `<td style="${style}">${fmtEok(node.months[m] || 0)}</td>`).join('');
 
-        if (isDeptExpanded) {
-          const advertisers = Object.keys(dNode.advertisers).sort((a,b) => dNode.advertisers[b].total - dNode.advertisers[a].total);
-          advertisers.forEach(adv => {
-            const aNode = dNode.advertisers[adv]; const advKey = dept + '||' + adv; const isAdvExpanded = !!expandedUpfrontAdvertisers[advKey];
-            const contractRaw = Object.values(aNode.contractByPeriod).map(c => ({ text: c.baseText + (c.hasNet ? ' (NET)' : ''), start: c.start, end: c.end }));
-            const contracts = mergeContractRefs(contractRaw);
-            const contractText = contracts.length > 0 ? contracts.map(c => c.text).join(', ') : '-';
-            const startD = contracts.length > 0 ? contracts.reduce((min,c) => (!min || (c.start && c.start < min)) ? c.start : min, null) : null;
-            const endD = contracts.length > 0 ? contracts.reduce((max,c) => (!max || (c.end && c.end > max)) ? c.end : max, null) : null;
+      (function renderLevel(node, depth, ancestorPath) {
+        const hasMore = depth + 1 < rowFields.length;
+        const field = rowFields[depth];
+        const sorter = pvMetricRowSorter(field, cfg, (n) => n.total, (a, b, na, nb) => nb.total - na.total);
+        const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        keys.forEach(k => {
+          const child = node.children[k];
+          const path = ancestorPath.concat(k);
+          const pathKey = path.join('||');
+          const isExpanded = !!expandedRows[pathKey];
+          const st = UP_STYLES[Math.min(depth, UP_STYLES.length - 1)];
+          const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('upfrontPivot','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
+          const inner = toggle + pvFormatFieldValue(field, k);
+          const label = st.wrap ? st.wrap(inner) : inner;
+          const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
+          const menu = ` oncontextmenu="return upOpenRowSortMenu(event,${depth})"`;
+          let cells = '';
+          if (contractCols) {
+            if (depth === contractDepth) {
+              const c = upContractCells(child);
+              cells = `<td style="color: #93C5FD;">${c.text}</td><td style="text-align: center;">${fmtDateShort(c.start)}</td><td style="text-align: center;">${fmtDateShort(c.end)}</td>`;
+            } else cells = blanks('');
+          }
+          out.push(`<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}"${menu} style="${st.label}">${label}</td>${cells}`
+            + `${monthCells(child, st.num)}<td style="${st.total}">${fmtEok(child.total)}</td></tr>`);
 
-            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;"><span class="toggle-icon" onclick="toggleUpfrontAdvertiserNode('${dept.replace(/'/g,"\\'")}', '${adv.replace(/'/g,"\\'")}')">${isAdvExpanded ? '-' : '+'}</span>${adv}</td><td style="color: #93C5FD;">${contractText}</td><td style="text-align: center;">${fmtDateShort(startD)}</td><td style="text-align: center;">${fmtDateShort(endD)}</td>`;
-            months.forEach(m => { html += `<td style="text-align: right;">${fmtEok(aNode.months[m] || 0)}</td>`; });
-            html += `<td style="text-align: right; font-weight: 400; color: #93C5FD;">${fmtEok(aNode.total)}</td></tr>`;
-
-            if (isAdvExpanded) {
-              const agencies = Object.keys(aNode.agencies).sort((a,b) => aNode.agencies[b].total - aNode.agencies[a].total);
-              agencies.forEach(agy => {
-                const gNode = aNode.agencies[agy];
-                html += `<tr class="row-subcategory"><td class="indent-step-3" style="background: #11151F; color: #94A3B8;">${agy}</td><td></td><td></td><td></td>`;
-                months.forEach(m => { html += `<td style="text-align: right;">${fmtEok(gNode.months[m] || 0)}</td>`; });
-                html += `<td style="text-align: right;">${fmtEok(gNode.total)}</td></tr>`;
-              });
+          if (hasMore && isExpanded) {
+            renderLevel(child, depth + 1, path);
+            // 첫 단계를 펼치면 그 아래가 길어져 무엇의 하위였는지 놓치기 쉬워서, 끝에 그 단계 합을 한 번 더 적는다.
+            if (depth === 0) {
+              out.push(`<tr class="row-category" style="border-top: 1px solid var(--border-default);"><td class="indent-step-1" style="font-weight: 700; background: #1E293B;">${pvFormatFieldValue(field, k)} 요약</td>`
+                + blanks(' style="background: #1E293B;"')
+                + months.map(m => `<td style="text-align: right; font-weight: 500; background: #1E293B;">${fmtEok(child.months[m] || 0)}</td>`).join('')
+                + `<td style="text-align: right; font-weight: 500; background: #1E293B; color: #93C5FD;">${fmtEok(child.total)}</td></tr>`);
             }
-          });
-          html += `<tr class="row-category" style="border-top: 1px solid var(--border-default);"><td class="indent-step-1" style="font-weight: 700; background: #1E293B;">${dept} 요약</td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td><td style="background: #1E293B;"></td>`;
-          months.forEach(m => { html += `<td style="text-align: right; font-weight: 500; background: #1E293B;">${fmtEok(dNode.months[m] || 0)}</td>`; });
-          html += `<td style="text-align: right; font-weight: 500; background: #1E293B; color: #93C5FD;">${fmtEok(dNode.total)}</td></tr>`;
-        }
-      });
+          }
+        });
+      })(root, 0, []);
 
-      document.getElementById('upfrontPivotTotalAmount').innerText = `${(grandTotal / 1e8).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 억원`;
+      document.getElementById('upfrontPivotTotalAmount').innerText = `${(root.total / 1e8).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 억원`;
 
-      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td><td></td><td></td><td></td>`;
-      months.forEach(m => { html += `<td style="text-align: right;">${fmtEok(grandMonthTotals[m])}</td>`; });
-      html += `<td style="text-align: right;">${fmtEok(grandTotal)}</td></tr>`;
+      let html = out.join('');
+      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>${blanks('')}`;
+      months.forEach(m => { html += `<td style="text-align: right;">${fmtEok(root.months[m] || 0)}</td>`; });
+      html += `<td style="text-align: right;">${fmtEok(root.total)}</td></tr>`;
 
       tbody.innerHTML = mapPivotHtml(html);
     }

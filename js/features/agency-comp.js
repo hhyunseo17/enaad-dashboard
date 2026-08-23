@@ -85,12 +85,22 @@
       switchView('agencyCompPivot');
     }
 
-    function toggleCompAgencyGroupNode(grp) { expandedCompAgencyGroups[grp] = !expandedCompAgencyGroups[grp]; renderAgencyCompPivotTable(); }
-    function toggleCompAgencyNode(grp, agy) { const key = grp + '||' + agy; expandedCompAgencies[key] = !expandedCompAgencies[key]; renderAgencyCompPivotTable(); }
+    // 행 토글은 일반 피벗과 공용(togglePvRowNode)이다. 이 두 이름은 예전 표기가 남아 있을 경우를 위한 래퍼.
+    function toggleCompAgencyGroupNode(grp) { togglePvRowNode('agencyCompPivot', grp); }
+    function toggleCompAgencyNode(grp, agy) { togglePvRowNode('agencyCompPivot', grp + '||' + agy); }
     function expandAllAgencyCompNodes(state) {
       const compData = computeAgencyCompData(); if (!compData) return;
-      const allRows = [...compData.currRows, ...compData.prevMonthRows, ...compData.prevYearRows];
-      allRows.forEach(r => { const g = r.agencyGroup || '(미지정)'; const a = r.agency || '(미지정)'; expandedCompAgencyGroups[g] = state; expandedCompAgencies[g + '||' + a] = state; });
+      // 행 축이 바뀌면 펼칠 경로도 달라지므로 트리를 실제로 만들어 그 경로를 쓴다.
+      const map = PIVOT_PRESETS.agencyCompPivot.expandedRows();
+      const rowFields = pvConfigFor('agencyCompPivot').rows;
+      (function walk(node, path, depth) {
+        if (depth >= rowFields.length - 1) return; // 잎은 펼칠 것이 없다
+        Object.keys(node.children).forEach(k => {
+          const p = path.concat(k);
+          map[p.join('||')] = state;
+          walk(node.children[k], p, depth + 1);
+        });
+      })(acBuildTree(compData, rowFields), [], 0);
       renderAgencyCompPivotTable();
     }
 
@@ -104,15 +114,57 @@
       return { rateText: `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`, diffText: diffStr, color: rate >= 0 ? '#4ADE80' : RC('negative') };
     }
 
+    // 행 축을 배열로 받는 트리. 노드마다 세 기간(전년동월 py / 전월 pm / 당월 cy)을 함께 누적한다.
+    // 세 기간이 **한 노드에서 만나는 것**이 이 표의 전부이므로, 연·월은 축이 될 수 없다(빌더에서도 막았다).
+    function acBuildTree(compData, rowFields) {
+      const makeNode = () => ({ py: 0, pm: 0, cy: 0, children: {} });
+      const root = makeNode();
+      const add = (rows, key) => rows.forEach(r => {
+        let n = root; n[key] += r.amount;
+        rowFields.forEach(f => {
+          const raw = r[f];
+          const v = (raw === undefined || raw === null || raw === '') ? '(미지정)' : String(raw);
+          if (!n.children[v]) n.children[v] = makeNode();
+          n = n.children[v]; n[key] += r.amount;
+        });
+      });
+      add(compData.prevYearRows, 'py'); add(compData.prevMonthRows, 'pm'); add(compData.currRows, 'cy');
+      return root;
+    }
+
+    // 깊이별 셀 색. 원본 렌더러가 인라인으로 넣던 값을 그대로 옮겼다 — mapPivotHtml()의 치환 키이므로
+    // **문자열 표기를 바꾸지 말 것**. 4단계 아래는 담당자별 피벗과 같은 램프를 이어 붙였다.
+    const AC_STYLES = [
+      { rowClass: 'row-channel', label: '', wrap: (s) => `<strong>${s}</strong>`,
+        num: 'text-align: right; font-weight: 400;', cur: 'text-align: right; font-weight: 500; color: #60A5FA;', w: 'font-weight: 400; ' },
+      { rowClass: 'row-category', label: 'background: #151C2C; color: #CBD5E1;',
+        num: 'text-align: right;', cur: 'text-align: right; color: #93C5FD;', w: '' },
+      { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
+        num: 'text-align: right;', cur: 'text-align: right;', w: '' },
+      { rowClass: '', label: 'background:#0D1117; color:#64748B;',
+        num: 'text-align: right;', cur: 'text-align: right;', w: '' },
+      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:12px;',
+        num: 'text-align: right;', cur: 'text-align: right;', w: '' },
+    ];
+
+    const AC_SORT_METRICS = [['cy', '당월'], ['py', '전년'], ['pm', '전월']];
+    function acOpenRowSortMenu(ev, depth) {
+      return pvOpenMetricRowSortMenu(ev, 'agencyCompPivot', depth, AC_SORT_METRICS, 'pvPickMetricRowSort');
+    }
+
     function renderAgencyCompPivotTable() {
       const compData = computeAgencyCompData();
       const tbody = document.getElementById('agencyCompPivotTableBody');
+      const cfg = pvConfigFor('agencyCompPivot');
+      renderPvBuilderPanel('agencyCompPivot');
+      const resetBtn = document.getElementById('agencyCompPivotResetBtn');
+      if (resetBtn) resetBtn.style.display = pvIsConfigDefault('agencyCompPivot') ? 'none' : '';
       if (!compData) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-secondary);">연도와 월을 각각 1개씩 선택하면 표시됩니다.</td></tr>`; document.getElementById('agencyCompPivotTotalAmount').innerText = `0 백만`; return; }
 
-      const { cy, cm, pmY, pmM, py, currRows, prevMonthRows, prevYearRows } = compData;
+      const { cy, cm, pmY, pmM, py } = compData;
       document.getElementById('agencyCompPivotTitle').innerText = `주요 대행사 전년·전월 비교 상세 (전년 ${py}.${cm} / 전월 ${pmY}.${pmM} / 당월 ${cy}.${cm})`;
       document.getElementById('agencyCompPivotHeaderRow').innerHTML = `
-        <th style="text-align: left;">구분</th>
+        <th style="text-align: left;" oncontextmenu="return acOpenRowSortMenu(event,0)" title="우클릭: 첫 단계 정렬">구분</th>
         <th style="text-align: right;">전년(${py}.${cm}) 금액</th>
         <th style="text-align: right;">전월(${pmY}.${pmM}) 금액</th>
         <th style="text-align: right;">당월(${cy}.${cm}) 금액</th>
@@ -121,55 +173,51 @@
         <th style="text-align: right;">전월비(%)</th>
         <th style="text-align: right;">전월비(금액)</th>`;
 
-      // 트리 구축: 그룹 -> 대행사 -> 광고주, 각 py/pm/cy 금액 누적
-      const tree = {};
-      function addRows(rows, key) {
-        rows.forEach(r => {
-          const g = r.agencyGroup || '(미지정)'; const a = r.agency || '(미지정)'; const adv = r.advertiser || '(미지정)';
-          if (!tree[g]) tree[g] = { py: 0, pm: 0, cy: 0, agencies: {} };
-          tree[g][key] += r.amount;
-          if (!tree[g].agencies[a]) tree[g].agencies[a] = { py: 0, pm: 0, cy: 0, advertisers: {} };
-          tree[g].agencies[a][key] += r.amount;
-          if (!tree[g].agencies[a].advertisers[adv]) tree[g].agencies[a].advertisers[adv] = { py: 0, pm: 0, cy: 0 };
-          tree[g].agencies[a].advertisers[adv][key] += r.amount;
-        });
+      const rowFields = cfg.rows;
+      if (rowFields.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-secondary);">행 영역에 필드를 놓으세요</td></tr>`;
+        document.getElementById('agencyCompPivotTotalAmount').innerText = `0 백만`;
+        return;
       }
-      addRows(prevYearRows, 'py'); addRows(prevMonthRows, 'pm'); addRows(currRows, 'cy');
+      const root = acBuildTree(compData, rowFields);
 
       const fmtM = (won) => { const m = Math.round(won / 1e6); if (!m) return '-'; return m.toLocaleString(); };
-      const grandTotalCy = Object.values(tree).reduce((s, g) => s + g.cy, 0);
-      document.getElementById('agencyCompPivotTotalAmount').innerText = `${Math.round(grandTotalCy / 1e6).toLocaleString()} 백만`;
+      document.getElementById('agencyCompPivotTotalAmount').innerText = `${Math.round(root.cy / 1e6).toLocaleString()} 백만`;
 
-      const groups = Object.keys(tree).sort((a,b) => tree[b].cy - tree[a].cy);
-      let html = '';
-      groups.forEach(grp => {
-        const gData = tree[grp]; const isGrpExpanded = !!expandedCompAgencyGroups[grp];
-        const gYoY = fmtAgencyCompRatio(gData.py, gData.cy); const gMoM = fmtAgencyCompRatio(gData.pm, gData.cy);
-        html += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleCompAgencyGroupNode('${grp.replace(/'/g,"\\'")}')">${isGrpExpanded ? '-' : '+'}</span>${grp}</strong></td><td style="text-align: right; font-weight: 400;">${fmtM(gData.py)}</td><td style="text-align: right; font-weight: 400;">${fmtM(gData.pm)}</td><td style="text-align: right; font-weight: 500; color: #60A5FA;">${fmtM(gData.cy)}</td><td style="text-align: right; font-weight: 400; color: ${gYoY.color};">${gYoY.rateText}</td><td style="text-align: right; font-weight: 400; color: ${gYoY.color};">${gYoY.diffText}</td><td style="text-align: right; font-weight: 400; color: ${gMoM.color};">${gMoM.rateText}</td><td style="text-align: right; font-weight: 400; color: ${gMoM.color};">${gMoM.diffText}</td></tr>`;
+      // 한 행의 값 칸 일곱 개(전년·전월·당월 금액 + 전년비 %·금액 + 전월비 %·금액).
+      const cellsHtml = (n, st) => {
+        const yoy = fmtAgencyCompRatio(n.py, n.cy); const mom = fmtAgencyCompRatio(n.pm, n.cy);
+        return `<td style="${st.num}">${fmtM(n.py)}</td><td style="${st.num}">${fmtM(n.pm)}</td><td style="${st.cur}">${fmtM(n.cy)}</td>`
+          + `<td style="text-align: right; ${st.w}color: ${yoy.color};">${yoy.rateText}</td><td style="text-align: right; ${st.w}color: ${yoy.color};">${yoy.diffText}</td>`
+          + `<td style="text-align: right; ${st.w}color: ${mom.color};">${mom.rateText}</td><td style="text-align: right; ${st.w}color: ${mom.color};">${mom.diffText}</td>`;
+      };
 
-        if (isGrpExpanded) {
-          const agencies = Object.keys(gData.agencies).sort((a,b) => gData.agencies[b].cy - gData.agencies[a].cy);
-          agencies.forEach(agy => {
-            const aData = gData.agencies[agy]; const agyKey = grp + '||' + agy; const isAgyExpanded = !!expandedCompAgencies[agyKey];
-            const aYoY = fmtAgencyCompRatio(aData.py, aData.cy); const aMoM = fmtAgencyCompRatio(aData.pm, aData.cy);
-            html += `<tr class="row-category"><td class="indent-step-2" style="background: #151C2C; color: #CBD5E1;"><span class="toggle-icon" onclick="toggleCompAgencyNode('${grp.replace(/'/g,"\\'")}', '${agy.replace(/'/g,"\\'")}')">${isAgyExpanded ? '-' : '+'}</span>${agy}</td><td style="text-align: right;">${fmtM(aData.py)}</td><td style="text-align: right;">${fmtM(aData.pm)}</td><td style="text-align: right; color: #93C5FD;">${fmtM(aData.cy)}</td><td style="text-align: right; color: ${aYoY.color};">${aYoY.rateText}</td><td style="text-align: right; color: ${aYoY.color};">${aYoY.diffText}</td><td style="text-align: right; color: ${aMoM.color};">${aMoM.rateText}</td><td style="text-align: right; color: ${aMoM.color};">${aMoM.diffText}</td></tr>`;
+      const expandedRows = PIVOT_PRESETS.agencyCompPivot.expandedRows();
+      const out = [];
+      (function renderLevel(node, depth, ancestorPath) {
+        const hasMore = depth + 1 < rowFields.length;
+        const field = rowFields[depth];
+        const sorter = pvMetricRowSorter(field, cfg, (n, by) => n[by] || 0, (a, b, na, nb) => nb.cy - na.cy);
+        const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        keys.forEach(k => {
+          const child = node.children[k];
+          const path = ancestorPath.concat(k);
+          const pathKey = path.join('||');
+          const isExpanded = !!expandedRows[pathKey];
+          const st = AC_STYLES[Math.min(depth, AC_STYLES.length - 1)];
+          const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('agencyCompPivot','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
+          const inner = toggle + pvFormatFieldValue(field, k);
+          const label = st.wrap ? st.wrap(inner) : inner;
+          const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
+          const menu = ` oncontextmenu="return acOpenRowSortMenu(event,${depth})"`;
+          out.push(`<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}"${menu} style="${st.label}">${label}</td>${cellsHtml(child, st)}</tr>`);
+          if (hasMore && isExpanded) renderLevel(child, depth + 1, path);
+        });
+      })(root, 0, []);
 
-            if (isAgyExpanded) {
-              const advertisers = Object.keys(aData.advertisers).sort((a,b) => aData.advertisers[b].cy - aData.advertisers[a].cy);
-              advertisers.forEach(adv => {
-                const advData = aData.advertisers[adv];
-                const advYoY = fmtAgencyCompRatio(advData.py, advData.cy); const advMoM = fmtAgencyCompRatio(advData.pm, advData.cy);
-                html += `<tr class="row-subcategory"><td class="indent-step-3" style="background: #11151F; color: #94A3B8;">${adv}</td><td style="text-align: right;">${fmtM(advData.py)}</td><td style="text-align: right;">${fmtM(advData.pm)}</td><td style="text-align: right;">${fmtM(advData.cy)}</td><td style="text-align: right; color: ${advYoY.color};">${advYoY.rateText}</td><td style="text-align: right; color: ${advYoY.color};">${advYoY.diffText}</td><td style="text-align: right; color: ${advMoM.color};">${advMoM.rateText}</td><td style="text-align: right; color: ${advMoM.color};">${advMoM.diffText}</td></tr>`;
-              });
-            }
-          });
-        }
-      });
-
-      const totalPy = Object.values(tree).reduce((s, g) => s + g.py, 0);
-      const totalPm = Object.values(tree).reduce((s, g) => s + g.pm, 0);
-      const totYoY = fmtAgencyCompRatio(totalPy, grandTotalCy); const totMoM = fmtAgencyCompRatio(totalPm, grandTotalCy);
-      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td><td style="text-align: right;">${fmtM(totalPy)}</td><td style="text-align: right;">${fmtM(totalPm)}</td><td style="text-align: right;">${fmtM(grandTotalCy)}</td><td style="text-align: right;">${totYoY.rateText}</td><td style="text-align: right;">${totYoY.diffText}</td><td style="text-align: right;">${totMoM.rateText}</td><td style="text-align: right;">${totMoM.diffText}</td></tr>`;
+      const totYoY = fmtAgencyCompRatio(root.py, root.cy); const totMoM = fmtAgencyCompRatio(root.pm, root.cy);
+      let html = out.join('');
+      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td><td style="text-align: right;">${fmtM(root.py)}</td><td style="text-align: right;">${fmtM(root.pm)}</td><td style="text-align: right;">${fmtM(root.cy)}</td><td style="text-align: right;">${totYoY.rateText}</td><td style="text-align: right;">${totYoY.diffText}</td><td style="text-align: right;">${totMoM.rateText}</td><td style="text-align: right;">${totMoM.diffText}</td></tr>`;
       tbody.innerHTML = mapPivotHtml(html);
     }
 

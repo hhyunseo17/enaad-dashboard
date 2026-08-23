@@ -572,10 +572,53 @@
         layoutId: 'goalDeptPivotLayout', builderBtn: 'goalDeptPivotBuilderBtn',
         builderDom: { fieldList:'goalDeptDdFieldList', columns:'goalDeptDdWellColumnsBody', rows:'goalDeptDdWellRowsBody' },
       },
+
+      // --- 대행사비교 / 업프론트 ---------------------------------------------------
+      // 이 둘도 엔진이 그리지 않는다(열이 축이 아니라 고정 지표 열이다 — 전년/전월/당월 + 증감,
+      // 계약금액/기간 + 월별). 행 축만 바꿀 수 있으므로 빌더에는 행 well 하나만 둔다.
+      agencyCompPivot: {
+        custom: true,
+        rows: ['agencyGroup', 'agency', 'advertiser'],
+        columns: [], values: [],
+        expandedRows: () => pvSplitMap(expandedCompAgencyGroups, expandedCompAgencies),
+        expandedCols: () => ({}),
+        render: () => renderAgencyCompPivotTable(),
+        resetBtn: 'agencyCompPivotResetBtn',
+        layoutId: 'agencyCompPivotLayout', builderBtn: 'agencyCompPivotBuilderBtn',
+        builderDom: { fieldList:'agencyCompDdFieldList', rows:'agencyCompDdWellRowsBody' },
+      },
+
+      upfrontPivot: {
+        custom: true,
+        rows: ['dept', 'upfrontAdvertiser', 'agency'],
+        columns: [], values: [],
+        expandedRows: () => pvSplitMap(expandedUpfrontDepts, expandedUpfrontAdvertisers),
+        expandedCols: () => ({}),
+        render: () => renderUpfrontPivotTable(),
+        resetBtn: 'upfrontPivotResetBtn',
+        layoutId: 'upfrontPivotLayout', builderBtn: 'upfrontPivotBuilderBtn',
+        builderDom: { fieldList:'upfrontDdFieldList', rows:'upfrontDdWellRowsBody' },
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
-    const PV_GOAL_FIELDS = new Set(['year', 'month', 'dept', 'manager', 'categoryReclassified']);
+    const PV_GOAL_FIELDS = ['year', 'month', 'dept', 'manager', 'categoryReclassified'];
+
+    // 대행사비교는 **연·월을 축에 놓을 수 없다.** 세 기간(전년동월·전월·당월)이 서로 다른 연월의 행에서
+    // 오기 때문에, 연이나 월로 행을 가르면 같은 줄에서 만나야 할 세 값이 서로 다른 줄로 흩어진다.
+    const PV_AC_FIELDS = ['agencyGroup', 'agency', 'advertiser', 'dept', 'manager',
+      'categoryReclassified', 'subCategory', 'subCategory3', 'channel', 'industry', 'broadDigital', 'isUpfront'];
+
+    // 업프론트는 연 1개 선택이 전제이고 월이 이미 열 축이라 둘 다 뺀다.
+    // upfrontAdvertiser(업프론트광고주)는 이 표에만 쓰는 필드라 공용 필드 목록에는 없다.
+    const PV_UP_FIELDS = ['dept', 'upfrontAdvertiser', 'agency', 'agencyGroup', 'advertiser', 'manager',
+      'categoryReclassified', 'subCategory', 'channel', 'industry', 'broadDigital'];
+
+    // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
+    const PV_FIELD_WHITELIST = {
+      goalTrendPivot: PV_GOAL_FIELDS, goalDeptPivot: PV_GOAL_FIELDS,
+      agencyCompPivot: PV_AC_FIELDS, upfrontPivot: PV_UP_FIELDS,
+    };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
 
@@ -608,6 +651,56 @@
       return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
         items.map(([v, t]) => [t, v === cur, `pvPickRowSort('${viewKey}','${pvEsc(field)}','${v}')`]));
     }
+    // 한 행에 값이 여러 가지인 표(목표 = 목표·실적·달성률, 대행사비교 = 전년·전월·당월)의 행 정렬 메뉴.
+    // 저런 표에서는 "값 큰 순"이 무엇 기준인지 갈리므로 기준을 먼저 고르게 한다.
+    //   metrics  [[정렬키, 표시이름, 큰쪽 말, 작은쪽 말], ...] — 뒤 둘은 생략하면 '큰'/'작은'
+    //            (달성률은 "큰 순"보다 "높은 순"이 읽기 자연스럽다)
+    //   pickFn   고른 값을 적용할 전역 함수 이름(표마다 자기 렌더러를 불러야 해서 이름으로 받는다)
+    //   orderMap 그 필드에 고유 순서가 있는지 판단할 표(없으면 '기본 순서' 항목을 빼고 보여준다)
+    function pvOpenMetricRowSortMenu(ev, viewKey, depth, metrics, pickFn, orderMap) {
+      const cfg = pvConfigFor(viewKey);
+      const field = cfg.rows[depth];
+      if (!field) return true;
+      const cur = (cfg.sorts && cfg.sorts[field]) ? `${cfg.sorts[field].by}:${cfg.sorts[field].dir}` : '';
+      const isYm = (field === 'year' || field === 'month');
+      const items = [];
+      metrics.forEach(pair => {
+        items.push([`${pair[1]} ${pair[2] || '큰'} 순`, `${pair[0]}:desc`]);
+        items.push([`${pair[1]} ${pair[3] || '작은'} 순`, `${pair[0]}:asc`]);
+      });
+      items.push([isYm ? '오름차순' : '이름 오름차순', 'label:asc'], [isYm ? '내림차순' : '이름 내림차순', 'label:desc']);
+      if ((orderMap || PV_FIELD_ORDER_SORTER)[field]) items.push(['기본 순서', 'preset:asc'], ['기본 순서 역순', 'preset:desc']);
+      return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
+        items.map(it => [it[0], it[1] === cur, `${pickFn}('${viewKey}','${pvEsc(field)}','${it[1]}')`]));
+    }
+    // 위 메뉴에서 고른 값을 저장하고 그 표를 다시 그린다. 표마다 다른 것이 없어 하나로 쓴다.
+    function pvPickMetricRowSort(viewKey, field, val) {
+      pvCloseRowSortMenu();
+      const cfg = pvConfigFor(viewKey);
+      if (!cfg.sorts) cfg.sorts = {};
+      const p = val.split(':');
+      cfg.sorts[field] = { by: p[0], dir: p[1] };
+      cfg.colSort = null;
+      PIVOT_PRESETS[viewKey].render();
+    }
+    // 위 메뉴가 정한 정렬을 실제 비교자로 바꾼다. metricOf(노드, 기준키)는 표마다 다르므로 받는다.
+    function pvMetricRowSorter(field, cfg, metricOf, fallback, orderMap) {
+      const s = cfg && cfg.sorts && cfg.sorts[field];
+      const om = orderMap || PV_FIELD_ORDER_SORTER;
+      if (s) {
+        if (s.by === 'label') return (a, b) => pvCompareFieldValues(field, a, b, s.dir);
+        if (s.by === 'preset' && om[field]) {
+          const base = PV_ROW_SORTERS[om[field]];
+          return s.dir === 'desc' ? (a, b) => -base(a, b) : base;
+        }
+        const sign = s.dir === 'asc' ? 1 : -1;
+        return (a, b, na, nb) => sign * (metricOf(na, s.by) - metricOf(nb, s.by));
+      }
+      if (om[field]) return PV_ROW_SORTERS[om[field]];
+      if (PV_FIELD_SORT_ASC[field]) return (a, b) => pvCompareFieldValues(field, a, b, pvColumnDir(field, cfg));
+      return fallback;
+    }
+
     // 열 헤더 우클릭. 값이 있는 열이면 "그 열 기준 행 정렬"이 먼저고, 그 아래에 축 나열 순서를 둔다.
     // orderDepth < 0 이면 축이 없는 열(총합계)이라 값 정렬만 나온다.
     function pvOpenColMenu(ev, viewKey, orderDepth, pathKey, label) {
@@ -799,11 +892,13 @@
     function pvBuilderCtxFor(viewKey) {
       const p = PIVOT_PRESETS[viewKey];
       if (!p || !p.builderDom) return null;
+      // 화이트리스트가 있는 뷰(목표·대행사비교·업프론트)는 그 목록만 패널에 내보내고 드롭도 그것만 받는다.
+      // 나머지 여섯은 null — 공용 필드 목록 전부.
+      const list = PV_FIELD_WHITELIST[viewKey] || null;
       return {
         config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey,
         maxValues: 1, hiddenFields: PV_HIDDEN_FIELDS,
-        // 목표 피벗만 화이트리스트가 있다. 나머지는 null(=전 필드 허용).
-        allowedFields: p.goal ? PV_GOAL_FIELDS : null,
+        fieldList: list, allowedFields: list ? new Set(list) : null,
       };
     }
     function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
