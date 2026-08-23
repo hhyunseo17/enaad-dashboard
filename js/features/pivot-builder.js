@@ -728,6 +728,25 @@
       pvConfigFor(viewKey).colSort = { pathKey, dir };
       PIVOT_PRESETS[viewKey].render();
     }
+    // 열이 축이 아니라 **고정 지표**인 표(대행사비교 = 전년·전월·당월·증감, 업프론트 = 월별·총합계)의
+    // 헤더 우클릭. 축 순서라는 개념이 없으므로 "이 열 기준 행 정렬"만 고른다.
+    // 좌클릭은 일반 피벗과 같이 pvSortByColumn이 방향을 토글한다.
+    function pvOpenFixedColMenu(ev, viewKey, key, label) {
+      const cs = pvConfigFor(viewKey).colSort;
+      const on = (d) => !!(cs && cs.pathKey === key && cs.dir === d);
+      const items = [
+        ['내림차순', on('desc'), `pvSetColumnSort('${viewKey}','${pvEsc(key)}','desc')`],
+        ['오름차순', on('asc'), `pvSetColumnSort('${viewKey}','${pvEsc(key)}','asc')`],
+      ];
+      if (cs) items.push(['정렬 해제', false, `pvClearColumnSortFromMenu('${viewKey}')`]);
+      return pvShowMenu(ev, label, items);
+    }
+    function pvClearColumnSortFromMenu(viewKey) { pvCloseRowSortMenu(); pvClearColumnSort(viewKey); }
+    // 정렬이 걸린 열에 붙는 화살표.
+    function pvColSortMark(viewKey, key) {
+      const cs = pvConfigFor(viewKey).colSort;
+      return (cs && cs.pathKey === key) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    }
     function pvPickColOrder(viewKey, field, dir) {
       pvCloseRowSortMenu();
       const cfg = pvConfigFor(viewKey);

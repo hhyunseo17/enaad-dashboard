@@ -108,6 +108,8 @@
     function upOpenRowSortMenu(ev, depth) {
       return pvOpenMetricRowSortMenu(ev, 'upfrontPivot', depth, [['total', '금액']], 'pvPickMetricRowSort');
     }
+    // 열 헤더 기준 행 정렬용 값. 월 키는 HTML에서 문자열로 돌아오지만 months의 키도 문자열이라 그대로 닿는다.
+    function upColValue(n, key) { return key === PV_GRAND ? n.total : (n.months[key] || 0); }
 
     // 한 노드의 계약 참조를 화면 문구로. 병합 단위가 노드이므로 어느 위계에 놓이느냐에 따라 달라진다.
     function upContractCells(node) {
@@ -138,10 +140,14 @@
       // 축에서 빠지면 어느 줄에 붙여야 할지가 없어진다(부서 줄에 계약금액을 적으면 여러 계약이 뭉개진다).
       const contractDepth = rowFields.indexOf('upfrontAdvertiser');
       const contractCols = contractDepth >= 0;
-      let headerHtml = `<th style="text-align: left;" oncontextmenu="return upOpenRowSortMenu(event,0)" title="우클릭: 첫 단계 정렬">구분</th>`;
+      // 월 열과 총합계 열은 정렬 대상이다 — 좌클릭이 방향을 토글하고, 우클릭으로 오름/내림을 직접 고른다.
+      // 계약 세 열은 노드마다 병합된 텍스트·기간이라 정렬 대상으로 두지 않는다.
+      const upCs = cfg.colSort;
+      const sortTh = (key, label) => `<th style="text-align: right;" data-pvsort="1" onclick="pvSortByColumn('upfrontPivot','${key}')" oncontextmenu="return pvOpenFixedColMenu(event,'upfrontPivot','${key}','${label}')">${label}${pvColSortMark('upfrontPivot', key)}</th>`;
+      let headerHtml = `<th style="text-align: left;" data-pvsort="1" onclick="pvClearColumnSort('upfrontPivot')" oncontextmenu="return upOpenRowSortMenu(event,0)" title="클릭: 열 기준 정렬 해제 · 우클릭: 첫 단계 정렬">구분${upCs ? ' ↺' : ''}</th>`;
       if (contractCols) headerHtml += `<th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
-      months.forEach(m => { headerHtml += `<th style="text-align: right;">${m}월</th>`; });
-      headerHtml += `<th style="text-align: right;">총합계</th>`;
+      months.forEach(m => { headerHtml += sortTh(m, `${m}월`); });
+      headerHtml += sortTh(PV_GRAND, '총합계');
       document.getElementById('upfrontPivotHeaderRow').innerHTML = mapPivotHtml(headerHtml);
 
       const fmtEok = (won) => { const v = won / 1e8; if (!v) return '-'; return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
@@ -162,8 +168,16 @@
       (function renderLevel(node, depth, ancestorPath) {
         const hasMore = depth + 1 < rowFields.length;
         const field = rowFields[depth];
-        const sorter = pvMetricRowSorter(field, cfg, (n) => n.total, (a, b, na, nb) => nb.total - na.total);
-        const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        // 열 헤더에서 건 정렬은 모든 레벨에 같이 걸린다. 레벨마다 다르게 두려면 행 라벨 우클릭을 쓴다.
+        let keys;
+        if (cfg.colSort) {
+          const sign = cfg.colSort.dir === 'asc' ? 1 : -1;
+          keys = Object.keys(node.children).sort((a, b) =>
+            sign * (upColValue(node.children[a], cfg.colSort.pathKey) - upColValue(node.children[b], cfg.colSort.pathKey)));
+        } else {
+          const sorter = pvMetricRowSorter(field, cfg, (n) => n.total, (a, b, na, nb) => nb.total - na.total);
+          keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        }
         keys.forEach(k => {
           const child = node.children[k];
           const path = ancestorPath.concat(k);

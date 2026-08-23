@@ -152,6 +152,18 @@
       return pvOpenMetricRowSortMenu(ev, 'agencyCompPivot', depth, AC_SORT_METRICS, 'pvPickMetricRowSort');
     }
 
+    // 열 헤더 기준 행 정렬용 값. 증감률은 fmtAgencyCompRatio의 판정과 같은 순서로 늘어놓는다 —
+    // 신규(기준 0, 당월 있음)가 맨 위, 비교 자체가 안 되는 칸(둘 다 0)이 맨 아래.
+    const AC_RATE_NEW = 1e15, AC_RATE_NONE = -1e15;
+    function acColValue(n, key) {
+      if (key === 'py' || key === 'pm' || key === 'cy') return n[key];
+      if (key === 'yoyDiff') return n.cy - n.py;
+      if (key === 'momDiff') return n.cy - n.pm;
+      const base = key === 'yoyRate' ? n.py : n.pm;
+      if (base === 0) return n.cy === 0 ? AC_RATE_NONE : AC_RATE_NEW;
+      return (n.cy - base) / base;
+    }
+
     function renderAgencyCompPivotTable() {
       const compData = computeAgencyCompData();
       const tbody = document.getElementById('agencyCompPivotTableBody');
@@ -163,15 +175,15 @@
 
       const { cy, cm, pmY, pmM, py } = compData;
       document.getElementById('agencyCompPivotTitle').innerText = `주요 대행사 전년·전월 비교 상세 (전년 ${py}.${cm} / 전월 ${pmY}.${pmM} / 당월 ${cy}.${cm})`;
-      document.getElementById('agencyCompPivotHeaderRow').innerHTML = `
-        <th style="text-align: left;" oncontextmenu="return acOpenRowSortMenu(event,0)" title="우클릭: 첫 단계 정렬">구분</th>
-        <th style="text-align: right;">전년(${py}.${cm}) 금액</th>
-        <th style="text-align: right;">전월(${pmY}.${pmM}) 금액</th>
-        <th style="text-align: right;">당월(${cy}.${cm}) 금액</th>
-        <th style="text-align: right;">전년비(%)</th>
-        <th style="text-align: right;">전년비(금액)</th>
-        <th style="text-align: right;">전월비(%)</th>
-        <th style="text-align: right;">전월비(금액)</th>`;
+      // 일곱 값 열 전부가 정렬 대상이다 — 좌클릭이 방향을 토글하고, 우클릭으로 오름/내림을 직접 고른다.
+      const acCols = [
+        ['py', `전년(${py}.${cm}) 금액`], ['pm', `전월(${pmY}.${pmM}) 금액`], ['cy', `당월(${cy}.${cm}) 금액`],
+        ['yoyRate', '전년비(%)'], ['yoyDiff', '전년비(금액)'], ['momRate', '전월비(%)'], ['momDiff', '전월비(금액)'],
+      ];
+      const acCs = cfg.colSort;
+      document.getElementById('agencyCompPivotHeaderRow').innerHTML =
+        `<th style="text-align: left;" data-pvsort="1" onclick="pvClearColumnSort('agencyCompPivot')" oncontextmenu="return acOpenRowSortMenu(event,0)" title="클릭: 열 기준 정렬 해제 · 우클릭: 첫 단계 정렬">구분${acCs ? ' ↺' : ''}</th>`
+        + acCols.map(c => `<th style="text-align: right;" data-pvsort="1" onclick="pvSortByColumn('agencyCompPivot','${c[0]}')" oncontextmenu="return pvOpenFixedColMenu(event,'agencyCompPivot','${c[0]}','${c[1]}')">${c[1]}${pvColSortMark('agencyCompPivot', c[0])}</th>`).join('');
 
       const rowFields = cfg.rows;
       if (rowFields.length === 0) {
@@ -197,8 +209,17 @@
       (function renderLevel(node, depth, ancestorPath) {
         const hasMore = depth + 1 < rowFields.length;
         const field = rowFields[depth];
-        const sorter = pvMetricRowSorter(field, cfg, (n, by) => n[by] || 0, (a, b, na, nb) => nb.cy - na.cy);
-        const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        // 열 헤더에서 건 정렬은 **모든 레벨에 같이** 걸린다(헤더는 하나인데 행 계층은 여럿이라 나눌 수가 없다).
+        // 레벨마다 다르게 두고 싶으면 행 라벨 우클릭(필드별 설정)을 쓴다.
+        let keys;
+        if (cfg.colSort) {
+          const sign = cfg.colSort.dir === 'asc' ? 1 : -1;
+          keys = Object.keys(node.children).sort((a, b) =>
+            sign * (acColValue(node.children[a], cfg.colSort.pathKey) - acColValue(node.children[b], cfg.colSort.pathKey)));
+        } else {
+          const sorter = pvMetricRowSorter(field, cfg, (n, by) => n[by] || 0, (a, b, na, nb) => nb.cy - na.cy);
+          keys = Object.keys(node.children).sort((a, b) => sorter(a, b, node.children[a], node.children[b]));
+        }
         keys.forEach(k => {
           const child = node.children[k];
           const path = ancestorPath.concat(k);
