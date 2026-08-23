@@ -52,6 +52,7 @@
       labelDesc: (a, b) => String(b).localeCompare(String(a), 'ko'),
       deptOrder: (a, b) => compareDeptOrder(a, b),                 // shared-helpers.js
       categoryOrder: (a, b) => pvOrderListCompare(categoryOrderList, a, b), // state.js
+      channelOrder: (a, b) => pvOrderListCompare(PV_CHANNEL_ORDER, a, b),
     };
     // 고정 순서 목록 기준 비교 — 목록에 있는 것이 먼저, 둘 다 없으면 이름순.
     function pvOrderListCompare(list, a, b) {
@@ -203,6 +204,7 @@
     // 깊이별 헤더 행. 자기 깊이에서 끝나는 열(소계 등)은 남은 헤더 행을 rowspan으로 덮는다.
     function pvRenderColumnHeaderRows(visibleColumns, colFields, opt) {
       const L = colFields.length;
+      const H = opt.header;
       const rows = [];
       for (let depth = 0; depth < L; depth++) {
         const cells = [];
@@ -211,13 +213,13 @@
           const col = visibleColumns[i];
           if (col.path.length <= depth) { i++; continue; } // 앞 깊이에서 rowspan으로 이미 덮인 열
           if (col.path.length - 1 === depth) {
-            const rowspan = L - depth;
+            const span = L - depth > 1 ? ` rowspan="${L - depth}"` : '';
             if (col.isSubtotal) {
               const label = `${pvFormatFieldValue(col.groupField, col.groupValue)} 요약`;
-              cells.push(`<th class="pv-th-summary" rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${label}</th>`);
+              cells.push(`<th${span}${H.subtotal}>${label}</th>`);
             } else {
               const label = pvFormatFieldValue(colFields[depth], col.path[col.path.length - 1]);
-              cells.push(`<th rowspan="${rowspan}" style="text-align:center; vertical-align:middle;">${label}</th>`);
+              cells.push(`<th${span}${H.leaf}>${label}</th>`);
             }
             i++;
           } else {
@@ -233,7 +235,7 @@
               const expanded = opt.columnDefaultExpanded ? (opt.expandedCols[key] !== false) : !!opt.expandedCols[key];
               toggle = `<span class="year-toggle-btn" onclick="togglePvColNode('${opt.presetKey}','${pvEsc(value)}')">${expanded ? '-' : '+'}</span> `;
             }
-            cells.push(`<th colspan="${span}" style="text-align:center;">${toggle}${label}</th>`);
+            cells.push(`<th colspan="${span}"${H.group}>${toggle}${label}</th>`);
             i = j;
           }
         }
@@ -271,6 +273,71 @@
     const PV_SUBTOTAL_STYLE_TREE = 'text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);';
     const PV_TOTAL_STYLE_TREE = 'text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);';
 
+    // 채널/광고주/대행사 계열 — 위 셋과 달리 소계·총합계 칸 색이 **깊이마다 다르고**, 1단계 라벨에는
+    // 인라인 배경이 없다(<strong>만 두른다). 별개 계열이므로 통일하려 들지 말 것.
+    const PV_STYLE_CHANNEL = [
+      { rowClass: 'row-channel', label: '',
+        labelWrap: (s) => `<strong>${s}</strong>`,
+        month: 'text-align: right; font-weight: 400;',
+        subtotal: 'text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;',
+        total: 'text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;' },
+      { rowClass: 'row-category', label: 'background: #151C2C; color: #CBD5E1;',
+        // inline-flex 래퍼는 토글이 있을 때만 감싼다 — 광고주별 피벗의 2단계는 잎이라 래퍼가 없다.
+        labelWrap: (s, hasToggle) => hasToggle ? `<span style="display:inline-flex; align-items:center;">${s}</span>` : s,
+        month: 'text-align: right; font-weight: 500;',
+        subtotal: 'text-align: right; font-weight: 600; background: #172033;',
+        total: 'text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;' },
+      { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
+        month: 'text-align: right; font-weight: 400;',
+        subtotal: 'text-align: right; font-weight: 500; background: #141824;',
+        total: 'text-align: right; font-weight: 600; background: #1A2234; color: #93C5FD;' },
+    ];
+
+    // 헤더 <th>에 붙일 속성 문자열. `!important`가 붙은 hex도 mapPivotHtml의 치환 키다.
+    const PV_HEADER_TREE = {
+      label: ' style="text-align:left; vertical-align:middle;"',
+      group: '', leaf: '',
+      subtotal: ' class="pv-th-summary"',
+      total: ' class="pv-th-total" style="z-index:35;"',
+    };
+    const PV_HEADER_CHANNEL = {
+      label: ' style="text-align: left; vertical-align: middle;"',
+      group: ' style="text-align: center;"',
+      leaf: ' style="text-align: center;"',
+      subtotal: ' style="text-align: center; background: #1E3A8A !important; color: #93C5FD !important;"',
+      total: ' style="text-align: center; background: #1E40AF !important; color: #FFFFFF !important; font-weight: 500; vertical-align: middle; z-index: 35;"',
+    };
+
+    // 총합계 행의 칸 속성.
+    const PV_GRAND_TREE = {
+      month: ' style="text-align:right; font-weight: 500;"',
+      subtotal: ' class="pv-num-sum"',
+      total: ' class="pv-num-total"',
+    };
+    const PV_GRAND_CHANNEL = {
+      month: ' style="text-align: right; font-weight: 500; color: #FFFFFF;"',
+      subtotal: ' style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E3A8A;"',
+      total: ' style="text-align: right; font-weight: 500; color: #FFFFFF; background: #1D4ED8;"',
+    };
+
+    // 채널 표시 순서 — 매출순이 아니라 편성 순서(원본 renderChannelPivotTable의 targetOrder).
+    const PV_CHANNEL_ORDER = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
+
+    // 접힘 상태를 두 객체에 나눠 담는 피벗(채널·대행사)을 위한 어댑터.
+    // 1단계는 앞 객체, `||`가 들어간 하위 경로는 뒤 객체로 보낸다 — 엔진은 맵 하나만 알면 되고,
+    // 기존 toggleChannelNode/toggleAgencyNode 등이 쓰던 전역도 그대로 살아 있어 스위치를 껐다 켜도 이어진다.
+    function pvSplitMap(topMap, deepMap) {
+      const pick = (k) => (typeof k === 'string' && k.includes('||')) ? deepMap : topMap;
+      return new Proxy({}, {
+        get: (_, k) => pick(k)[k],
+        set: (_, k, v) => { pick(k)[k] = v; return true; },
+        has: (_, k) => k in pick(k),
+        deleteProperty: (_, k) => { delete pick(k)[k]; return true; },
+        ownKeys: () => [...Object.keys(topMap), ...Object.keys(deepMap)],
+        getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+      });
+    }
+
     const PIVOT_PRESETS = {
       category: {
         rows: ['categoryReclassified', 'subCategory', 'subCategory3'],
@@ -285,6 +352,8 @@
         depthStyles: PV_STYLE_TREE,
         subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
         totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
         // 접힘 상태는 **기존 전역 객체를 그대로 쓴다.** 키 형식도 같아서(`l1`, `l1||l2`)
         // USE_PIVOT_ENGINE을 껐다 켜도 펼쳐둔 상태가 유지된다.
         //
@@ -310,6 +379,8 @@
         depthStyles: PV_STYLE_TREE,
         subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
         totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
         expandedRows: () => expandedDeptPivot,
         expandedCols: () => expandedDeptYearColumns,
         render: () => renderDeptPivotTable(),
@@ -329,10 +400,72 @@
         depthStyles: PV_STYLE_MANAGER,
         subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
         totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
         expandedRows: () => expandedMgrPivot,
         expandedCols: () => expandedMgrYearColumns,
         render: () => renderManagerPivotTable(),
         dom: { head1: 'mgrPivotHeaderRow1', head2: 'mgrPivotHeaderRow2', body: 'mgrPivotTableBody', total: 'managerPivotTotalAmount' },
+      },
+
+      // --- 채널/광고주/대행사 계열 -------------------------------------------------
+      // 광고주별·대행사별의 사전 필터는 categoryReclassified가 아니라 **categoryOriginal**이다.
+      // 재분류 전 원본 대분류 기준이라, 바꾸면 수치가 달라진다.
+      channel: {
+        rows: ['channel', 'categoryReclassified', 'subCategory'],
+        rowFallbacks: ['(미지정)', '기타', '일반'],
+        rowSorters: ['channelOrder', 'categoryOrder', 'labelAsc'],
+        columns: ['year', 'month'],
+        values: [{ field: 'amount', agg: 'sum' }],
+        sourceFilter: null,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_CHANNEL,
+        header: PV_HEADER_CHANNEL,
+        grandTotal: PV_GRAND_CHANNEL,
+        expandedRows: () => pvSplitMap(expandedChannels, expandedCategories),
+        expandedCols: () => expandedYearColumns,
+        render: () => renderChannelPivotTable(),
+        dom: { head1: 'pivotTableHeaderRow1', head2: 'pivotTableHeaderRow2', body: 'pivotTableBody', total: 'pivotTotalAmount' },
+      },
+
+      advertiser: {
+        rows: ['advertiser', 'categoryReclassified'],
+        rowFallbacks: ['(미지정)', '기타'],
+        rowSorters: ['valueDesc', 'categoryOrder'],
+        columns: ['year', 'month'],
+        values: [{ field: 'amount', agg: 'sum' }],
+        sourceFilter: (r) => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC',
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_CHANNEL,
+        header: PV_HEADER_CHANNEL,
+        grandTotal: PV_GRAND_CHANNEL,
+        expandedRows: () => expandedAdvertisers,
+        expandedCols: () => expandedAdvertiserYearColumns,
+        render: () => renderAdvertiserPivotTable(),
+        dom: { head1: 'advertiserPivotHeaderRow1', head2: 'advertiserPivotHeaderRow2', body: 'advertiserPivotTableBody', total: 'advertiserPivotTotalAmount' },
+      },
+
+      agency: {
+        rows: ['agencyGroup', 'agency', 'advertiser'],
+        rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
+        rowSorters: ['valueDesc', 'valueDesc', 'valueDesc'],
+        columns: ['year', 'month'],
+        values: [{ field: 'amount', agg: 'sum' }],
+        sourceFilter: (r) => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC',
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_CHANNEL,
+        header: PV_HEADER_CHANNEL,
+        grandTotal: PV_GRAND_CHANNEL,
+        expandedRows: () => pvSplitMap(expandedAgencyGroups, expandedAgencies),
+        expandedCols: () => expandedAgencyYearColumns,
+        render: () => renderAgencyPivotTable(),
+        dom: { head1: 'agencyPivotHeaderRow1', head2: 'agencyPivotHeaderRow2', body: 'agencyPivotTableBody', total: 'agencyPivotTotalAmount' },
       },
     };
 
@@ -380,7 +513,7 @@
         const st = preset.depthStyles[Math.min(depth, preset.depthStyles.length - 1)];
         const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('${preset.key}','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
         const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
-        const label = st.labelWrap ? st.labelWrap(toggle + k) : (toggle + k);
+        const label = st.labelWrap ? st.labelWrap(toggle + k, hasMore) : (toggle + k);
 
         let html = `<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}" style="${st.label}">${label}</td>`;
         visibleColumns.forEach(col => {
@@ -422,13 +555,14 @@
         toggleDepth: preset.toggleDepth,
         presetKey: viewKey,
         expandedCols,
+        header: preset.header,
       };
       const visibleColumns = pvBuildVisibleColumns(liveCombos, preset.columns, expandedCols, opt);
       const headerRows = pvRenderColumnHeaderRows(visibleColumns, preset.columns, opt);
 
-      const h1 = `<th rowspan="${preset.columns.length}" style="text-align:left; vertical-align:middle;">구분</th>`
+      const h1 = `<th rowspan="${preset.columns.length}"${preset.header.label}>구분</th>`
         + headerRows[0]
-        + `<th rowspan="${preset.columns.length}" class="pv-th-total" style="z-index:35;">총합계</th>`;
+        + `<th rowspan="${preset.columns.length}"${preset.header.total}>총합계</th>`;
       document.getElementById(preset.dom.head1).innerHTML = mapPivotHtml(h1);
       document.getElementById(preset.dom.head2).innerHTML = mapPivotHtml(headerRows[1] || '');
 
@@ -437,15 +571,13 @@
 
       let body = out.join('');
       body += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
-      // 총합계 행만 클래스를 쓴다(pivot-table.css가 이 행에 한해 정의해 둔 것) — 원본과 동일.
+      const G = preset.grandTotal;
       visibleColumns.forEach(col => {
         const m = pvMergeMetrics(root, col.leafKeys);
-        body += col.isSubtotal
-          ? `<td class="pv-num-sum">${pvFormatCell(pvComputeMetric(m, primary))}</td>`
-          : `<td style="text-align:right; font-weight: 500;">${pvFormatCell(pvComputeMetric(m, primary))}</td>`;
+        body += `<td${col.isSubtotal ? G.subtotal : G.month}>${pvFormatCell(pvComputeMetric(m, primary))}</td>`;
       });
       const grand = pvComputeMetric(root.metrics[PV_ROWTOTAL], primary);
-      body += `<td class="pv-num-total">${pvFormatCell(grand)}</td></tr>`;
+      body += `<td${G.total}>${pvFormatCell(grand)}</td></tr>`;
       document.getElementById(preset.dom.body).innerHTML = mapPivotHtml(body);
 
       document.getElementById(preset.dom.total).innerText = `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;

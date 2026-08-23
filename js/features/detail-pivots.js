@@ -244,6 +244,8 @@
     // 차트 렌더링
     // ==========================================================================
     function renderChannelPivotTable() {
+      // 공용 엔진으로 이관됨(PIVOT_PRESETS.channel). 아래 원본은 USE_PIVOT_ENGINE=false용 되돌리기 장치.
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('channel'); return; }
       const targetData = filteredData;
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
       const yearMonthsMap = {}; years.forEach(yr => { const monthsWithData = new Set(); targetData.filter(r => r.year === yr && r.amount > 0).forEach(r => monthsWithData.add(r.month)); yearMonthsMap[yr] = [...monthsWithData].sort((a,b)=>a-b); });
@@ -330,6 +332,8 @@
     }
 
     function renderAdvertiserPivotTable() {
+      // 공용 엔진으로 이관됨(PIVOT_PRESETS.advertiser). 아래 원본은 USE_PIVOT_ENGINE=false용 되돌리기 장치.
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('advertiser'); return; }
       // 광고주 ➔ 대분류 (2단계 트리), 일반광고+IMC 기준
       const targetData = filteredData.filter(r => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC');
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
@@ -401,6 +405,8 @@
     }
 
     function renderAgencyPivotTable() {
+      // 공용 엔진으로 이관됨(PIVOT_PRESETS.agency). 아래 원본은 USE_PIVOT_ENGINE=false용 되돌리기 장치.
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('agency'); return; }
       // 대행사그룹 ➔ 대행사 ➔ 광고주 (3단계 트리), 일반광고+IMC 기준
       const targetData = filteredData.filter(r => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC');
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
