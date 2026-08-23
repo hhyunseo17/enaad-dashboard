@@ -309,7 +309,11 @@
       ev.dataTransfer.effectAllowed = 'move';
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.add('dd-dragging');
     }
-    function onDetailDataWellDragOver(ev) { ev.preventDefault(); if (ev.currentTarget.classList) ev.currentTarget.classList.add('drag-over'); }
+    function onDetailDataWellDragOver(ev) {
+      ev.preventDefault();
+      pvClearDropLines(); // 빈 공간 위 = 맨 뒤에 붙는다
+      if (ev.currentTarget.classList) ev.currentTarget.classList.add('drag-over');
+    }
     function onDetailDataWellDragLeave(ev) { if (ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over'); }
 
     function getDetailDataDragPayload(ev) {
@@ -410,9 +414,12 @@
     // ==========================================================================
     // 빌더 패널(필드목록 + 필터/열/행/값 well) 렌더링
     // ==========================================================================
-    function renderDetailDataFieldListHtml(cfg) {
+    // hidden: 이 패널에서 아예 내보내지 않을 필드. 일반 피벗은 매출기준(revenueBasis)을 감춘다 —
+    // 상단 필터바의 취급고/회계 토글이 이미 그 축을 정하고 있어서, 축에 놓아 봐야
+    // 취급고에서는 '실적' 한 줄만 나오고 회계에서는 두 줄이 나오는 게 전부다.
+    function renderDetailDataFieldListHtml(cfg, hidden) {
       const placed = getDetailDataPlacedFields(cfg);
-      return DETAIL_DATA_FIELDS.map(f => {
+      return DETAIL_DATA_FIELDS.filter(f => !(hidden && hidden.has(f.key))).map(f => {
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
         const title = DD_FILTER_BAR_COVERED_FIELDS.has(f.key) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
         return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="onDetailDataDragEnd(event)">${f.label}</div>`;
@@ -436,13 +443,17 @@
       }).join('');
     }
 
+    function pvClearDropLines() {
+      document.querySelectorAll('.dd-drop-before').forEach(el => el.classList.remove('dd-drop-before'));
+    }
+    // dragleave로 지우면 칩 안의 라벨/✕로 커서가 넘어갈 때마다 선이 깜빡인다.
+    // 대신 dragover마다 전부 지우고 지금 칩에만 다시 긋는다 — 항상 한 곳에만 선이 선다.
     function onDetailDataChipDragOver(ev) {
       ev.preventDefault(); ev.stopPropagation();
+      pvClearDropLines();
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.add('dd-drop-before');
     }
-    function onDetailDataChipDragLeave(ev) {
-      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('dd-drop-before');
-    }
+    function onDetailDataChipDragLeave(ev) { /* dragover에서 일괄 정리한다 — 여기서 지우면 깜빡인다 */ }
     // 드래그가 끝나면 화면 어디에 남아 있을지 모르는 표시들을 한 번에 걷는다.
     function onDetailDataDragEnd(ev) {
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('dd-dragging');
@@ -504,7 +515,7 @@
       const rowEl = document.getElementById(dom.rows);
       const valEl = document.getElementById(dom.values);
       if (!fieldListEl || !filterBarEl || !filterWellEl || !colEl || !rowEl || !valEl) return;
-      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg);
+      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields);
       // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 cfg.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
       filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
       filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', cfg.filters.map(f => f.field)) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;

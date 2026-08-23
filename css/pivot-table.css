@@ -137,8 +137,14 @@
     .dd-chip-order { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
       width: 16px; height: 16px; border-radius: 50%; background: var(--primary-blue); color: var(--text-on-accent);
       font-size: 10px; font-weight: 600; }
-    /* 드래그 중 "이 칩 앞에 들어간다"는 표시. onDetailDataChipDrop이 대상 앞에 삽입하므로 왼쪽에 긋는다. */
-    .dd-field-chip.dd-drop-before { box-shadow: inset 3px 0 0 var(--primary-blue); }
+    /* 드래그 중 "여기 들어간다"는 표시 — 칩 **사이의 빈 틈**에 실제로 선을 하나 긋는다.
+       칩 안쪽에 그림자를 넣는 방식도 해봤는데 '이 칩이 선택됨'으로 읽혀서 삽입 위치로 안 보였다.
+       onDetailDataChipDrop이 대상 칩 앞에 끼워 넣으므로 선도 왼쪽 틈(gap 6px의 가운데)에 선다.
+       바깥 1px 테두리는 칩 배경 위에 겹쳐도 선이 묻히지 않게 하는 것. */
+    .dd-field-chip.dd-drop-before::before {
+      content: ''; position: absolute; left: -5px; top: -2px; bottom: -2px; width: 3px;
+      border-radius: 2px; background: var(--primary-blue); box-shadow: 0 0 0 1px var(--bg-elevated);
+    }
 
     .dd-well { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 90px; background: var(--bg-subtle); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md); transition: border-color 0.15s, background 0.15s; }
     .dd-well.drag-over { border-color: var(--primary-blue); background: var(--primary-blue-glow); border-style: solid; }

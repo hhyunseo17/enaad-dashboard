@@ -557,10 +557,13 @@
     // 이 컨텍스트를 통해 두 화면이 나눠 쓴다. 인라인 onclick은 인자를 받지 않으므로 **지금 보고 있는
     // 화면(currentView)**으로 대상을 정한다 — 어차피 패널은 한 번에 하나만 떠 있다.
     // ctx가 null이면 세부데이터 자신을 뜻한다.
+    // 상단 필터바의 취급고/회계 토글이 이미 정하는 축이라 필드 목록에서 뺀다.
+    // (세부데이터는 자기 목록을 그대로 쓴다 — 거기서도 빼려면 ctx 없이도 걸리게 옮길 것.)
+    const PV_HIDDEN_FIELDS = new Set(['revenueBasis']);
     function pvBuilderCtxFor(viewKey) {
       const p = PIVOT_PRESETS[viewKey];
       if (!p || !p.builderDom) return null;
-      return { config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey, maxValues: 1 };
+      return { config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey, maxValues: 1, hiddenFields: PV_HIDDEN_FIELDS };
     }
     function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
     function renderPvBuilderPanel(viewKey) {
