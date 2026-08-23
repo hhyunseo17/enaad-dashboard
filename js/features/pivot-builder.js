@@ -364,7 +364,6 @@
         expandedCols: () => expandedCatYearColumns,
         render: () => renderCategoryPivotTable(), // 스위치를 존중하도록 원래 진입점으로 되돌아간다
         dom: { head1: 'catPivotHeaderRow1', head2: 'catPivotHeaderRow2', body: 'catPivotTableBody', total: 'categoryPivotTotalAmount' },
-        // 1단계-B 시범: 이 피벗에만 세부데이터식 빌더 사이드바를 붙였다.
         resetBtn: 'catPivotResetBtn',
         layoutId: 'catPivotLayout', builderBtn: 'catPivotBuilderBtn',
         builderDom: { fieldList:'catDdFieldList', filterBar:'catDdFilterBar', filters:'catDdWellFilterBody', columns:'catDdWellColumnsBody', rows:'catDdWellRowsBody', values:'catDdWellValuesBody' },
@@ -388,6 +387,9 @@
         expandedRows: () => expandedDeptPivot,
         expandedCols: () => expandedDeptYearColumns,
         render: () => renderDeptPivotTable(),
+        resetBtn: 'deptPivotResetBtn',
+        layoutId: 'deptPivotLayout', builderBtn: 'deptPivotBuilderBtn',
+        builderDom: { fieldList:'deptDdFieldList', filterBar:'deptDdFilterBar', filters:'deptDdWellFilterBody', columns:'deptDdWellColumnsBody', rows:'deptDdWellRowsBody', values:'deptDdWellValuesBody' },
         dom: { head1: 'deptPivotHeaderRow1', head2: 'deptPivotHeaderRow2', body: 'deptPivotTableBody', total: 'deptPivotTotalAmount' },
       },
 
@@ -409,6 +411,9 @@
         expandedRows: () => expandedMgrPivot,
         expandedCols: () => expandedMgrYearColumns,
         render: () => renderManagerPivotTable(),
+        resetBtn: 'mgrPivotResetBtn',
+        layoutId: 'mgrPivotLayout', builderBtn: 'mgrPivotBuilderBtn',
+        builderDom: { fieldList:'mgrDdFieldList', filterBar:'mgrDdFilterBar', filters:'mgrDdWellFilterBody', columns:'mgrDdWellColumnsBody', rows:'mgrDdWellRowsBody', values:'mgrDdWellValuesBody' },
         dom: { head1: 'mgrPivotHeaderRow1', head2: 'mgrPivotHeaderRow2', body: 'mgrPivotTableBody', total: 'managerPivotTotalAmount' },
       },
 
@@ -431,6 +436,9 @@
         expandedRows: () => pvSplitMap(expandedChannels, expandedCategories),
         expandedCols: () => expandedYearColumns,
         render: () => renderChannelPivotTable(),
+        resetBtn: 'chPivotResetBtn',
+        layoutId: 'chPivotLayout', builderBtn: 'chPivotBuilderBtn',
+        builderDom: { fieldList:'chDdFieldList', filterBar:'chDdFilterBar', filters:'chDdWellFilterBody', columns:'chDdWellColumnsBody', rows:'chDdWellRowsBody', values:'chDdWellValuesBody' },
         dom: { head1: 'pivotTableHeaderRow1', head2: 'pivotTableHeaderRow2', body: 'pivotTableBody', total: 'pivotTotalAmount' },
       },
 
@@ -450,6 +458,9 @@
         expandedRows: () => expandedAdvertisers,
         expandedCols: () => expandedAdvertiserYearColumns,
         render: () => renderAdvertiserPivotTable(),
+        resetBtn: 'advPivotResetBtn',
+        layoutId: 'advPivotLayout', builderBtn: 'advPivotBuilderBtn',
+        builderDom: { fieldList:'advDdFieldList', filterBar:'advDdFilterBar', filters:'advDdWellFilterBody', columns:'advDdWellColumnsBody', rows:'advDdWellRowsBody', values:'advDdWellValuesBody' },
         dom: { head1: 'advertiserPivotHeaderRow1', head2: 'advertiserPivotHeaderRow2', body: 'advertiserPivotTableBody', total: 'advertiserPivotTotalAmount' },
       },
 
@@ -469,6 +480,9 @@
         expandedRows: () => pvSplitMap(expandedAgencyGroups, expandedAgencies),
         expandedCols: () => expandedAgencyYearColumns,
         render: () => renderAgencyPivotTable(),
+        resetBtn: 'agyPivotResetBtn',
+        layoutId: 'agyPivotLayout', builderBtn: 'agyPivotBuilderBtn',
+        builderDom: { fieldList:'agyDdFieldList', filterBar:'agyDdFilterBar', filters:'agyDdWellFilterBody', columns:'agyDdWellColumnsBody', rows:'agyDdWellRowsBody', values:'agyDdWellValuesBody' },
         dom: { head1: 'agencyPivotHeaderRow1', head2: 'agencyPivotHeaderRow2', body: 'agencyPivotTableBody', total: 'agencyPivotTotalAmount' },
       },
     };

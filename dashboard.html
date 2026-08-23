@@ -630,16 +630,42 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 style="font-size: 16px; font-weight: 600;">부서별 항목 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('dept', true)">모든 연도 월 펼치기 (-)</button>
-            <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button>
+            <button class="btn btn-sm" onclick="expandAllYears('dept', false)">모든 연도 월 접기 (+)</button><button class="btn btn-sm" id="deptPivotResetBtn" onclick="pvResetPivot('dept')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="deptPivotBuilderBtn" onclick="pvToggleBuilder('dept')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
           </div>
           <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('dept')">📥 피벗 엑셀 다운로드</button>
         </div>
-        <div class="table-wrapper" style="max-height: 650px;">
+        <section class="dd-layout dd-layout-collapsed" id="deptPivotLayout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="deptDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
           <table class="data-table pivot-tree-table" id="deptPivotTreeTable">
             <thead><tr id="deptPivotHeaderRow1"></tr><tr id="deptPivotHeaderRow2"></tr></thead>
             <tbody id="deptPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="deptDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="deptDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="deptDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="deptDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="deptDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -664,16 +690,42 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 style="font-size: 16px; font-weight: 600;">담당자별 5계층 피벗</h2>
             <button class="btn btn-sm" onclick="expandAllYears('mgr', true)">모든 연도 월 펼치기 (-)</button>
-            <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button>
+            <button class="btn btn-sm" onclick="expandAllYears('mgr', false)">모든 연도 월 접기 (+)</button><button class="btn btn-sm" id="mgrPivotResetBtn" onclick="pvResetPivot('manager')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="mgrPivotBuilderBtn" onclick="pvToggleBuilder('manager')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
           </div>
           <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('mgr')">📥 피벗 엑셀 다운로드</button>
         </div>
-        <div class="table-wrapper" style="max-height: 750px;">
+        <section class="dd-layout dd-layout-collapsed" id="mgrPivotLayout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="mgrDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 750px;">
           <table class="data-table pivot-tree-table" id="managerPivotTreeTable">
             <thead><tr id="mgrPivotHeaderRow1"></tr><tr id="mgrPivotHeaderRow2"></tr></thead>
             <tbody id="mgrPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="mgrDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="mgrDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="mgrDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="mgrDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="mgrDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -765,16 +817,42 @@
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
             <button class="btn btn-sm" onclick="expandAllYears('channel', true)">모든 연도 펼치기</button>
-            <button class="btn btn-sm" onclick="expandAllYears('channel', false)">모든 연도 접기</button>
+            <button class="btn btn-sm" onclick="expandAllYears('channel', false)">모든 연도 접기</button><button class="btn btn-sm" id="chPivotResetBtn" onclick="pvResetPivot('channel')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="chPivotBuilderBtn" onclick="pvToggleBuilder('channel')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
           </div>
           <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('channel')">📥 피벗 엑셀 다운로드</button>
         </div>
-        <div class="table-wrapper" style="max-height: 650px;">
+        <section class="dd-layout dd-layout-collapsed" id="chPivotLayout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="chDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
           <table class="data-table pivot-tree-table" id="pivotTreeTable">
             <thead><tr id="pivotTableHeaderRow1"></tr><tr id="pivotTableHeaderRow2"></tr></thead>
             <tbody id="pivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="chDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="chDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="chDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="chDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="chDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -805,9 +883,35 @@
       </section>
       <section class="table-container">
         <div class="table-controls">
-          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('advertiser', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('advertiser', false)">접기</button></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('advertiser', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('advertiser', false)">접기</button><button class="btn btn-sm" id="advPivotResetBtn" onclick="pvResetPivot('advertiser')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="advPivotBuilderBtn" onclick="pvToggleBuilder('advertiser')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="advertiserPivotTreeTable"><thead><tr id="advertiserPivotHeaderRow1"></tr><tr id="advertiserPivotHeaderRow2"></tr></thead><tbody id="advertiserPivotTableBody"></tbody></table></div>
+        <section class="dd-layout dd-layout-collapsed" id="advPivotLayout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="advDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="advertiserPivotTreeTable"><thead><tr id="advertiserPivotHeaderRow1"></tr><tr id="advertiserPivotHeaderRow2"></tr></thead><tbody id="advertiserPivotTableBody"></tbody></table></div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="advDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="advDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="advDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="advDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="advDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -820,9 +924,35 @@
       </section>
       <section class="table-container">
         <div class="table-controls">
-          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('agency', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('agency', false)">접기</button></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><button class="btn btn-sm" onclick="expandAllYears('agency', true)">펼치기</button><button class="btn btn-sm" onclick="expandAllYears('agency', false)">접기</button><button class="btn btn-sm" id="agyPivotResetBtn" onclick="pvResetPivot('agency')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="agyPivotBuilderBtn" onclick="pvToggleBuilder('agency')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button></div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="agencyPivotTreeTable"><thead><tr id="agencyPivotHeaderRow1"></tr><tr id="agencyPivotHeaderRow2"></tr></thead><tbody id="agencyPivotTableBody"></tbody></table></div>
+        <section class="dd-layout dd-layout-collapsed" id="agyPivotLayout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="agyDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 700px;"><table class="data-table pivot-tree-table" id="agencyPivotTreeTable"><thead><tr id="agencyPivotHeaderRow1"></tr><tr id="agencyPivotHeaderRow2"></tr></thead><tbody id="agencyPivotTableBody"></tbody></table></div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="agyDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="agyDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="agyDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="agyDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="agyDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
