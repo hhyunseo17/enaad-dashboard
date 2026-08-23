@@ -567,14 +567,44 @@
             <button class="btn btn-sm" onclick="expandAllYears('cat', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('cat', false)">모든 연도 월 접기 (+)</button>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('cat')">📥 피벗 엑셀 다운로드</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="catPivotResetBtn" onclick="pvResetPivot('category')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-primary btn-sm" onclick="exportPivotExcel('cat')">📥 피벗 엑셀 다운로드</button>
+          </div>
         </div>
-        <div class="table-wrapper" style="max-height: 650px;">
-          <table class="data-table pivot-tree-table" id="categoryPivotTreeTable">
-            <thead><tr id="catPivotHeaderRow1"></tr><tr id="catPivotHeaderRow2"></tr></thead>
-            <tbody id="catPivotTableBody"></tbody>
-          </table>
-        </div>
+        <!-- 1단계-B 시범: 세부데이터와 같은 빌더 사이드바를 이 피벗에 붙였다. -->
+        <section class="dd-layout">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="catDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table" id="categoryPivotTreeTable">
+                <thead><tr id="catPivotHeaderRow1"></tr><tr id="catPivotHeaderRow2"></tr></thead>
+                <tbody id="catPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="catDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="catDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="catDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="catDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="catDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 

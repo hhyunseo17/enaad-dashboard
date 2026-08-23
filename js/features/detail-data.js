@@ -20,6 +20,21 @@
 
     const DETAIL_DATA_AGG_LABELS = { sum: '합계', avg: '평균', count: '개수', distinct: '고유 개수' };
 
+    // ── 빌더 패널 공유 ────────────────────────────────────────────────────────
+    // 이 파일의 필드 목록·드래그앤드롭·필터 팝오버는 세부데이터 전용이었지만, 일반 피벗(pivot-builder.js)도
+    // 같은 패널을 쓴다. 대상은 pvBuilderCtx()가 정한다 — null이면 세부데이터 자신.
+    // 인라인 onclick이 인자를 받지 않으므로 '지금 보고 있는 화면' 기준이고, 패널은 한 번에 하나만 뜬다.
+    const DD_DOM = { fieldList:'ddFieldList', filterBar:'ddFilterBar', filters:'ddWellFilterBody', columns:'ddWellColumnsBody', rows:'ddWellRowsBody', values:'ddWellValuesBody' };
+    function ddCtx() { return (typeof pvBuilderCtx === 'function') ? pvBuilderCtx() : null; }
+    function ddCfg() { const c = ddCtx(); return c ? c.config : detailDataConfig; }
+    // 일반 피벗은 아직 값이 하나일 때만 그릴 수 있다(엔진에 다중 값 열 분할이 없다).
+    // 패널이 허용하는 것과 실제로 그려지는 것이 어긋나면 안 되므로, 새 값을 놓으면 앞의 것을 밀어낸다.
+    function ddCapValues() {
+      const c = ddCtx(); if (!c || !c.maxValues) return;
+      if (c.config.values.length > c.maxValues) c.config.values = c.config.values.slice(-c.maxValues);
+    }
+    function ddRerender() { const c = ddCtx(); if (c) c.render(); else renderDetailDataPivot(); }
+
     function detailDataFieldLabel(key) { const f = DETAIL_DATA_FIELDS.find(x => x.key === key); return f ? f.label : key; }
     function ddEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
     function getDetailDataAggOptions(field) { return field === 'amount' ? ['sum', 'avg', 'count', 'distinct'] : ['count', 'distinct']; }
@@ -48,7 +63,7 @@
     function getDetailDataBaseRows() {
       // 본부매출/매출기준/연·월/부서/채널/방송디지털/대분류/대행사·광고주 검색은 상단 전역 필터바(filteredData)가 이미 적용.
       return filteredData.filter(r => {
-        return detailDataConfig.filters.every(f => {
+        return ddCfg().filters.every(f => {
           if (!f.selected || f.selected.length === 0) return true;
           return f.selected.includes(String(r[f.field]));
         });
@@ -56,10 +71,10 @@
     }
 
     function setDetailDataValueAgg(id, agg) {
-      const v = detailDataConfig.values.find(x => x.id === id);
+      const v = ddCfg().values.find(x => x.id === id);
       if (!v) return;
       v.agg = agg;
-      renderDetailDataPivot();
+      ddRerender();
     }
 
     // 노드 하나의 특정 colKey(또는 '__ROWTOTAL__') 구간에 누적되는 원시 집계치.
@@ -252,35 +267,36 @@
     // 필터/행/열 세 영역끼리는 한 필드가 한 곳에만 존재(상호 배타적). 값 영역은 완전히 독립 —
     // 다른 영역에 이미 쓰인 필드도 값에 자유롭게 추가할 수 있고, 같은 필드를 여러 번(다른 집계로) 넣을 수 있다.
     // ==========================================================================
-    function getDetailDataPlacedFields() {
+    function getDetailDataPlacedFields(cfg) {
+      cfg = cfg || ddCfg();
       const s = new Set();
-      detailDataConfig.filters.forEach(f => s.add(f.field));
-      detailDataConfig.rows.forEach(f => s.add(f));
-      detailDataConfig.columns.forEach(f => s.add(f));
-      detailDataConfig.values.forEach(v => s.add(v.field));
+      ddCfg().filters.forEach(f => s.add(f.field));
+      ddCfg().rows.forEach(f => s.add(f));
+      ddCfg().columns.forEach(f => s.add(f));
+      ddCfg().values.forEach(v => s.add(v.field));
       return s;
     }
 
     // 필터/행/열에서만 제거(값은 건드리지 않음) — 이 세 영역 간 이동 시 사용.
     function removeDetailDataFieldFromStructuralAreas(fieldKey) {
-      detailDataConfig.filters = detailDataConfig.filters.filter(f => f.field !== fieldKey);
-      detailDataConfig.rows = detailDataConfig.rows.filter(f => f !== fieldKey);
-      detailDataConfig.columns = detailDataConfig.columns.filter(f => f !== fieldKey);
+      ddCfg().filters = ddCfg().filters.filter(f => f.field !== fieldKey);
+      ddCfg().rows = ddCfg().rows.filter(f => f !== fieldKey);
+      ddCfg().columns = ddCfg().columns.filter(f => f !== fieldKey);
       if (detailDataOpenFilterField === fieldKey) detailDataOpenFilterField = null;
     }
 
     // 필터/행/열/값 전부에서 제거 — 필드 목록으로 다시 드래그(완전히 빼기)했을 때만 사용.
     function removeDetailDataFieldEverywhere(fieldKey) {
       removeDetailDataFieldFromStructuralAreas(fieldKey);
-      detailDataConfig.values = detailDataConfig.values.filter(v => v.field !== fieldKey);
+      ddCfg().values = ddCfg().values.filter(v => v.field !== fieldKey);
     }
 
     function removeDetailDataField(wellName, key) {
-      if (wellName === 'filters') detailDataConfig.filters = detailDataConfig.filters.filter(f => f.field !== key);
-      else if (wellName === 'values') detailDataConfig.values = detailDataConfig.values.filter(v => v.id !== key);
-      else detailDataConfig[wellName] = detailDataConfig[wellName].filter(f => f !== key);
+      if (wellName === 'filters') ddCfg().filters = ddCfg().filters.filter(f => f.field !== key);
+      else if (wellName === 'values') ddCfg().values = ddCfg().values.filter(v => v.id !== key);
+      else ddCfg()[wellName] = ddCfg()[wellName].filter(f => f !== key);
       if (detailDataOpenFilterField === key) detailDataOpenFilterField = null;
-      renderDetailDataPivot();
+      ddRerender();
     }
 
     // ==========================================================================
@@ -315,24 +331,24 @@
       detailDataDragPayload = null;
       if (!payload || !payload.field) return;
       const fieldKey = payload.field;
-      if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); renderDetailDataPivot(); return; }
+      if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); ddRerender(); return; }
       if (fieldKey === 'amount' && wellName !== 'values') return; // amount는 값 well 전용
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
         if (payload.valueId != null) {
           // 값 영역 내 기존 항목을 빈 공간에 드롭 — 새로 추가하지 않고 맨 뒤로 이동만
-          const arr = detailDataConfig.values;
+          const arr = ddCfg().values;
           const idx = arr.findIndex(v => v.id === payload.valueId);
           if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.push(item); }
         } else {
-          detailDataConfig.values.push(makeDetailDataValueEntry(fieldKey));
+          ddCfg().values.push(makeDetailDataValueEntry(fieldKey)); ddCapValues();
         }
       } else {
         removeDetailDataFieldFromStructuralAreas(fieldKey);
-        if (wellName === 'filters') detailDataConfig.filters.push({ field: fieldKey, selected: [] });
-        else detailDataConfig[wellName].push(fieldKey);
+        if (wellName === 'filters') ddCfg().filters.push({ field: fieldKey, selected: [] });
+        else ddCfg()[wellName].push(fieldKey);
       }
-      renderDetailDataPivot();
+      ddRerender();
     }
 
     function onDetailDataChipDrop(ev, wellName, targetKey) {
@@ -345,7 +361,7 @@
       if (fieldKey === 'amount' && wellName !== 'values') return;
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
-        const arr = detailDataConfig.values;
+        const arr = ddCfg().values;
         if (payload.valueId != null) {
           if (payload.valueId === targetKey) return; // 자기 자신 위에 드롭
           const fromIdx = arr.findIndex(v => v.id === payload.valueId);
@@ -355,20 +371,20 @@
           arr.splice(targetIdx < 0 ? arr.length : targetIdx, 0, item);
         } else {
           const targetIdx = arr.findIndex(v => v.id === targetKey);
-          arr.splice(targetIdx < 0 ? arr.length : targetIdx, 0, makeDetailDataValueEntry(fieldKey));
+          arr.splice(targetIdx < 0 ? arr.length : targetIdx, 0, makeDetailDataValueEntry(fieldKey)); ddCapValues();
         }
       } else {
         if (fieldKey === targetKey) return;
         removeDetailDataFieldFromStructuralAreas(fieldKey);
         if (wellName === 'filters') {
-          const arr = detailDataConfig.filters; const idx = arr.findIndex(f => f.field === targetKey);
+          const arr = ddCfg().filters; const idx = arr.findIndex(f => f.field === targetKey);
           arr.splice(idx < 0 ? arr.length : idx, 0, { field: fieldKey, selected: [] });
         } else {
-          const arr = detailDataConfig[wellName]; const idx = arr.indexOf(targetKey);
+          const arr = ddCfg()[wellName]; const idx = arr.indexOf(targetKey);
           arr.splice(idx < 0 ? arr.length : idx, 0, fieldKey);
         }
       }
-      renderDetailDataPivot();
+      ddRerender();
     }
 
     // ==========================================================================
@@ -381,21 +397,21 @@
     }
     function toggleDetailDataFilterPopover(fieldKey) {
       detailDataOpenFilterField = detailDataOpenFilterField === fieldKey ? null : fieldKey;
-      renderDetailDataPivot();
+      ddRerender();
     }
     function toggleDetailDataFilterValue(fieldKey, value) {
-      const filt = detailDataConfig.filters.find(f => f.field === fieldKey);
+      const filt = ddCfg().filters.find(f => f.field === fieldKey);
       if (!filt) return;
       const idx = filt.selected.indexOf(value);
       if (idx >= 0) filt.selected.splice(idx, 1); else filt.selected.push(value);
-      renderDetailDataPivot();
+      ddRerender();
     }
 
     // ==========================================================================
     // 빌더 패널(필드목록 + 필터/열/행/값 well) 렌더링
     // ==========================================================================
-    function renderDetailDataFieldListHtml() {
-      const placed = getDetailDataPlacedFields();
+    function renderDetailDataFieldListHtml(cfg) {
+      const placed = getDetailDataPlacedFields(cfg);
       return DETAIL_DATA_FIELDS.map(f => {
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
         const title = DD_FILTER_BAR_COVERED_FIELDS.has(f.key) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
@@ -415,8 +431,9 @@
       }).join('');
     }
 
-    function renderDetailDataFilterChips() {
-      return detailDataConfig.filters.map(f => {
+    function renderDetailDataFilterChips(cfg) {
+      cfg = cfg || ddCfg();
+      return ddCfg().filters.map(f => {
         const label = detailDataFieldLabel(f.field);
         const isOpen = detailDataOpenFilterField === f.field;
         const countText = f.selected.length === 0 ? '전체' : `${f.selected.length}개 선택`;
@@ -438,8 +455,9 @@
       }).join('');
     }
 
-    function renderDetailDataValuesChips() {
-      return detailDataConfig.values.map(v => {
+    function renderDetailDataValuesChips(cfg) {
+      cfg = cfg || ddCfg();
+      return ddCfg().values.map(v => {
         const label = detailDataFieldLabel(v.field);
         const opts = getDetailDataAggOptions(v.field);
         const select = `<select class="dd-agg-select" onclick="event.stopPropagation();" onchange="setDetailDataValueAgg(${v.id}, this.value)">${opts.map(a =>
@@ -454,30 +472,35 @@
       }).join('');
     }
 
-    function renderDetailDataBuilderPanels() {
-      const fieldListEl = document.getElementById('ddFieldList');
-      const filterBarEl = document.getElementById('ddFilterBar');
-      const filterWellEl = document.getElementById('ddWellFilterBody');
-      const colEl = document.getElementById('ddWellColumnsBody');
-      const rowEl = document.getElementById('ddWellRowsBody');
-      const valEl = document.getElementById('ddWellValuesBody');
+    // ctx를 넘기면 그 피벗의 패널에 그린다(일반 피벗). 안 넘기면 세부데이터 자신.
+    // **cfg는 ddCfg()가 아니라 ctx에서 꺼낸다** — renderPresetPivot은 보고 있지 않은 화면을 그릴 수도
+    // 있어서 currentView 기준으로 잡으면 남의 패널에 그려 넣게 된다.
+    function renderDetailDataBuilderPanels(ctx) {
+      const dom = ctx ? ctx.dom : DD_DOM;
+      const cfg = ctx ? ctx.config : detailDataConfig;
+      const fieldListEl = document.getElementById(dom.fieldList);
+      const filterBarEl = document.getElementById(dom.filterBar);
+      const filterWellEl = document.getElementById(dom.filters);
+      const colEl = document.getElementById(dom.columns);
+      const rowEl = document.getElementById(dom.rows);
+      const valEl = document.getElementById(dom.values);
       if (!fieldListEl || !filterBarEl || !filterWellEl || !colEl || !rowEl || !valEl) return;
-      fieldListEl.innerHTML = renderDetailDataFieldListHtml();
-      // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 detailDataConfig.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
-      filterBarEl.innerHTML = renderDetailDataFilterChips();
-      filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', detailDataConfig.filters.map(f => f.field)) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      colEl.innerHTML = renderDetailDataWellFieldChips('columns', detailDataConfig.columns) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      rowEl.innerHTML = renderDetailDataWellFieldChips('rows', detailDataConfig.rows) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      valEl.innerHTML = renderDetailDataValuesChips() || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg);
+      // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 cfg.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
+      filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
+      filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', cfg.filters.map(f => f.field)) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      colEl.innerHTML = renderDetailDataWellFieldChips('columns', cfg.columns) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      rowEl.innerHTML = renderDetailDataWellFieldChips('rows', cfg.rows) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      valEl.innerHTML = renderDetailDataValuesChips(cfg) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
     }
 
     // ==========================================================================
     // 메인 렌더 — 필드 배치가 바뀔 때마다 매번 rawData부터 재계산(캐시 없음)
     // ==========================================================================
     function renderDetailDataPivot() {
-      renderDetailDataBuilderPanels();
+      renderDetailDataBuilderPanels(null);
 
-      const valueDefs = detailDataConfig.values;
+      const valueDefs = ddCfg().values;
       if (valueDefs.length === 0) {
         document.getElementById('detailDataTableHead').innerHTML = `<tr><th style="text-align:left;">구분</th></tr>`;
         document.getElementById('detailDataTableBody').innerHTML = `<tr><td style="text-align:center; color:var(--text-tertiary); padding:16px;">값 영역에 필드를 놓으세요</td></tr>`;
@@ -485,8 +508,8 @@
         return;
       }
 
-      const rowFieldDefs = detailDataConfig.rows.map(k => DETAIL_DATA_FIELDS.find(f => f.key === k)).filter(Boolean);
-      const colFieldDefs = detailDataConfig.columns.map(k => DETAIL_DATA_FIELDS.find(f => f.key === k)).filter(Boolean);
+      const rowFieldDefs = ddCfg().rows.map(k => DETAIL_DATA_FIELDS.find(f => f.key === k)).filter(Boolean);
+      const colFieldDefs = ddCfg().columns.map(k => DETAIL_DATA_FIELDS.find(f => f.key === k)).filter(Boolean);
 
       const baseRows = getDetailDataBaseRows();
       const { root, colCombos } = buildDetailDataTree(baseRows, rowFieldDefs, colFieldDefs, valueDefs);

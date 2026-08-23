@@ -17,6 +17,11 @@
     // 접힘 상태(expandedCatPivot / expandedCatYearColumns)도 키 형식이 같아 껐다 켜도 이어진다.
     // 현재 엔진으로 넘어간 것은 항목별 피벗 하나뿐이다.
     const USE_PIVOT_ENGINE = true;
+    // 일반 피벗의 실행 중 축 구성 { viewKey: {filters, rows, columns, values} }.
+    // 형태는 세부데이터의 detailDataConfig와 동일 — 빌더 패널 코드를 두 화면이 나눠 쓰기 때문이다.
+    // 비어 있으면 pivot-builder.js가 PIVOT_PRESETS에서 채운다(= 프리셋이 곧 '처음 모양'이자 초기화 기준).
+    // 세션 안에서만 유지된다 — 새로고침하면 프리셋으로 돌아간다.
+    let pivotConfigs = {};
     let lastSeenBatchId = null; // Supabase 모드에서 배치 변경 감지 폴링에 사용
     let rawData = [];
     let filteredData = [];

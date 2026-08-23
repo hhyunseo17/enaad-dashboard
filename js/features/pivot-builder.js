@@ -342,7 +342,7 @@
       category: {
         rows: ['categoryReclassified', 'subCategory', 'subCategory3'],
         rowFallbacks: ['기타', '일반', '일반'], // 값이 비었을 때 쓰던 기본값(원본 렌더러와 동일)
-        rowSorters: ['valueDesc', 'valueDesc', 'labelAsc'],
+        fieldSorters: { categoryReclassified:'valueDesc', subCategory:'valueDesc', subCategory3:'labelAsc' },
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: null,
@@ -364,12 +364,15 @@
         expandedCols: () => expandedCatYearColumns,
         render: () => renderCategoryPivotTable(), // 스위치를 존중하도록 원래 진입점으로 되돌아간다
         dom: { head1: 'catPivotHeaderRow1', head2: 'catPivotHeaderRow2', body: 'catPivotTableBody', total: 'categoryPivotTotalAmount' },
+        // 1단계-B 시범: 이 피벗에만 세부데이터식 빌더 사이드바를 붙였다.
+        resetBtn: 'catPivotResetBtn',
+        builderDom: { fieldList:'catDdFieldList', filterBar:'catDdFilterBar', filters:'catDdWellFilterBody', columns:'catDdWellColumnsBody', rows:'catDdWellRowsBody', values:'catDdWellValuesBody' },
       },
 
       dept: {
         rows: ['dept', 'categoryReclassified', 'subCategory'],
         rowFallbacks: ['(미지정)', '기타', '일반'],
-        rowSorters: ['deptOrder', 'valueDesc', 'labelAsc'], // 부서는 매출순이 아니라 팀 번호순
+        fieldSorters: { dept:'deptOrder', categoryReclassified:'valueDesc', subCategory:'labelAsc' }, // 부서는 매출순이 아니라 팀 번호순
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: null,
@@ -390,7 +393,7 @@
       manager: {
         rows: ['dept', 'manager', 'categoryReclassified', 'advertiser', 'channel'],
         rowFallbacks: ['(미지정)', '(미지정)', '기타', '(미지정)', '(미지정)'],
-        rowSorters: ['deptOrder', 'valueDesc', 'valueDesc', 'valueDesc', 'valueDesc'],
+        fieldSorters: { dept:'deptOrder', manager:'valueDesc', categoryReclassified:'valueDesc', advertiser:'valueDesc', channel:'valueDesc' },
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: null,
@@ -414,7 +417,7 @@
       channel: {
         rows: ['channel', 'categoryReclassified', 'subCategory'],
         rowFallbacks: ['(미지정)', '기타', '일반'],
-        rowSorters: ['channelOrder', 'categoryOrder', 'labelAsc'],
+        fieldSorters: { channel:'channelOrder', categoryReclassified:'categoryOrder', subCategory:'labelAsc' },
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: null,
@@ -433,7 +436,7 @@
       advertiser: {
         rows: ['advertiser', 'categoryReclassified'],
         rowFallbacks: ['(미지정)', '기타'],
-        rowSorters: ['valueDesc', 'categoryOrder'],
+        fieldSorters: { advertiser:'valueDesc', categoryReclassified:'categoryOrder' },
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: (r) => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC',
@@ -452,7 +455,7 @@
       agency: {
         rows: ['agencyGroup', 'agency', 'advertiser'],
         rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
-        rowSorters: ['valueDesc', 'valueDesc', 'valueDesc'],
+        fieldSorters: { agencyGroup:'valueDesc', agency:'valueDesc', advertiser:'valueDesc' },
         columns: ['year', 'month'],
         values: [{ field: 'amount', agg: 'sum' }],
         sourceFilter: (r) => r.categoryOriginal === '일반광고' || r.categoryOriginal === 'IMC',
@@ -488,21 +491,26 @@
     // 렌더
     // ==========================================================================
     // 금액은 원 단위로 누적해 두고 표시 직전에만 백만원으로 줄인다(원본과 동일하게 반올림 정수).
-    function pvFormatCell(won) {
-      const m = (won || 0) / 1000000;
+    // 합계/평균은 백만원 반올림 정수(원본 렌더러와 동일), 개수/고유개수는 건수 그대로.
+    // 집계 방식을 안 보고 무조건 1e6으로 나누면 '개수 : 광고주' 같은 값이 통째로 0이 된다.
+    function pvFormatCell(value, agg) {
+      if (agg === 'count' || agg === 'distinct') return value ? value.toLocaleString() : '-';
+      const m = (value || 0) / 1000000;
       return m > 0 ? Math.round(m).toLocaleString() : '-';
     }
 
-    function pvRowSorterFor(preset, depth) {
-      const name = preset.rowSorters[depth] || 'valueDesc';
+    // 정렬은 **레벨 번호가 아니라 필드**에 붙는다. 사용자가 축 순서를 바꿔도 부서는 팀 순서,
+    // 채널은 편성 순서를 그대로 따라가야 하기 때문이다. 프리셋에 없는 필드는 값 내림차순.
+    function pvRowSorterFor(preset, field) {
+      const name = (preset.fieldSorters && preset.fieldSorters[field]) || 'valueDesc';
       return PV_ROW_SORTERS[name] || PV_ROW_SORTERS.valueDesc;
     }
 
-    function pvRenderRows(node, preset, depth, ancestorPath, visibleColumns, valueDefs, expandedRows, out) {
-      const hasMore = depth + 1 < preset.rows.length;
+    function pvRenderRows(node, preset, depth, ancestorPath, visibleColumns, valueDefs, expandedRows, out, rowFields) {
+      const hasMore = depth + 1 < rowFields.length;
       const primary = valueDefs[0];
       const nodeTotal = (n) => pvComputeMetric(n.metrics[PV_ROWTOTAL], primary);
-      const sorter = pvRowSorterFor(preset, depth);
+      const sorter = pvRowSorterFor(preset, rowFields[depth]);
       const keys = Object.keys(node.children).sort((a, b) => sorter(a, b, nodeTotal(node.children[a]), nodeTotal(node.children[b])));
 
       keys.forEach(k => {
@@ -521,26 +529,93 @@
           // 소계·총합계 칸 색은 클래스가 아니라 인라인이다 — pv-num-sum/pv-num-total은
           // pivot-table.css에서 `.row-grand-total` 아래에만 정의돼 있어 데이터 행에는 효과가 없다.
           const style = col.isSubtotal ? (st.subtotal || preset.subtotalStyle) : (st.month || 'text-align:right;');
-          html += `<td style="${style}">${pvFormatCell(pvComputeMetric(m, primary))}</td>`;
+          html += `<td style="${style}">${pvFormatCell(pvComputeMetric(m, primary), primary.agg)}</td>`;
         });
-        html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child))}</td></tr>`;
+        html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child), primary.agg)}</td></tr>`;
         out.push(html);
 
-        if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out);
+        if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out, rowFields);
       });
+    }
+
+    // ==========================================================================
+    // 실행 중 축 구성 — 빌더 패널이 여기를 고치고, 렌더는 여기만 읽는다.
+    // 프리셋은 '처음 모양'이자 초기화 기준으로만 남는다. 형태는 세부데이터의 detailDataConfig와
+    // 동일하게 맞춰서(rows/columns는 필드 키 배열, values는 {id,field,agg}) 빌더 패널 코드를 공유한다.
+    // ==========================================================================
+    function pvConfigFor(viewKey) {
+      if (!pivotConfigs[viewKey]) pvResetConfig(viewKey);
+      return pivotConfigs[viewKey];
+    }
+
+    // 빌더 패널(필드 목록 + 필터/열/행/값 well)의 실제 코드는 js/features/detail-data.js에 있고,
+    // 이 컨텍스트를 통해 두 화면이 나눠 쓴다. 인라인 onclick은 인자를 받지 않으므로 **지금 보고 있는
+    // 화면(currentView)**으로 대상을 정한다 — 어차피 패널은 한 번에 하나만 떠 있다.
+    // ctx가 null이면 세부데이터 자신을 뜻한다.
+    function pvBuilderCtxFor(viewKey) {
+      const p = PIVOT_PRESETS[viewKey];
+      if (!p || !p.builderDom) return null;
+      return { config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey, maxValues: 1 };
+    }
+    function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
+    function renderPvBuilderPanel(viewKey) {
+      const ctx = pvBuilderCtxFor(viewKey);
+      if (ctx) renderDetailDataBuilderPanels(ctx);
+    }
+    function pvResetConfig(viewKey) {
+      const p = PIVOT_PRESETS[viewKey];
+      pivotConfigs[viewKey] = {
+        filters: [],
+        rows: p.rows.slice(),
+        columns: p.columns.slice(),
+        values: p.values.map((v) => ({ id: detailDataValueIdCounter++, field: v.field, agg: v.agg })),
+      };
+    }
+    function pvIsConfigDefault(viewKey) {
+      const p = PIVOT_PRESETS[viewKey], c = pvConfigFor(viewKey);
+      const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+      return c.filters.length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
+        && c.values.length === p.values.length && c.values.every((v, i) => v.field === p.values[i].field && v.agg === p.values[i].agg);
+    }
+    function pvResetPivot(viewKey) {
+      pvResetConfig(viewKey);
+      const m = PIVOT_PRESETS[viewKey].expandedRows(); Object.keys(m).forEach(k => { delete m[k]; });
+      PIVOT_PRESETS[viewKey].render();
     }
 
     function renderPresetPivot(viewKey) {
       const preset = PIVOT_PRESETS[viewKey];
       if (!preset) return;
       preset.key = viewKey; // 인라인 onclick이 자기 프리셋을 되찾을 수 있게
+      const cfg = pvConfigFor(viewKey);
 
-      const rows = preset.sourceFilter ? filteredData.filter(preset.sourceFilter) : filteredData;
+      let rows = preset.sourceFilter ? filteredData.filter(preset.sourceFilter) : filteredData;
+      // 빌더 패널의 필터 well — 상단 전역 필터바가 이미 좁힌 결과 위에 더 얹는다.
+      if (cfg.filters.length) {
+        rows = rows.filter(r => cfg.filters.every(f => !f.selected || f.selected.length === 0 || f.selected.includes(String(r[f.field]))));
+      }
+      const rowFields = cfg.rows, colFields = cfg.columns;
       const expandedRows = preset.expandedRows();
       const expandedCols = preset.expandedCols();
-      const valueDefs = preset.values;
+      const valueDefs = cfg.values.length ? cfg.values : preset.values;
+      // 축을 바꾸면 원본 순서 기준의 기본값(기타/일반/…)은 의미가 없어지므로 프리셋 순서일 때만 쓴다.
+      const sameRows = rowFields.length === preset.rows.length && rowFields.every((f, i) => f === preset.rows[i]);
+      const fallbacks = sameRows ? preset.rowFallbacks : null;
 
-      const { root, colCombos } = pvBuildTree(rows, preset.rows, preset.columns, valueDefs, preset.rowFallbacks);
+      renderPvBuilderPanel(viewKey);
+      // 프리셋과 달라졌을 때만 '원래대로'를 보여준다 — 평소 화면을 어지럽히지 않는다.
+      const resetBtn = preset.resetBtn && document.getElementById(preset.resetBtn);
+      if (resetBtn) resetBtn.style.display = pvIsConfigDefault(viewKey) ? 'none' : '';
+      if (colFields.length === 0 || rowFields.length === 0) {
+        document.getElementById(preset.dom.head1).innerHTML = mapPivotHtml(`<th${preset.header.label}>구분</th>`);
+        document.getElementById(preset.dom.head2).innerHTML = '';
+        document.getElementById(preset.dom.body).innerHTML =
+          `<tr><td style="text-align:center; color:var(--text-tertiary); padding:16px;">${rowFields.length ? '열' : '행'} 영역에 필드를 놓으세요</td></tr>`;
+        document.getElementById(preset.dom.total).innerText = '0 백만';
+        return;
+      }
+
+      const { root, colCombos } = pvBuildTree(rows, rowFields, colFields, valueDefs, fallbacks);
 
       // 금액이 0뿐인 열(월)은 만들지 않는다 — 원본 렌더러가 `amount > 0`인 월만 헤더에 넣던 것과 같다.
       const primary = valueDefs[0];
@@ -557,28 +632,30 @@
         expandedCols,
         header: preset.header,
       };
-      const visibleColumns = pvBuildVisibleColumns(liveCombos, preset.columns, expandedCols, opt);
-      const headerRows = pvRenderColumnHeaderRows(visibleColumns, preset.columns, opt);
+      const visibleColumns = pvBuildVisibleColumns(liveCombos, colFields, expandedCols, opt);
+      const headerRows = pvRenderColumnHeaderRows(visibleColumns, colFields, opt);
 
-      const h1 = `<th rowspan="${preset.columns.length}"${preset.header.label}>구분</th>`
+      const h1 = `<th rowspan="${colFields.length}"${preset.header.label}>구분</th>`
         + headerRows[0]
-        + `<th rowspan="${preset.columns.length}"${preset.header.total}>총합계</th>`;
+        + `<th rowspan="${colFields.length}"${preset.header.total}>총합계</th>`;
       document.getElementById(preset.dom.head1).innerHTML = mapPivotHtml(h1);
       document.getElementById(preset.dom.head2).innerHTML = mapPivotHtml(headerRows[1] || '');
 
       const out = [];
-      pvRenderRows(root, preset, 0, [], visibleColumns, valueDefs, expandedRows, out);
+      pvRenderRows(root, preset, 0, [], visibleColumns, valueDefs, expandedRows, out, rowFields);
 
       let body = out.join('');
       body += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>`;
       const G = preset.grandTotal;
       visibleColumns.forEach(col => {
         const m = pvMergeMetrics(root, col.leafKeys);
-        body += `<td${col.isSubtotal ? G.subtotal : G.month}>${pvFormatCell(pvComputeMetric(m, primary))}</td>`;
+        body += `<td${col.isSubtotal ? G.subtotal : G.month}>${pvFormatCell(pvComputeMetric(m, primary), primary.agg)}</td>`;
       });
       const grand = pvComputeMetric(root.metrics[PV_ROWTOTAL], primary);
-      body += `<td${G.total}>${pvFormatCell(grand)}</td></tr>`;
+      body += `<td${G.total}>${pvFormatCell(grand, primary.agg)}</td></tr>`;
       document.getElementById(preset.dom.body).innerHTML = mapPivotHtml(body);
 
-      document.getElementById(preset.dom.total).innerText = `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
+      document.getElementById(preset.dom.total).innerText = (primary.agg === 'count' || primary.agg === 'distinct')
+        ? `${(grand || 0).toLocaleString()} 건`
+        : `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
     }
