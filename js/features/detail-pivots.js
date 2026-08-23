@@ -77,7 +77,9 @@
     // ==========================================================================
     // 2. 부서별 (부서/대/중) 피벗
     // ==========================================================================
+    // 공용 엔진으로 이관됨(PIVOT_PRESETS.dept). 아래 원본은 USE_PIVOT_ENGINE=false용 되돌리기 장치.
     function renderDeptPivotTable() {
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('dept'); return; }
       const targetData = filteredData;
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
       const yearMonthsMap = {};
@@ -150,7 +152,9 @@
     // ==========================================================================
     // 3. 담당자별 (부서/담당/대/광고주/채널) 5계층 피벗
     // ==========================================================================
+    // 공용 엔진으로 이관됨(PIVOT_PRESETS.manager). 아래 원본은 USE_PIVOT_ENGINE=false용 되돌리기 장치.
     function renderManagerPivotTable() {
+      if (typeof USE_PIVOT_ENGINE !== 'undefined' && USE_PIVOT_ENGINE) { renderPresetPivot('manager'); return; }
       const targetData = filteredData;
       const years = [...new Set(targetData.map(r => r.year))].sort((a,b)=>b-a);
       const yearMonthsMap = {};

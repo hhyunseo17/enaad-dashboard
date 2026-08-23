@@ -248,11 +248,28 @@
     // 깊이별 행 라벨 셀 색. 렌더러가 인라인으로 박아 넣던 값을 그대로 옮겼다 —
     // theme-system.js의 mapPivotHtml()이 이 문자열을 키로 라이트 값을 치환하므로 **표기를 바꾸지 말 것**
     // (대문자 6자리 hex / rgba 문자열 전체가 정확히 일치해야 한다).
-    const PV_DEPTH_STYLE_TREE = [
-      { rowClass: 'row-channel', bg: '#1E293B', color: '#F8FAFC', weight: '700' },
-      { rowClass: 'row-category', bg: '#151C2C', color: '#CBD5E1', weight: '' },
-      { rowClass: 'row-subcategory', bg: '#11151F', color: '#94A3B8', weight: '' },
+    // 스타일은 의미로 재구성하지 않고 **원본 문자열 그대로** 옮긴다. 이 표를 예쁘게 정리하고 싶어질
+    // 텐데, 그러면 mapPivotHtml의 치환 키가 어긋나 라이트 모드에서 조용히 색이 죽는다.
+    //   label    행 라벨(첫) 칸
+    //   month    일반 값 칸 (깊이마다 굵기가 다른 피벗이 있다 — 담당자별)
+    //   subtotal 그룹 소계 칸 / total 행 총합계 칸 (깊이별로 다르면 여기서 덮어쓴다)
+    const PV_STYLE_CELL = { month: 'text-align:right;' };
+    const PV_STYLE_TREE = [
+      { rowClass: 'row-channel', label: 'background:#1E293B; color:#F8FAFC; font-weight:700;', ...PV_STYLE_CELL },
+      { rowClass: 'row-category', label: 'background:#151C2C; color:#CBD5E1;', ...PV_STYLE_CELL },
+      { rowClass: 'row-subcategory', label: 'background:#11151F; color:#94A3B8;', ...PV_STYLE_CELL },
     ];
+    // 담당자별 5단계 — 라벨 칸뿐 아니라 값 칸의 굵기도 깊이마다 다르다(원본 genCells의 fontW 인자).
+    const PV_STYLE_MANAGER = [
+      { rowClass: '', label: 'background:#1E293B; color:#F8FAFC; font-weight:700;', month: 'text-align:right; font-weight:700;' },
+      { rowClass: '', label: 'background:#151C2C; color:#CBD5E1; font-weight:700;', month: 'text-align:right; font-weight:600;' },
+      { rowClass: '', label: 'background:#11151F; color:#94A3B8;', month: 'text-align:right; font-weight:500;' },
+      { rowClass: '', label: 'background:#0D1117; color:#64748B;', month: 'text-align:right; font-weight:400;' },
+      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:12px;', month: 'text-align:right; font-weight:400;' },
+    ];
+    // 항목/부서/담당자 계열이 공유하는 소계·총합계 칸 색.
+    const PV_SUBTOTAL_STYLE_TREE = 'text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);';
+    const PV_TOTAL_STYLE_TREE = 'text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);';
 
     const PIVOT_PRESETS = {
       category: {
@@ -265,7 +282,9 @@
         columnDefaultExpanded: true,
         subtotalDepths: [0],          // 연도 그룹마다 "N년 요약"
         toggleDepth: 0,               // 연도 열 접기/펼치기
-        depthStyles: PV_DEPTH_STYLE_TREE,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
         // 접힘 상태는 **기존 전역 객체를 그대로 쓴다.** 키 형식도 같아서(`l1`, `l1||l2`)
         // USE_PIVOT_ENGINE을 껐다 켜도 펼쳐둔 상태가 유지된다.
         //
@@ -276,6 +295,44 @@
         expandedCols: () => expandedCatYearColumns,
         render: () => renderCategoryPivotTable(), // 스위치를 존중하도록 원래 진입점으로 되돌아간다
         dom: { head1: 'catPivotHeaderRow1', head2: 'catPivotHeaderRow2', body: 'catPivotTableBody', total: 'categoryPivotTotalAmount' },
+      },
+
+      dept: {
+        rows: ['dept', 'categoryReclassified', 'subCategory'],
+        rowFallbacks: ['(미지정)', '기타', '일반'],
+        rowSorters: ['deptOrder', 'valueDesc', 'labelAsc'], // 부서는 매출순이 아니라 팀 번호순
+        columns: ['year', 'month'],
+        values: [{ field: 'amount', agg: 'sum' }],
+        sourceFilter: null,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        expandedRows: () => expandedDeptPivot,
+        expandedCols: () => expandedDeptYearColumns,
+        render: () => renderDeptPivotTable(),
+        dom: { head1: 'deptPivotHeaderRow1', head2: 'deptPivotHeaderRow2', body: 'deptPivotTableBody', total: 'deptPivotTotalAmount' },
+      },
+
+      manager: {
+        rows: ['dept', 'manager', 'categoryReclassified', 'advertiser', 'channel'],
+        rowFallbacks: ['(미지정)', '(미지정)', '기타', '(미지정)', '(미지정)'],
+        rowSorters: ['deptOrder', 'valueDesc', 'valueDesc', 'valueDesc', 'valueDesc'],
+        columns: ['year', 'month'],
+        values: [{ field: 'amount', agg: 'sum' }],
+        sourceFilter: null,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_MANAGER,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        expandedRows: () => expandedMgrPivot,
+        expandedCols: () => expandedMgrYearColumns,
+        render: () => renderManagerPivotTable(),
+        dom: { head1: 'mgrPivotHeaderRow1', head2: 'mgrPivotHeaderRow2', body: 'mgrPivotTableBody', total: 'managerPivotTotalAmount' },
       },
     };
 
@@ -322,20 +379,18 @@
         const isExpanded = !!expandedRows[pathKey];
         const st = preset.depthStyles[Math.min(depth, preset.depthStyles.length - 1)];
         const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('${preset.key}','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
-        const weight = st.weight ? ` font-weight:${st.weight};` : '';
+        const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
+        const label = st.labelWrap ? st.labelWrap(toggle + k) : (toggle + k);
 
-        let html = `<tr class="${st.rowClass}"><td class="indent-step-${Math.min(depth + 1, 5)}" style="background:${st.bg}; color:${st.color};${weight}">${toggle}${k}</td>`;
+        let html = `<tr${trClass}><td class="indent-step-${Math.min(depth + 1, 5)}" style="${st.label}">${label}</td>`;
         visibleColumns.forEach(col => {
           const m = pvMergeMetrics(child, col.leafKeys);
-          // 소계·총합계 열의 옅은 파랑은 인라인으로 둔다 — pv-num-sum/pv-num-total 클래스는
-          // pivot-table.css에서 `.row-grand-total` 아래에만 정의돼 있어 데이터 행에는 아무 효과가 없다.
-          // 이 rgba 문자열은 theme-system.js의 PIVOT_COLOR_MAP 키라서 **표기를 바꾸면 라이트에서 치환되지 않는다.**
-          const style = col.isSubtotal
-            ? 'text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);'
-            : 'text-align:right;';
+          // 소계·총합계 칸 색은 클래스가 아니라 인라인이다 — pv-num-sum/pv-num-total은
+          // pivot-table.css에서 `.row-grand-total` 아래에만 정의돼 있어 데이터 행에는 효과가 없다.
+          const style = col.isSubtotal ? (st.subtotal || preset.subtotalStyle) : (st.month || 'text-align:right;');
           html += `<td style="${style}">${pvFormatCell(pvComputeMetric(m, primary))}</td>`;
         });
-        html += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${pvFormatCell(nodeTotal(child))}</td></tr>`;
+        html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child))}</td></tr>`;
         out.push(html);
 
         if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out);
