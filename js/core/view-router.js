@@ -3,9 +3,27 @@
 // 화면(뷰) 라우팅: VIEW_CONFIG / switchView / open* / popstate — features 이후 로드
 // ============================================================
     window.addEventListener('popstate', (e) => {
-      const viewKey = (e.state && e.state.view) || 'main';
+      // history.state가 비는 경우(주소창에 #뷰를 직접 입력, 해시 링크로 진입)를 위해 해시로 폴백한다.
+      const viewKey = (e.state && e.state.view) || viewKeyFromHash();
       switchView(viewKey, false);
     });
+
+    // 새로고침해도 보던 피벗 화면에 머물게 하는 최소 장치.
+    // 예전에는 switchView가 pushState의 url 인자로 빈 문자열을 넘겨(= 현재 URL 유지) 주소가 한 번도
+    // 바뀌지 않았다. 뒤로가기는 history.state에 실린 {view}로 동작했지만 그 state는 새로고침을 넘기지
+    // 못하므로, 로드되면 언제나 메인이었다. 이제 뷰 키를 해시에 남긴다.
+    // 쿼리가 아니라 해시인 이유: 해시는 서버로 가지 않아 Cloudflare Pages의 라우팅·Zero Trust 설정을
+    // 건드릴 일이 없다.
+    function viewKeyFromHash() {
+      const key = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+      return VIEW_CONFIG[key] ? key : 'main';
+    }
+    // 데이터 적재가 끝난 뒤에 부른다(finalizeLoadedData). 피벗 렌더러는 filteredData를 읽으므로
+    // 그 전에 부르면 빈 표가 그려진다.
+    function restoreViewFromHash() {
+      const key = viewKeyFromHash();
+      if (key !== 'main') switchView(key, false);
+    }
 
     function renderDashboard() {
       renderKPIs(); renderTrendChart(); renderGoalTrendChart(); renderGoalBreakdownChart(); renderPortfolioChart(); renderChannelChart(); renderAdvBucketChart();
@@ -47,7 +65,9 @@
       // finally에서 기본값을 짧은 쪽으로 되돌려 둔다 — 이후 차트 모드 토글(setTrendChartMode 등)은
       // applyFilters()를 거치지 않고 render*Chart()를 직접 부르므로, 그때 남아있는 기본값을 쓴다.
       try { cfg.render(); } finally { setChartAnimForViewEntry(false); applyChartAnimDuration(); }
-      if (pushHistory) history.pushState({ view: viewKey }, '', '');
+      // url 인자에 빈 문자열을 넘기면 현재 URL이 유지되어 주소에 아무 흔적이 남지 않는다.
+      // 메인은 해시를 걷어내고, 나머지는 #뷰키를 남겨 새로고침·주소 공유가 그 화면으로 열리게 한다.
+      if (pushHistory) history.pushState({ view: viewKey }, '', viewKey === 'main' ? location.pathname + location.search : '#' + viewKey);
     }
 
     function returnToMainDashboard() { switchView('main'); }

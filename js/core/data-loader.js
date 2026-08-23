@@ -293,6 +293,10 @@
       setupYearPills(isFirstLoad);
       updateFilterCheckboxes(isFirstLoad);
       applyFilters();
+      // 최초 적재에서만 주소의 #뷰키를 따라간다(view-router.js). 여기서 부르는 이유는 피벗 렌더러가
+      // filteredData를 읽기 때문 — 적재 전에 부르면 빈 표가 그려진다. 이후 재적재(배치 갱신 폴링 등)
+      // 때는 보고 있던 화면을 그대로 두어야 하므로 다시 부르지 않는다.
+      if (isFirstLoad) restoreViewFromHash();
       isFirstLoad = false;
     }
 

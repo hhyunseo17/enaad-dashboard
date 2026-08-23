@@ -5,7 +5,9 @@
     window.addEventListener('DOMContentLoaded', () => {
       setupEventListeners();
       initDataConnection();
-      history.replaceState({ view: 'main' }, '', '');
+      // url에 빈 문자열 = 현재 URL 유지. 해시가 붙어 들어온 경우 그 값을 state에도 실어 둔다
+      // (실제 화면 전환은 데이터 적재가 끝난 뒤 finalizeLoadedData가 restoreViewFromHash로 한다).
+      history.replaceState({ view: viewKeyFromHash() }, '', '');
       if (window.innerWidth <= 768) {
         const el = document.getElementById('filterBarCollapsible');
         const btn = document.getElementById('filterBarToggleBtn');
