@@ -236,7 +236,9 @@
             const span = L - depth > 1 ? ` rowspan="${L - depth}"` : '';
             if (col.isSubtotal) {
               const label = `${pvFormatFieldValue(col.groupField, col.groupValue)} 요약`;
-              cells.push(`<th${span}${H.subtotal}${click(col.pathKey)}>${label}${mark(col.pathKey)}</th>`);
+              // 소계 칸도 우클릭을 받는다 — 연도를 접으면 화면에 보이는 열 제목이 이것뿐이라,
+              // 여기서 안 되면 "열 순서가 안 먹는다"가 된다. 소계는 한 단계 위 그룹(연)에 속한다.
+              cells.push(`<th${span}${H.subtotal}${click(col.pathKey)}${depth > 0 ? order(depth - 1) : ''}>${label}${mark(col.pathKey)}</th>`);
             } else {
               const label = pvFormatFieldValue(colFields[depth], col.path[col.path.length - 1]);
               cells.push(`<th${span}${H.leaf}${click(col.pathKey)}${order(depth)}>${label}${mark(col.pathKey)}</th>`);
