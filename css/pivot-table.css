@@ -92,6 +92,14 @@
     .toggle-icon:hover,
     .year-toggle-btn:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--text-on-accent); }
 
+    /* 우클릭(=iPad에서는 길게 누르기) 메뉴가 붙는 칸 — 행 라벨과 열 헤더.
+       iOS Safari는 길게 누르면 텍스트 선택과 '글쓰기 도구' 팝업을 먼저 띄워서 우리 메뉴를 덮는다.
+       그 두 칸에서만 선택·콜아웃을 끈다(숫자 칸은 그대로 두어 복사할 수 있게 남긴다). */
+    .pivot-tree-table th,
+    .pivot-tree-table td:first-child {
+      -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    }
+
     /* 열 헤더 클릭 정렬 — 누를 수 있다는 것만 알리고 평소엔 조용히 둔다. */
     .pivot-tree-table th[data-pvsort] { cursor: pointer; }
     .pivot-tree-table th[data-pvsort]:hover { text-decoration: underline; text-underline-offset: 3px; }
