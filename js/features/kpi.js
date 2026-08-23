@@ -422,8 +422,8 @@
     function goalMetricThs(cls) { const c = cls ? ` class="${cls}"` : ''; return `<th${c}>목표</th><th${c}>실적</th><th${c}>달성률</th>`; }
 
     // 헤더 3줄: 연도 → 월 → 목표/실적/달성률. 다른 피벗은 2줄이라 이 두 표만 .pivot-tri-header를 단다.
-    function goalPivotHeaderHtml(viewType, years, yearMonthsMap, expandedMap, rowLabel, labelMinWidth) {
-      let h1 = `<th rowspan="3" style="text-align:left; min-width:${labelMinWidth}px; vertical-align:middle;">${rowLabel}</th>`;
+    function goalPivotHeaderHtml(viewType, years, yearMonthsMap, expandedMap, rowLabel) {
+      let h1 = `<th rowspan="3" style="text-align:left; vertical-align:middle;">${rowLabel}</th>`;
       let h2 = '', h3 = '';
       years.forEach(yr => {
         const isExp = expandedMap[yr] !== false;
@@ -482,7 +482,7 @@
       const src = goalPivotSourceRows(axis.scopeSet);
       const expandedMap = expandedGoalTrendYearColumns;
 
-      const hdr = goalPivotHeaderHtml('goalTrend', years, yearMonthsMap, expandedMap, '대분류', 200);
+      const hdr = goalPivotHeaderHtml('goalTrend', years, yearMonthsMap, expandedMap, '구분');
       document.getElementById('goalTrendPivotHeaderRow1').innerHTML = mapPivotHtml(hdr.h1);
       document.getElementById('goalTrendPivotHeaderRow2').innerHTML = mapPivotHtml(hdr.h2);
       document.getElementById('goalTrendPivotHeaderRow3').innerHTML = mapPivotHtml(hdr.h3);
@@ -572,7 +572,7 @@
       const src = goalPivotSourceRows(axis.scopeSet);
       const expandedMap = expandedGoalDeptYearColumns;
 
-      const hdr = goalPivotHeaderHtml('goalDept', years, yearMonthsMap, expandedMap, '부서 → 담당자 → 대분류', 300);
+      const hdr = goalPivotHeaderHtml('goalDept', years, yearMonthsMap, expandedMap, '구분');
       document.getElementById('goalDeptPivotHeaderRow1').innerHTML = mapPivotHtml(hdr.h1);
       document.getElementById('goalDeptPivotHeaderRow2').innerHTML = mapPivotHtml(hdr.h2);
       document.getElementById('goalDeptPivotHeaderRow3').innerHTML = mapPivotHtml(hdr.h3);

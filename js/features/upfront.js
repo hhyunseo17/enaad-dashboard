@@ -81,12 +81,12 @@
     function renderUpfrontPivotTable() {
       const data = computeUpfrontPivotData();
       const tbody = document.getElementById('upfrontPivotTableBody');
-      if (!data) { document.getElementById('upfrontPivotHeaderRow').innerHTML = `<th style="text-align: left;">부서 / 광고주(업프론트용) / 대행사</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`; tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-secondary);">연도를 1개만 선택하면 표시됩니다.</td></tr>`; document.getElementById('upfrontPivotTotalAmount').innerText = `0 억원`; return; }
+      if (!data) { document.getElementById('upfrontPivotHeaderRow').innerHTML = `<th style="text-align: left;">구분</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`; tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-secondary);">연도를 1개만 선택하면 표시됩니다.</td></tr>`; document.getElementById('upfrontPivotTotalAmount').innerText = `0 억원`; return; }
 
       const { cy, months, tree } = data;
       document.getElementById('upfrontPivotTitle').innerText = `업프론트 실적 현황 (${cy}년)`;
 
-      let headerHtml = `<th style="text-align: left;">부서 / 광고주(업프론트용) / 대행사</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
+      let headerHtml = `<th style="text-align: left;">구분</th><th style="text-align: left;">업프론트 계약금액</th><th style="text-align: center;">계약시작일</th><th style="text-align: center;">계약종료일</th>`;
       months.forEach(m => { headerHtml += `<th style="text-align: right;">${m}월</th>`; });
       headerHtml += `<th style="text-align: right;">총합계</th>`;
       document.getElementById('upfrontPivotHeaderRow').innerHTML = mapPivotHtml(headerHtml);

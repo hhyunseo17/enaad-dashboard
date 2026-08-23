@@ -8,7 +8,7 @@
       const yearMonthsMap = {};
       years.forEach(yr => { const monthsWithData = new Set(); targetData.filter(r => r.year === yr && r.amount > 0).forEach(r => monthsWithData.add(r.month)); yearMonthsMap[yr] = [...monthsWithData].sort((a,b)=>a-b); });
 
-      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">항목별 (대·중·소)</th>`, h2 = ``;
+      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">구분</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedCatYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
         if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('cat', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 
@@ -79,7 +79,7 @@
       const yearMonthsMap = {};
       years.forEach(yr => { const monthsWithData = new Set(); targetData.filter(r => r.year === yr && r.amount > 0).forEach(r => monthsWithData.add(r.month)); yearMonthsMap[yr] = [...monthsWithData].sort((a,b)=>a-b); });
 
-      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">부서별 (부서·대·중)</th>`, h2 = ``;
+      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">구분</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedDeptYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
         if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('dept', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 
@@ -152,7 +152,7 @@
       const yearMonthsMap = {};
       years.forEach(yr => { const monthsWithData = new Set(); targetData.filter(r => r.year === yr && r.amount > 0).forEach(r => monthsWithData.add(r.month)); yearMonthsMap[yr] = [...monthsWithData].sort((a,b)=>a-b); });
 
-      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">담당자별 5단계 (부서·담당·대·광고주·채널)</th>`, h2 = ``;
+      let h1 = `<th rowspan="2" style="text-align:left; vertical-align:middle;">구분</th>`, h2 = ``;
       years.forEach(yr => {
         const isExp = expandedMgrYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || [];
         if (isExp) { h1 += `<th colspan="${activeMonths.length+1}"><span class="year-toggle-btn" onclick="toggleYearColumn('mgr', ${yr})">-</span> ${yr}년</th>`; activeMonths.forEach(m => h2 += `<th>${m}월</th>`); h2 += `<th class="pv-th-summary">${yr}년 요약</th>`; } 

@@ -494,7 +494,9 @@
 
       const multiValue = valueDefs.length > 1;
       const valuesPerCol = multiValue ? valueDefs.length : 1;
-      const rowLabel = rowFieldDefs.length ? rowFieldDefs.map(f => f.label).join(' / ') : '구분';
+      // 다른 피벗과 같이 '구분'으로 고정한다. 어떤 필드가 행에 놓였는지는 우측 행 well이 이미 보여주므로
+      // 여기에 필드명을 이어 붙이면 열 폭만 잡아먹는다(행이 3단계면 "부서 / 담당자 / 대분류"가 된다).
+      const rowLabel = '구분';
 
       // 그룹핑 행: 열 필드가 있으면 필드별 colspan 그룹(접힌 그룹은 병합 1칸 + 토글), 없으면 (단일값일 때만) "합계" 한 칸.
       let groupRows = colFieldDefs.length > 0
