@@ -59,6 +59,14 @@
     .btn-primary { background: var(--primary-blue); color: var(--text-on-primary); border: none; box-shadow: var(--shadow-blue-glow); }
     .btn-primary:hover { background: var(--primary-blue-hover); }
     .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--radius-sm); }
+    /* 켜짐/꺼짐이 있는 토글 버튼(빌더 패널 열고 닫기). 눌린 상태가 눈에 보여야 '들어갔다 나갔다'가
+       읽힌다. btn-primary를 쓰면 옆의 진짜 주요 동작(엑셀 다운로드)과 경쟁하므로 옅은 파랑 + 테두리로만
+       구분한다. 화살표는 패널이 오른쪽에서 들고 나는 방향을 가리킨다. */
+    .btn-toggle.is-on { background: var(--primary-blue-glow); border-color: var(--primary-blue); color: var(--primary-blue); font-weight: 500; }
+    .btn-toggle.is-on:hover { background: var(--primary-blue-glow); border-color: var(--primary-blue); }
+    /* 화살표 방향은 JS가 글자로 바꾼다(◀/▶) — 이 자리는 flex 아이템이라 display가 block으로
+       블록화되고 transform 회전이 기대대로 걸리지 않았다. */
+    .btn-toggle .btn-caret { font-size: 11px; opacity: 0.8; }
 
     .file-dropzone-container { background: var(--bg-elevated); border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 24px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 12px; transition: border-color 0.2s ease; }
     .file-dropzone-container.active { border-color: var(--primary-blue); background: var(--bg-card-hover); }

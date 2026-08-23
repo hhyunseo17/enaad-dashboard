@@ -591,7 +591,15 @@
       const el = document.getElementById(preset.layoutId); if (!el) return;
       const open = el.classList.toggle('dd-layout-collapsed') === false;
       const btn = preset.builderBtn && document.getElementById(preset.builderBtn);
-      if (btn) btn.innerText = open ? '⚙ 편집 닫기' : '⚙ 표 편집';
+      // 이름('표 편집')은 그대로 두고 **눌린 상태와 화살표 방향**으로만 알린다 — 버튼 폭이 흔들리지
+      // 않고, 무엇을 여는 버튼인지가 계속 보인다. 화살표는 패널이 오른쪽에서 들고 나는 방향이다:
+      // 닫힘 ◀(끌어온다) / 열림 ▶(밀어낸다). 회전(transform)이 아니라 글자를 바꾼다 —
+      // 이 자리는 flex 아이템이라 display가 block으로 바뀌는 등 변수가 있어 글자 교체가 확실하다.
+      if (btn) {
+        btn.classList.toggle('is-on', open);
+        const caret = btn.querySelector('.btn-caret');
+        if (caret) caret.textContent = open ? '▶' : '◀';
+      }
       if (open) renderPvBuilderPanel(viewKey); // 접혀 있는 동안 갱신을 건너뛴 경우를 대비
     }
 
