@@ -431,54 +431,20 @@
     // 행/열 well은 **순서가 곧 위계**다(위가 상위). 칩을 세로로 쌓아 두었으므로 위아래 순서가
     // 그대로 위계라, 따로 번호를 붙이지 않는다. 드래그 중에는 어느 칩 앞에 끼워지는지
     // 그 칩 위쪽 틈에 가로선으로 미리 보여준다(onDetailDataChipDrop이 대상 "앞"에 삽입).
-    function renderDetailDataWellFieldChips(wellName, fieldKeys, cfg, sortable) {
+    function renderDetailDataWellFieldChips(wellName, fieldKeys) {
       return fieldKeys.map(key => {
         const label = detailDataFieldLabel(key);
-        const sort = sortable ? renderPvSortSelect(wellName, key, cfg) : '';
         return `<div class="dd-field-chip dd-field-chip-placed" draggable="true" data-field="${key}"
           ondragstart="onDetailDataDragStart(event,'${key}')" ondragend="onDetailDataDragEnd(event)"
           ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
           ondrop="onDetailDataChipDrop(event,'${wellName}','${key}')">
-          <span>${label}</span>${sort}<span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
+          <span>${label}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
         </div>`;
       }).join('');
     }
 
-    // 행/열 칩의 정렬 선택. 세부데이터는 아직 첫 값 내림차순 고정이라 일반 피벗에서만 띄운다
-    // (renderDetailDataBuilderPanels가 ctx 유무로 판단해 sortable을 넘긴다).
-    //   행  — 값 / 이름 / 그 필드 고유 순서(부서=팀순, 대분류=5대분류순, 채널=편성순)
-    //   열  — 열 머리글 값 기준 오름·내림뿐. 값으로 정렬한다는 개념이 없다.
-    function renderPvSortSelect(wellName, key, cfg) {
-      if (wellName !== 'rows' && wellName !== 'columns') return '';
-      const cur = (cfg && cfg.sorts && cfg.sorts[key]) || null;
-      const opts = [];
-      if (wellName === 'columns') {
-        const defDir = (typeof PV_FIELD_DEFAULT_DIR !== 'undefined' && PV_FIELD_DEFAULT_DIR[key]) || 'asc';
-        opts.push(['label:asc', '↑ 오름'], ['label:desc', '↓ 내림']);
-        var curVal = cur ? `label:${cur.dir}` : `label:${defDir}`;
-      } else {
-        const hasOrder = typeof PV_FIELD_ORDER_SORTER !== 'undefined' && PV_FIELD_ORDER_SORTER[key];
-        if (hasOrder) opts.push(['preset:asc', '기본순'], ['preset:desc', '기본순 ↕']);
-        // 연·월은 '이름순'이라고 하면 뜻이 안 통한다 — 그 필드에서는 값 자체가 순서다.
-        const isYm = (key === 'year' || key === 'month');
-        opts.push(['value:desc', '값 ↓'], ['value:asc', '값 ↑'],
-                  ['label:asc', isYm ? '↑ 오름' : '이름 ↑'], ['label:desc', isYm ? '↓ 내림' : '이름 ↓']);
-        var curVal = cur ? `${cur.by}:${cur.dir}` : null;
-      }
-      const sel = opts.map(([v, t]) => `<option value="${v}"${v === curVal ? ' selected' : ''}>${t}</option>`).join('');
-      const head = curVal === null ? '<option value="" selected>기본</option>' : '';
-      return `<select class="dd-sort-select" title="정렬" onclick="event.stopPropagation();" ondragstart="event.preventDefault(); event.stopPropagation();"
-        onchange="setPvFieldSort('${wellName}','${ddEsc(key)}', this.value)">${head}${sel}</select>`;
-    }
-
-    function setPvFieldSort(wellName, key, val) {
-      const cfg = ddCfg();
-      if (!cfg.sorts) cfg.sorts = {};
-      if (!val) delete cfg.sorts[key];
-      else { const [by, dir] = val.split(':'); cfg.sorts[key] = { by, dir }; }
-      ddRerender();
-    }
-
+    // 정렬은 표 안에서 정한다 — 행은 라벨 우클릭, 열은 헤더 우클릭(pivot-builder.js).
+    // 패널에도 셀렉트를 두었었지만 같은 일을 두 번 하는 자리가 되어 걷어냈다.
     function pvClearDropLines() {
       document.querySelectorAll('.dd-drop-before').forEach(el => el.classList.remove('dd-drop-before'));
     }
@@ -554,9 +520,9 @@
       fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields);
       // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 cfg.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
       filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
-      filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', cfg.filters.map(f => f.field), cfg, false) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      colEl.innerHTML = renderDetailDataWellFieldChips('columns', cfg.columns, cfg, !!ctx) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      rowEl.innerHTML = renderDetailDataWellFieldChips('rows', cfg.rows, cfg, !!ctx) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', cfg.filters.map(f => f.field)) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      colEl.innerHTML = renderDetailDataWellFieldChips('columns', cfg.columns) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      rowEl.innerHTML = renderDetailDataWellFieldChips('rows', cfg.rows) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
       valEl.innerHTML = renderDetailDataValuesChips(cfg) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
     }
 

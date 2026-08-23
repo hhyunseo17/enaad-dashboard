@@ -280,7 +280,7 @@
       });
 
       document.getElementById('pivotTotalAmount').innerText = `${Math.round(grandTotalSum).toLocaleString()} 백만`;
-      let tbodyHtml = ''; const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
+      let tbodyHtml = ''; const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', '기타', 'CHING', 'ONT', '헬스메디TV'];
       const channels = Object.keys(channelTree).sort((a,b) => { let idxA = targetOrder.indexOf(a); let idxB = targetOrder.indexOf(b); if (idxA !== -1 && idxB !== -1) return idxA - idxB; if (idxA !== -1) return -1; if (idxB !== -1) return 1; return a.localeCompare(b); });
 
       channels.forEach(ch => {
