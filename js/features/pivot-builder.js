@@ -236,12 +236,17 @@
       // class가 아니라 data 속성으로 표시한다 — H.subtotal 등이 이미 class를 갖고 있어서 class를
       // 한 번 더 붙이면 같은 속성이 두 번 나오고 파서가 뒤엣것을 통째로 버린다. 그래서 정렬 표시가
       // 조용히 사라졌었다(onclick은 남고 클래스만 없어져 눈에 잘 안 띈다).
-      const click = (pk) => ` data-pvsort="1" onclick="pvSortByColumn('${opt.presetKey}','${pvEsc(pk)}')"`;
+      const click = opt.colClick || ((pk) => ` data-pvsort="1" onclick="pvSortByColumn('${opt.presetKey}','${pvEsc(pk)}')"`);
       // 좌클릭은 '이 열 값으로 행 정렬', 우클릭은 '이 축의 순서'. 서로 다른 일이라 갈라 둔다.
       // 우클릭은 행 라벨에서든 열 헤더에서든 "여기 기준으로 정렬"이어야 뜻이 같다.
       // 값이 있는 열이면 그 열 기준 행 정렬을 먼저 보여주고, 그 아래에 축 나열 순서를 붙인다.
       // 그룹 헤더(연도)는 한 칸에 값이 여러 개라 "이 열 기준"이 성립하지 않으므로 축 순서만.
-      const menu = (orderDepth, pathKey, label) => ` oncontextmenu="return pvOpenColMenu(event,'${opt.presetKey}',${orderDepth},'${pvEsc(pathKey || '')}','${pvEsc(label)}')"`;
+      // colClick/colMenu를 프리셋이 덮어쓸 수 있게 열어 둔 이유: 목표 피벗은 한 열이 세 칸(목표·실적·달성률)이라
+      // '값'이 무엇인지가 갈라져서, 같은 메뉴를 쓸 수 없다.
+      const menu = opt.colMenu || ((orderDepth, pathKey, label) => ` oncontextmenu="return pvOpenColMenu(event,'${opt.presetKey}',${orderDepth},'${pvEsc(pathKey || '')}','${pvEsc(label)}')"`);
+      // 한 열이 여러 칸을 차지하는 표(목표 피벗 = 3칸)를 위해 colspan을 곱한다. 기본은 1칸.
+      const spanMul = opt.spanMul || 1;
+      const mulAttr = spanMul > 1 ? ` colspan="${spanMul}"` : '';
       const L = colFields.length;
       const H = opt.header;
       const rows = [];
@@ -252,7 +257,7 @@
           const col = visibleColumns[i];
           if (col.path.length <= depth) { i++; continue; } // 앞 깊이에서 rowspan으로 이미 덮인 열
           if (col.path.length - 1 === depth) {
-            const span = L - depth > 1 ? ` rowspan="${L - depth}"` : '';
+            const span = (L - depth > 1 ? ` rowspan="${L - depth}"` : '') + mulAttr;
             if (col.isSubtotal) {
               const label = `${pvFormatFieldValue(col.groupField, col.groupValue)} 요약`;
               // 소계 칸도 우클릭을 받는다 — 연도를 접으면 화면에 보이는 열 제목이 이것뿐이라,
@@ -276,7 +281,7 @@
               const expanded = opt.columnDefaultExpanded ? (opt.expandedCols[key] !== false) : !!opt.expandedCols[key];
               toggle = `<span class="year-toggle-btn" onclick="togglePvColNode('${opt.presetKey}','${pvEsc(value)}')">${expanded ? '-' : '+'}</span> `;
             }
-            cells.push(`<th colspan="${span}"${H.group}${menu(depth, '', label)}>${toggle}${label}</th>`);
+            cells.push(`<th colspan="${span * spanMul}"${H.group}${menu(depth, '', label)}>${toggle}${label}</th>`);
             i = j;
           }
         }
@@ -526,7 +531,51 @@
         builderDom: { fieldList:'agyDdFieldList', filterBar:'agyDdFilterBar', filters:'agyDdWellFilterBody', columns:'agyDdWellColumnsBody', rows:'agyDdWellRowsBody', values:'agyDdWellValuesBody' },
         dom: { head1: 'agencyPivotHeaderRow1', head2: 'agencyPivotHeaderRow2', body: 'agencyPivotTableBody', total: 'agencyPivotTotalAmount' },
       },
+
+      // --- 목표 대비 실적 2종 ------------------------------------------------------
+      // 이 둘은 **엔진이 그리지 않는다**(render가 renderGoalPivot으로 나간다). 한 열이 목표·실적·달성률
+      // 세 칸이고 값이 두 소스(salesTargets / rawData)에서 오기 때문이다. 그래도 프리셋으로 등록하는
+      // 이유는 축 구성(pvConfigFor)·열 접기(togglePvColNode)·빌더 패널·원래대로가 전부 뷰 키만 보고
+      // 도는 공용 코드라, 등록만 해두면 그 상호작용을 그대로 물려받기 때문이다.
+      //
+      // 놓을 수 있는 필드를 다섯 개로 묶어 둔 것이 핵심 제약이다(PV_GOAL_FIELDS). 목표(salesTargets)는
+      // **담당자 × 5대분류 × 연월** 단위로만 편성돼 있어서, 채널·광고주·대행사를 축에 놓으면 실적만
+      // 쪼개지고 목표는 그대로라 달성률이 거짓으로 낮아진다(kpi.js의 스코프 주석 참고).
+      goalTrendPivot: {
+        goal: true,
+        rows: ['categoryReclassified'],
+        columns: ['year', 'month'],
+        values: [],
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        expandedRows: () => expandedGoalTrendPivot,
+        expandedCols: () => expandedGoalTrendYearColumns,
+        render: () => renderGoalPivot('goalTrendPivot'),
+        resetBtn: 'goalTrendPivotResetBtn',
+        layoutId: 'goalTrendPivotLayout', builderBtn: 'goalTrendPivotBuilderBtn',
+        builderDom: { fieldList:'goalTrendDdFieldList', columns:'goalTrendDdWellColumnsBody', rows:'goalTrendDdWellRowsBody' },
+      },
+
+      goalDeptPivot: {
+        goal: true,
+        rows: ['dept', 'manager', 'categoryReclassified'],
+        columns: ['year', 'month'],
+        values: [],
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        expandedRows: () => expandedGoalDeptPivot,
+        expandedCols: () => expandedGoalDeptYearColumns,
+        render: () => renderGoalPivot('goalDeptPivot'),
+        resetBtn: 'goalDeptPivotResetBtn',
+        layoutId: 'goalDeptPivotLayout', builderBtn: 'goalDeptPivotBuilderBtn',
+        builderDom: { fieldList:'goalDeptDdFieldList', columns:'goalDeptDdWellColumnsBody', rows:'goalDeptDdWellRowsBody' },
+      },
     };
+
+    // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
+    const PV_GOAL_FIELDS = new Set(['year', 'month', 'dept', 'manager', 'categoryReclassified']);
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
 
@@ -750,7 +799,12 @@
     function pvBuilderCtxFor(viewKey) {
       const p = PIVOT_PRESETS[viewKey];
       if (!p || !p.builderDom) return null;
-      return { config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey, maxValues: 1, hiddenFields: PV_HIDDEN_FIELDS };
+      return {
+        config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey,
+        maxValues: 1, hiddenFields: PV_HIDDEN_FIELDS,
+        // 목표 피벗만 화이트리스트가 있다. 나머지는 null(=전 필드 허용).
+        allowedFields: p.goal ? PV_GOAL_FIELDS : null,
+      };
     }
     function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
     function renderPvBuilderPanel(viewKey) {

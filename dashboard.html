@@ -754,21 +754,41 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">대분류 × 월별 (목표 · 실적 · 달성률)</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">목표 · 실적 · 달성률</h2>
             <button class="btn btn-sm" onclick="expandAllYears('goalTrend', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('goalTrend', false)">모든 연도 월 접기 (+)</button>
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 12px; color: var(--text-tertiary);">금액 단위: 백만원 · 좌측 상세필터 미반영</span>
+            <button class="btn btn-sm" id="goalTrendPivotResetBtn" onclick="pvResetPivot('goalTrendPivot')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="goalTrendPivotBuilderBtn" onclick="pvToggleBuilder('goalTrendPivot')" title="행·열을 바꿔 표를 다시 구성합니다 (목표가 편성된 다섯 축만 놓을 수 있습니다)"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
             <button class="btn btn-primary btn-sm" onclick="exportGoalPivotExcel('trend')">📥 피벗 엑셀 다운로드</button>
           </div>
         </div>
-        <div class="table-wrapper" style="max-height: 750px;">
+        <section class="dd-layout dd-layout-collapsed" id="goalTrendPivotLayout">
+          <div class="dd-main">
+            <div class="table-wrapper" style="max-height: 750px;">
           <table class="data-table pivot-tree-table pivot-tri-header" id="goalTrendPivotTable">
-            <thead><tr id="goalTrendPivotHeaderRow1"></tr><tr id="goalTrendPivotHeaderRow2"></tr><tr id="goalTrendPivotHeaderRow3"></tr></thead>
+            <!-- 헤더는 열 축 깊이에 따라 줄 수가 달라져 renderGoalPivot()이 thead를 통째로 그린다 --><thead></thead>
             <tbody id="goalTrendPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <!-- 목표 피벗의 빌더는 열·행 두 well만 둔다. 값은 목표·실적·달성률로 고정이고, 필터를 걸면
+               실적만 줄고 목표는 그대로라 달성률이 거짓으로 낮아진다(좌측 필터바 미반영과 같은 이유). -->
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="goalTrendDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="goalTrendDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="goalTrendDdWellRowsBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -791,21 +811,39 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">부서 → 담당자 → 대분류 × 월별 (목표 · 실적 · 달성률)</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">목표 · 실적 · 달성률</h2>
             <button class="btn btn-sm" onclick="expandAllYears('goalDept', true)">모든 연도 월 펼치기 (-)</button>
             <button class="btn btn-sm" onclick="expandAllYears('goalDept', false)">모든 연도 월 접기 (+)</button>
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 12px; color: var(--text-tertiary);">금액 단위: 백만원 · 좌측 상세필터 미반영</span>
+            <button class="btn btn-sm" id="goalDeptPivotResetBtn" onclick="pvResetPivot('goalDeptPivot')" style="display:none;">↺ 원래대로</button><button class="btn btn-sm btn-toggle" id="goalDeptPivotBuilderBtn" onclick="pvToggleBuilder('goalDeptPivot')" title="행·열을 바꿔 표를 다시 구성합니다 (목표가 편성된 다섯 축만 놓을 수 있습니다)"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
             <button class="btn btn-primary btn-sm" onclick="exportGoalPivotExcel('dept')">📥 피벗 엑셀 다운로드</button>
           </div>
         </div>
-        <div class="table-wrapper" style="max-height: 750px;">
+        <section class="dd-layout dd-layout-collapsed" id="goalDeptPivotLayout">
+          <div class="dd-main">
+            <div class="table-wrapper" style="max-height: 750px;">
           <table class="data-table pivot-tree-table pivot-tri-header" id="goalDeptPivotTable">
-            <thead><tr id="goalDeptPivotHeaderRow1"></tr><tr id="goalDeptPivotHeaderRow2"></tr><tr id="goalDeptPivotHeaderRow3"></tr></thead>
+            <!-- 헤더는 열 축 깊이에 따라 줄 수가 달라져 renderGoalPivot()이 thead를 통째로 그린다 --><thead></thead>
             <tbody id="goalDeptPivotTableBody"></tbody>
           </table>
         </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="goalDeptDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="goalDeptDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="goalDeptDdWellRowsBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 

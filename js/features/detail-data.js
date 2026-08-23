@@ -36,6 +36,12 @@
       if (c.config.values.length > c.maxValues) c.config.values = c.config.values.slice(-c.maxValues);
     }
     function ddRerender() { const c = ddCtx(); if (c) c.render(); else renderDetailDataPivot(); }
+    // 목표 피벗은 놓을 수 있는 필드가 다섯 개로 정해져 있다(목표가 그 축으로만 편성돼 있어서).
+    // 목록에서 감추는 것만으로는 부족하다 — 다른 화면에서 끌어온 칩이 드롭될 수 있으므로 드롭에서도 막는다.
+    function ddFieldAllowed(fieldKey) {
+      const c = ddCtx();
+      return !c || !c.allowedFields || c.allowedFields.has(fieldKey);
+    }
 
     function detailDataFieldLabel(key) { const f = DETAIL_DATA_FIELDS.find(x => x.key === key); return f ? f.label : key; }
     function ddEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
@@ -269,13 +275,15 @@
     // 필터/행/열 세 영역끼리는 한 필드가 한 곳에만 존재(상호 배타적). 값 영역은 완전히 독립 —
     // 다른 영역에 이미 쓰인 필드도 값에 자유롭게 추가할 수 있고, 같은 필드를 여러 번(다른 집계로) 넣을 수 있다.
     // ==========================================================================
+    // **인자로 받은 cfg를 쓴다.** 예전에는 전부 ddCfg()를 읽어서 인자가 무시됐는데, 지금은
+    // 보고 있지 않은 화면의 패널을 그릴 수도 있어(renderPresetPivot) 남의 배치가 칠해지게 된다.
     function getDetailDataPlacedFields(cfg) {
       cfg = cfg || ddCfg();
       const s = new Set();
-      ddCfg().filters.forEach(f => s.add(f.field));
-      ddCfg().rows.forEach(f => s.add(f));
-      ddCfg().columns.forEach(f => s.add(f));
-      ddCfg().values.forEach(v => s.add(v.field));
+      (cfg.filters || []).forEach(f => s.add(f.field));
+      (cfg.rows || []).forEach(f => s.add(f));
+      (cfg.columns || []).forEach(f => s.add(f));
+      (cfg.values || []).forEach(v => s.add(v.field));
       return s;
     }
 
@@ -338,6 +346,7 @@
       if (!payload || !payload.field) return;
       const fieldKey = payload.field;
       if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); ddRerender(); return; }
+      if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
       if (fieldKey === 'amount' && wellName !== 'values') return; // amount는 값 well 전용
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
@@ -364,6 +373,7 @@
       detailDataDragPayload = null;
       if (!payload || !payload.field) return;
       const fieldKey = payload.field;
+      if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
       if (fieldKey === 'amount' && wellName !== 'values') return;
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
@@ -419,11 +429,14 @@
     // hidden: 이 패널에서 아예 내보내지 않을 필드. 일반 피벗은 매출기준(revenueBasis)을 감춘다 —
     // 상단 필터바의 취급고/회계 토글이 이미 그 축을 정하고 있어서, 축에 놓아 봐야
     // 취급고에서는 '실적' 한 줄만 나오고 회계에서는 두 줄이 나오는 게 전부다.
-    function renderDetailDataFieldListHtml(cfg, hidden) {
+    // allowed: 이 패널이 받아들이는 필드 화이트리스트(목표 피벗). null이면 제한 없음.
+    function renderDetailDataFieldListHtml(cfg, hidden, allowed) {
       const placed = getDetailDataPlacedFields(cfg);
-      return DETAIL_DATA_FIELDS.filter(f => !(hidden && hidden.has(f.key))).map(f => {
+      return DETAIL_DATA_FIELDS.filter(f => !(hidden && hidden.has(f.key)) && !(allowed && !allowed.has(f.key))).map(f => {
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
-        const title = DD_FILTER_BAR_COVERED_FIELDS.has(f.key) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
+        // 화이트리스트가 있는 패널(목표 피벗)에는 필터 well 자체가 없으므로 이 안내를 붙이지 않는다 —
+        // 게다가 그 표는 좌측 상세필터를 반영하지 않아(달성률 왜곡 방지) 문구가 사실과 어긋난다.
+        const title = (!allowed && DD_FILTER_BAR_COVERED_FIELDS.has(f.key)) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
         return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="onDetailDataDragEnd(event)">${f.label}</div>`;
       }).join('');
     }
@@ -510,20 +523,24 @@
     function renderDetailDataBuilderPanels(ctx) {
       const dom = ctx ? ctx.dom : DD_DOM;
       const cfg = ctx ? ctx.config : detailDataConfig;
-      const fieldListEl = document.getElementById(dom.fieldList);
-      const filterBarEl = document.getElementById(dom.filterBar);
-      const filterWellEl = document.getElementById(dom.filters);
-      const colEl = document.getElementById(dom.columns);
-      const rowEl = document.getElementById(dom.rows);
-      const valEl = document.getElementById(dom.values);
-      if (!fieldListEl || !filterBarEl || !filterWellEl || !colEl || !rowEl || !valEl) return;
-      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields);
+      // **없는 칸은 건너뛴다.** 목표 피벗 패널은 열·행 두 well만 둔다 — 값은 목표·실적·달성률로 고정이고,
+      // 필터는 걸면 실적만 줄고 목표는 그대로라 달성률이 거짓으로 낮아진다(좌측 필터바를 미반영하는 것과 같은 이유).
+      const el = (id) => id ? document.getElementById(id) : null;
+      const fieldListEl = el(dom.fieldList);
+      if (!fieldListEl) return;
+      const filterBarEl = el(dom.filterBar);
+      const filterWellEl = el(dom.filters);
+      const colEl = el(dom.columns);
+      const rowEl = el(dom.rows);
+      const valEl = el(dom.values);
+      const placeholder = `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      fieldListEl.innerHTML = renderDetailDataFieldListHtml(cfg, ctx && ctx.hiddenFields, ctx && ctx.allowedFields);
       // 필터 바(표 위, 실제 값 선택용)와 사이드바 필터 well(배치/순서 조정용)은 같은 cfg.filters를 두 곳에 나눠 보여준다 — 엑셀 피벗의 필드 목록 필터 영역 vs 상단 필터 드롭다운과 동일한 구조.
-      filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
-      filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', cfg.filters.map(f => f.field)) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      colEl.innerHTML = renderDetailDataWellFieldChips('columns', cfg.columns) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      rowEl.innerHTML = renderDetailDataWellFieldChips('rows', cfg.rows) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
-      valEl.innerHTML = renderDetailDataValuesChips(cfg) || `<div class="dd-well-placeholder">필드를 끌어 놓으세요</div>`;
+      if (filterBarEl) filterBarEl.innerHTML = renderDetailDataFilterChips(cfg);
+      if (filterWellEl) filterWellEl.innerHTML = renderDetailDataWellFieldChips('filters', (cfg.filters || []).map(f => f.field)) || placeholder;
+      if (colEl) colEl.innerHTML = renderDetailDataWellFieldChips('columns', cfg.columns) || placeholder;
+      if (rowEl) rowEl.innerHTML = renderDetailDataWellFieldChips('rows', cfg.rows) || placeholder;
+      if (valEl) valEl.innerHTML = renderDetailDataValuesChips(cfg) || placeholder;
     }
 
     // ==========================================================================

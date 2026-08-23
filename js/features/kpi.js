@@ -385,21 +385,8 @@
     // 금액 단위는 다른 피벗과 같이 백만원. 달성률은 실적합÷목표합이다(개별 달성률의 평균이 아니다).
     // ==========================================================================
 
-    // 열 축(연/월). 실적이 아직 없어도 목표가 있는 월은 열로 세워야 "목표는 있는데 실적 0"이
-    // 보인다 — buildGoalScopeSet()이 이미 그 범위를 준다.
-    function buildGoalPivotAxis() {
-      const scopeSet = buildGoalScopeSet();
-      const yearMonthsMap = {};
-      scopeSet.forEach(ym => {
-        const [y, m] = ym.split('-').map(Number);
-        if (!yearMonthsMap[y]) yearMonthsMap[y] = [];
-        yearMonthsMap[y].push(m);
-      });
-      const years = Object.keys(yearMonthsMap).map(Number).sort((a, b) => b - a);
-      years.forEach(y => yearMonthsMap[y].sort((a, b) => a - b));
-      return { scopeSet, years, yearMonthsMap };
-    }
-
+    // 열 축의 값은 filteredData가 아니라 **목표 스코프**에서 나온다. 실적이 아직 없어도 목표가 있는
+    // 달은 열로 세워야 "목표는 있는데 실적 0"이 보이기 때문이다 — buildGoalScopeSet()이 그 범위를 준다.
     function goalPivotSourceRows(scopeSet) {
       return {
         targets: salesTargets.filter(t => scopeSet.has(t.year + '-' + t.month)),
@@ -407,36 +394,68 @@
       };
     }
 
+    // 목표와 실적을 **같은 모양의 레코드 한 벌**로 합친다. 두 표가 하나로 합쳐지는 지점이 여기다 —
+    // salesTargets는 담당자 × 5대분류 × 연월 단위이고 실적은 그보다 잘지만, 축 다섯 개
+    // (연·월·부서·담당자·대분류)는 양쪽에 다 있다. 그 다섯 안에서는 행·열 어디에 어떤 순서로 놓아도
+    // 목표와 실적이 같은 칸에서 만나므로 달성률이 성립한다. 채널·광고주·대행사가 빠진 이유도 같다 —
+    // 목표가 그 축으로 편성되지 않아 실적만 쪼개지고 분모는 그대로가 되기 때문이다.
+    //
     // 누적은 **전부 원 단위 정수로** 한다. 예전에는 백만원으로 나눈 뒤 더했는데, 축소된 단위로
     // 쌓으면 표시 단계마다 반올림이 겹쳐 행 합과 총합계가 어긋난다(엑셀로 내보내 다시 더해 보면
     // 8백만원까지 벌어졌다). 단위 변환은 화면·파일에 내보내는 마지막 순간에만 한다.
-    function goalNode() { return { t: 0, a: 0, yrs: {} }; }
-    function goalAddToNode(node, yr, m, tAmt, aAmt) {
-      node.t += tAmt; node.a += aAmt;
-      if (!node.yrs[yr]) node.yrs[yr] = { t: 0, a: 0, m: {} };
-      node.yrs[yr].t += tAmt; node.yrs[yr].a += aAmt;
-      if (!node.yrs[yr].m[m]) node.yrs[yr].m[m] = { t: 0, a: 0 };
-      node.yrs[yr].m[m].t += tAmt; node.yrs[yr].m[m].a += aAmt;
+    function goalRecords(src) {
+      const recs = [];
+      src.targets.forEach(t => recs.push({
+        year: t.year, month: t.month, dept: t.dept || '(미지정)', manager: t.manager || '(미지정)',
+        categoryReclassified: t.categoryReclassified || '기타광고', t: t.targetWon, a: 0
+      }));
+      src.actuals.forEach(r => recs.push({
+        year: r.year, month: r.month, dept: r.dept || '(미지정)', manager: r.manager || '(미지정)',
+        categoryReclassified: r.categoryReclassified || '기타광고', t: 0, a: r.amount
+      }));
+      return recs;
+    }
+
+    // 행 N단계 × 열 N단계 트리. 노드마다 열 키별 {목표 t, 실적 a}를 들고, PV_ROWTOTAL에 행 전체 합을 둔다.
+    // 열 조합의 정렬 규칙은 일반 피벗과 같은 것을 쓴다(연은 최근부터, 월은 1월부터 — pivot-builder.js).
+    function goalBuildTree(recs, rowFields, colFields, cfg) {
+      const makeNode = () => ({ m: {}, children: {} });
+      const root = makeNode();
+      const combos = new Map();
+      const add = (n, key, r) => { const b = n.m[key] || (n.m[key] = { t: 0, a: 0 }); b.t += r.t; b.a += r.a; };
+      recs.forEach(r => {
+        const combo = colFields.map(f => String(r[f]));
+        const colKey = combo.length ? combo.join('||') : PV_ALLCOL;
+        if (!combos.has(colKey)) combos.set(colKey, combo);
+        let n = root;
+        add(n, colKey, r); add(n, PV_ROWTOTAL, r);
+        rowFields.forEach(f => {
+          const v = String(r[f]);
+          if (!n.children[v]) n.children[v] = makeNode();
+          n = n.children[v];
+          add(n, colKey, r); add(n, PV_ROWTOTAL, r);
+        });
+      });
+      if (colFields.length === 0) combos.set(PV_ALLCOL, []);
+      const colCombos = [...combos.values()].sort((a, b) => {
+        for (let i = 0; i < colFields.length; i++) {
+          const c = pvCompareFieldValues(colFields[i], a[i], b[i], pvColumnDir(colFields[i], cfg));
+          if (c !== 0) return c;
+        }
+        return 0;
+      });
+      return { root: root, colCombos: colCombos };
+    }
+
+    // 접힌 열 그룹 하나가 여러 잎을 대표하므로 그 잎들을 합쳐 한 칸으로 만든다.
+    function goalMergeCells(node, leafKeys) {
+      if (leafKeys.length === 1) return node.m[leafKeys[0]];
+      let t = 0, a = 0;
+      leafKeys.forEach(k => { const b = node.m[k]; if (b) { t += b.t; a += b.a; } });
+      return { t: t, a: a };
     }
 
     function goalMetricThs(cls) { const c = cls ? ` class="${cls}"` : ''; return `<th${c}>목표</th><th${c}>실적</th><th${c}>달성률</th>`; }
-
-    // 헤더 3줄: 연도 → 월 → 목표/실적/달성률. 다른 피벗은 2줄이라 이 두 표만 .pivot-tri-header를 단다.
-    function goalPivotHeaderHtml(viewType, years, yearMonthsMap, expandedMap, rowLabel) {
-      let h1 = `<th rowspan="3" style="text-align:left; vertical-align:middle;">${rowLabel}</th>`;
-      let h2 = '', h3 = '';
-      years.forEach(yr => {
-        const isExp = expandedMap[yr] !== false;
-        const months = yearMonthsMap[yr] || [];
-        const groupCount = isExp ? months.length + 1 : 1; // +1 = 연 요약
-        h1 += `<th colspan="${groupCount * 3}"><span class="year-toggle-btn" onclick="toggleYearColumn('${viewType}', ${yr})">${isExp ? '-' : '+'}</span> ${yr}년</th>`;
-        if (isExp) months.forEach(m => { h2 += `<th colspan="3">${m}월</th>`; h3 += goalMetricThs(''); });
-        h2 += `<th colspan="3" class="pv-th-summary">${yr}년 요약</th>`; h3 += goalMetricThs('pv-th-summary');
-      });
-      h1 += `<th colspan="3" rowspan="2" class="pv-th-total" style="z-index:35;">총합계</th>`;
-      h3 += goalMetricThs('pv-th-total');
-      return { h1: h1, h2: h2, h3: h3 };
-    }
 
     // 목표/실적/달성률 3칸. 값은 원 단위로 들어오고 여기서만 백만원으로 바꾼다.
     // 달성률 색은 피벗 색표(PIVOT_COLOR_MAP)에 이미 있는 증감색을 그대로 쓴다.
@@ -450,58 +469,238 @@
         + `<td style="text-align:right; font-weight:${fontW}; ${bg}${rateStyle}">${rate === null ? '-' : rate.toFixed(1) + '%'}</td>`;
     }
 
-    function goalCellsHtml(node, years, yearMonthsMap, expandedMap, fontW) {
+    // 한 행의 값 칸 전부(보이는 열 + 맨 끝 총합계). 소계·총합계 칸의 배경은 인라인이며
+    // mapPivotHtml()의 치환 키이므로 **문자열 표기를 바꾸지 말 것**.
+    function goalCellsHtml(node, visibleColumns, fontW) {
       let cells = '';
-      years.forEach(yr => {
-        const isExp = expandedMap[yr] !== false;
-        const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : { t: 0, a: 0, m: {} };
-        if (isExp) (yearMonthsMap[yr] || []).forEach(m => { cells += goalTriCells(yrObj.m[m], fontW, ''); });
-        cells += goalTriCells(yrObj, fontW, 'background:rgba(30,58,138,0.1);');
+      visibleColumns.forEach(col => {
+        cells += goalTriCells(goalMergeCells(node, col.leafKeys), fontW, col.isSubtotal ? 'background:rgba(30,58,138,0.1);' : '');
       });
-      cells += goalTriCells(node, fontW, 'background:rgba(30,64,175,0.2);');
+      cells += goalTriCells(node.m[PV_ROWTOTAL], fontW, 'background:rgba(30,64,175,0.2);');
       return cells;
     }
 
-    // 표가 성립하지 않는 두 경우(회계기준 / 스코프에 등록된 목표 없음) 공용 빈 상태.
+    // 표가 성립하지 않는 경우(회계기준 / 등록된 목표 없음 / 행이 빈 경우) 공용 빈 상태.
+    // 헤더는 줄 수가 열 축 깊이에 따라 달라지므로 thead를 통째로 쓴다.
+    function goalTheadEl(prefix) { return document.querySelector('#' + prefix + 'Table thead'); }
     function renderGoalPivotUnavailable(prefix, message) {
-      document.getElementById(prefix + 'HeaderRow1').innerHTML = `<th style="text-align:left;">구분</th>`;
-      document.getElementById(prefix + 'HeaderRow2').innerHTML = '';
-      document.getElementById(prefix + 'HeaderRow3').innerHTML = '';
+      const thead = goalTheadEl(prefix);
+      if (thead) thead.innerHTML = `<tr><th style="text-align:left; vertical-align:middle;">구분</th></tr>`;
       document.getElementById(prefix + 'TableBody').innerHTML = `<tr><td style="text-align:center; padding:30px; color:var(--text-tertiary);">${message}</td></tr>`;
       document.getElementById(prefix + 'Total').innerText = '-';
     }
 
     function goalRateText(t, a) { return t > 0 ? (a / t * 100).toFixed(1) + '%' : '-'; }
 
-    // ── 월별 목표 대비 실적 피벗 — 행: 대분류 ────────────────────────────────
-    function renderGoalTrendPivotTable() {
-      if (revenueBasisMode === 'accounting') { renderGoalPivotUnavailable('goalTrendPivot', '취급고 기준에서만 제공됩니다'); return; }
-
-      const axis = buildGoalPivotAxis(); const years = axis.years; const yearMonthsMap = axis.yearMonthsMap;
-      if (years.length === 0) { renderGoalPivotUnavailable('goalTrendPivot', GOAL_NO_TARGET_MSG); return; }
-      const src = goalPivotSourceRows(axis.scopeSet);
-      const expandedMap = expandedGoalTrendYearColumns;
-
-      const hdr = goalPivotHeaderHtml('goalTrend', years, yearMonthsMap, expandedMap, '구분');
-      document.getElementById('goalTrendPivotHeaderRow1').innerHTML = mapPivotHtml(hdr.h1);
-      document.getElementById('goalTrendPivotHeaderRow2').innerHTML = mapPivotHtml(hdr.h2);
-      document.getElementById('goalTrendPivotHeaderRow3').innerHTML = mapPivotHtml(hdr.h3);
-
-      const tree = {}; const grand = goalNode();
-      const ensure = (cat) => { if (!tree[cat]) tree[cat] = goalNode(); return tree[cat]; };
-      src.targets.forEach(t => { const cat = t.categoryReclassified || '기타광고'; goalAddToNode(ensure(cat), t.year, t.month, t.targetWon, 0); goalAddToNode(grand, t.year, t.month, t.targetWon, 0); });
-      src.actuals.forEach(r => { const cat = r.categoryReclassified || '기타광고'; goalAddToNode(ensure(cat), r.year, r.month, 0, r.amount); goalAddToNode(grand, r.year, r.month, 0, r.amount); });
-
-      const cats = Object.keys(tree).sort(compareGoalCategoryOrder);
-
-      let html = '';
-      cats.forEach(cat => {
-        html += `<tr><td class="indent-step-1" style="background:#1E293B; color:#F8FAFC; font-weight:700;">${cat}</td>${goalCellsHtml(tree[cat], years, yearMonthsMap, expandedMap, '600')}</tr>`;
-      });
-      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>${goalCellsHtml(grand, years, yearMonthsMap, expandedMap, '500')}</tr>`;
-      document.getElementById('goalTrendPivotTableBody').innerHTML = mapPivotHtml(html);
-      document.getElementById('goalTrendPivotTotal').innerText = goalRateText(grand.t, grand.a);
+    // ── 행 정렬 ──────────────────────────────────────────────────────────────
+    // 일반 피벗의 정렬자를 그대로 못 쓴다 — 저쪽은 값이 하나지만 여기는 한 칸에 셋(목표·실적·달성률)이라
+    // "값 큰 순"이 무엇 기준인지 먼저 정해야 한다. 그래서 메뉴에서 기준을 고르게 하고, 기본값은
+    // 원래 두 표가 쓰던 순서를 그대로 따른다(부서=팀 번호순, 대분류=5대분류 순, 담당자=목표+실적 큰 순).
+    const GOAL_FIELD_ORDER_SORTER = {
+      dept: (a, b) => compareDeptOrder(a, b),
+      categoryReclassified: (a, b) => compareGoalCategoryOrder(a, b),
+    };
+    function goalMetricOf(v, by) {
+      if (!v) return by === 'rate' ? -1 : 0;
+      if (by === 't') return v.t;
+      if (by === 'a') return v.a;
+      return v.t > 0 ? v.a / v.t : -1; // 달성률. 목표가 없으면 비교할 수 없으므로 맨 뒤로 보낸다.
     }
+    function goalRowSorterFor(field, cfg) {
+      const s = cfg && cfg.sorts && cfg.sorts[field];
+      if (s) {
+        if (s.by === 'label') return (a, b) => pvCompareFieldValues(field, a, b, s.dir);
+        if (s.by === 'preset' && GOAL_FIELD_ORDER_SORTER[field]) {
+          const base = GOAL_FIELD_ORDER_SORTER[field];
+          return (a, b) => (s.dir === 'desc' ? -1 : 1) * base(a, b);
+        }
+        const sign = s.dir === 'asc' ? 1 : -1;
+        return (a, b, va, vb) => sign * (goalMetricOf(va, s.by) - goalMetricOf(vb, s.by));
+      }
+      if (GOAL_FIELD_ORDER_SORTER[field]) return GOAL_FIELD_ORDER_SORTER[field];
+      // 연·월이 행으로 오면 매출순이 아니라 시간 순이 기본이다(열에 있을 때와 같은 방향).
+      if (field === 'year' || field === 'month') return (a, b) => pvCompareFieldValues(field, a, b, pvColumnDir(field, cfg));
+      return (a, b, va, vb) => (vb.t + vb.a) - (va.t + va.a);
+    }
+
+    // ── 우클릭 메뉴 ──────────────────────────────────────────────────────────
+    function goalOpenRowSortMenu(ev, viewKey, depth) {
+      const cfg = pvConfigFor(viewKey);
+      const field = cfg.rows[depth];
+      if (!field) return true;
+      const cur = (cfg.sorts && cfg.sorts[field]) ? `${cfg.sorts[field].by}:${cfg.sorts[field].dir}` : '';
+      const isYm = (field === 'year' || field === 'month');
+      const items = [
+        ['a:desc', '실적 큰 순'], ['a:asc', '실적 작은 순'],
+        ['t:desc', '목표 큰 순'], ['t:asc', '목표 작은 순'],
+        ['rate:desc', '달성률 높은 순'], ['rate:asc', '달성률 낮은 순'],
+        ['label:asc', isYm ? '오름차순' : '이름 오름차순'], ['label:desc', isYm ? '내림차순' : '이름 내림차순'],
+      ];
+      if (GOAL_FIELD_ORDER_SORTER[field]) items.push(['preset:asc', '기본 순서'], ['preset:desc', '기본 순서 역순']);
+      return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
+        items.map(([v, t]) => [t, v === cur, `goalPickRowSort('${viewKey}','${pvEsc(field)}','${v}')`]));
+    }
+    function goalPickRowSort(viewKey, field, val) {
+      pvCloseRowSortMenu();
+      const cfg = pvConfigFor(viewKey);
+      if (!cfg.sorts) cfg.sorts = {};
+      const parts = val.split(':');
+      cfg.sorts[field] = { by: parts[0], dir: parts[1] };
+      cfg.colSort = null; // 레벨별로 정하겠다는 뜻이므로 전 레벨 공통(열 기준) 정렬은 푼다
+      renderGoalPivot(viewKey);
+    }
+    // 열 헤더 우클릭. 값이 있는 열이면 "그 열의 무엇 기준으로 행을 정렬할지"를 먼저 묻고,
+    // 그 아래에 축 나열 순서를 붙인다. orderDepth < 0이면 축이 없는 열(총합계)이다.
+    function goalOpenColMenu(ev, viewKey, orderDepth, pathKey, label) {
+      const cfg = pvConfigFor(viewKey);
+      const items = [];
+      if (pathKey) {
+        const cs = cfg.colSort;
+        const on = (by, d) => !!(cs && cs.pathKey === pathKey && cs.dir === d && (cs.by || 'a') === by);
+        items.push(['이 열 기준 행 정렬', false, '']); // 구획 제목(클릭 안 됨)
+        [['a', '실적'], ['t', '목표'], ['rate', '달성률']].forEach(pair => {
+          items.push([`${pair[1]} 내림차순`, on(pair[0], 'desc'), `goalSetColumnSort('${viewKey}','${pvEsc(pathKey)}','${pair[0]}','desc')`]);
+          items.push([`${pair[1]} 오름차순`, on(pair[0], 'asc'), `goalSetColumnSort('${viewKey}','${pvEsc(pathKey)}','${pair[0]}','asc')`]);
+        });
+      }
+      const field = orderDepth >= 0 ? cfg.columns[orderDepth] : null;
+      if (field) {
+        const dir = (cfg.sorts && cfg.sorts[field]) ? cfg.sorts[field].dir : null;
+        items.push([`${detailDataFieldLabel(field)} 열 순서`, false, '']);
+        items.push(['오름차순', dir === 'asc', `goalPickColOrder('${viewKey}','${pvEsc(field)}','asc')`]);
+        items.push(['내림차순', dir === 'desc', `goalPickColOrder('${viewKey}','${pvEsc(field)}','desc')`]);
+      }
+      if (!items.length) return true;
+      return pvShowMenu(ev, label, items);
+    }
+    function goalSetColumnSort(viewKey, pathKey, by, dir) {
+      pvCloseRowSortMenu();
+      pvConfigFor(viewKey).colSort = { pathKey: pathKey, by: by, dir: dir };
+      renderGoalPivot(viewKey);
+    }
+    function goalPickColOrder(viewKey, field, dir) {
+      pvCloseRowSortMenu();
+      const cfg = pvConfigFor(viewKey);
+      if (!cfg.sorts) cfg.sorts = {};
+      cfg.sorts[field] = { by: 'label', dir: dir };
+      renderGoalPivot(viewKey);
+    }
+    function toggleGoalPivotNode(viewKey, pathKey) {
+      const map = PIVOT_PRESETS[viewKey].expandedRows();
+      map[pathKey] = !map[pathKey];
+      renderGoalPivot(viewKey);
+    }
+
+    // 깊이별 행 라벨 색과 값 칸 굵기. 원래 부서별 피벗이 쓰던 3단 램프를 그대로 쓰고,
+    // 축을 다섯 개까지 쌓을 수 있게 아래로 두 단을 더 두었다(담당자별 피벗과 같은 값).
+    const GOAL_ROW_STYLES = [
+      { label: 'background:#1E293B; color:#F8FAFC; font-weight:700;', fontW: '700' },
+      { label: 'background:#151C2C; color:#CBD5E1; font-weight:700;', fontW: '600' },
+      { label: 'background:#11151F; color:#94A3B8;', fontW: '400' },
+      { label: 'background:#0D1117; color:#64748B;', fontW: '400' },
+      { label: 'background:#090C10; color:#475569; font-size:12px;', fontW: '400' },
+    ];
+
+    function goalRenderRows(node, viewKey, depth, ancestorPath, visibleColumns, rowFields, cfg, expandedRows, out) {
+      const hasMore = depth + 1 < rowFields.length;
+      const field = rowFields[depth];
+      const zero = { t: 0, a: 0 };
+      const tot = (n) => n.m[PV_ROWTOTAL] || zero;
+
+      // 열 헤더에서 건 정렬이 있으면 그 열 기준으로, 없으면 필드별 규칙으로 정렬한다.
+      // 열 기준은 **모든 레벨에 같이** 걸린다(헤더는 하나인데 행 계층은 여럿이라 나눌 수가 없다).
+      const cs = cfg.colSort;
+      const sortCol = cs ? (cs.pathKey === PV_GRAND ? PV_GRAND : visibleColumns.find(c => c.pathKey === cs.pathKey)) : null;
+      let keys;
+      if (sortCol) {
+        const by = cs.by || 'a'; // 헤더 좌클릭은 기준을 안 고르므로 실적으로 본다
+        const sign = cs.dir === 'asc' ? 1 : -1;
+        const val = (n) => sortCol === PV_GRAND ? tot(n) : goalMergeCells(n, sortCol.leafKeys);
+        keys = Object.keys(node.children).sort((a, b) =>
+          sign * (goalMetricOf(val(node.children[a]), by) - goalMetricOf(val(node.children[b]), by)));
+      } else {
+        const sorter = goalRowSorterFor(field, cfg);
+        keys = Object.keys(node.children).sort((a, b) => sorter(a, b, tot(node.children[a]), tot(node.children[b])));
+      }
+
+      keys.forEach(k => {
+        const child = node.children[k];
+        const path = ancestorPath.concat(k);
+        const pathKey = path.join('||');
+        const isExpanded = !!expandedRows[pathKey];
+        const st = GOAL_ROW_STYLES[Math.min(depth, GOAL_ROW_STYLES.length - 1)];
+        const toggle = hasMore ? `<span class="toggle-icon" onclick="toggleGoalPivotNode('${viewKey}','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
+        const menu = ` oncontextmenu="return goalOpenRowSortMenu(event,'${viewKey}',${depth})"`;
+        out.push(`<tr><td class="indent-step-${Math.min(depth + 1, 5)}"${menu} style="${st.label}">${toggle}${pvFormatFieldValue(field, k)}</td>`
+          + `${goalCellsHtml(child, visibleColumns, st.fontW)}</tr>`);
+        if (hasMore && isExpanded) goalRenderRows(child, viewKey, depth + 1, path, visibleColumns, rowFields, cfg, expandedRows, out);
+      });
+    }
+
+    // ── 목표 대비 실적 피벗 본체 (월별 / 부서별 공용) ────────────────────────
+    // 두 화면의 차이는 **처음 행 축뿐**이다(대분류 / 부서→담당자→대분류). 나머지는 전부 같아서
+    // 예전에는 같은 코드가 두 벌 있었다. 이제 축은 pvConfigFor(viewKey)가 들고 있고 표 편집으로 바뀐다.
+    function renderGoalPivot(viewKey) {
+      const preset = PIVOT_PRESETS[viewKey];
+      const prefix = viewKey; // DOM id 접두사가 뷰 키와 같다 (goalTrendPivot / goalDeptPivot)
+      const cfg = pvConfigFor(viewKey);
+      const rowFields = cfg.rows, colFields = cfg.columns;
+
+      // 빌더 패널과 '원래대로'는 표가 성립하지 않는 경우에도 그린다 — 축을 되돌려서 빠져나올 수 있어야 한다.
+      renderPvBuilderPanel(viewKey);
+      const resetBtn = preset.resetBtn && document.getElementById(preset.resetBtn);
+      if (resetBtn) resetBtn.style.display = pvIsConfigDefault(viewKey) ? 'none' : '';
+
+      if (revenueBasisMode === 'accounting') { renderGoalPivotUnavailable(prefix, '취급고 기준에서만 제공됩니다'); return; }
+      const scopeSet = buildGoalScopeSet();
+      if (scopeSet.size === 0) { renderGoalPivotUnavailable(prefix, GOAL_NO_TARGET_MSG); return; }
+      if (rowFields.length === 0) { renderGoalPivotUnavailable(prefix, '행 영역에 필드를 놓으세요'); return; }
+
+      const recs = goalRecords(goalPivotSourceRows(scopeSet));
+      const tree = goalBuildTree(recs, rowFields, colFields, cfg);
+      const root = tree.root;
+
+      const opt = {
+        subtotalDepths: new Set(preset.subtotalDepths || []),
+        columnDefaultExpanded: true,
+        toggleDepth: preset.toggleDepth,
+        presetKey: viewKey,
+        expandedCols: preset.expandedCols(),
+        cfg: cfg,
+        header: PV_HEADER_TREE,
+        spanMul: 3, // 한 열이 목표·실적·달성률 세 칸
+        colClick: (pk) => ` data-pvsort="1" onclick="pvSortByColumn('${viewKey}','${pvEsc(pk)}')"`,
+        colMenu: (orderDepth, pathKey, label) => ` oncontextmenu="return goalOpenColMenu(event,'${viewKey}',${orderDepth},'${pvEsc(pathKey || '')}','${pvEsc(label)}')"`,
+      };
+      const visibleColumns = colFields.length ? pvBuildVisibleColumns(tree.colCombos, colFields, opt.expandedCols, opt) : [];
+      const headerRows = colFields.length ? pvRenderColumnHeaderRows(visibleColumns, colFields, opt) : [];
+
+      // 헤더는 열 축 깊이 + 지표 한 줄. 열 축이 [연, 월]이면 예전과 같은 3줄이 된다.
+      const L = headerRows.length;
+      // 열 축 L줄 + 지표 1줄. 열이 아예 없으면(총합계만) 축 줄이 없어도 지표 줄은 있어야 하므로 2줄이 된다.
+      const headRows = L >= 1 ? L + 1 : 2;
+      const cs = cfg.colSort;
+      const grandMark = (cs && cs.pathKey === PV_GRAND) ? (cs.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      let head = `<tr><th rowspan="${headRows}"${PV_HEADER_TREE.label} data-pvsort="1" onclick="pvClearColumnSort('${viewKey}')" oncontextmenu="return goalOpenRowSortMenu(event,'${viewKey}',0)" title="클릭: 열 기준 정렬 해제 · 우클릭: 첫 단계 정렬">구분${cs ? ' ↺' : ''}</th>`
+        + (headerRows[0] || '')
+        + `<th colspan="3" rowspan="${Math.max(L, 1)}"${PV_HEADER_TREE.total} data-pvsort="1" onclick="pvSortByColumn('${viewKey}','${PV_GRAND}')" oncontextmenu="return goalOpenColMenu(event,'${viewKey}',-1,'${PV_GRAND}','총합계')">총합계${grandMark}</th></tr>`;
+      for (let d = 1; d < L; d++) head += `<tr>${headerRows[d]}</tr>`;
+      head += `<tr>${visibleColumns.map(c => goalMetricThs(c.isSubtotal ? 'pv-th-summary' : '')).join('')}${goalMetricThs('pv-th-total')}</tr>`;
+      const thead = goalTheadEl(prefix);
+      if (thead) thead.innerHTML = mapPivotHtml(head);
+
+      const out = [];
+      goalRenderRows(root, viewKey, 0, [], visibleColumns, rowFields, cfg, preset.expandedRows(), out);
+      let body = out.join('');
+      body += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>${goalCellsHtml(root, visibleColumns, '500')}</tr>`;
+      document.getElementById(prefix + 'TableBody').innerHTML = mapPivotHtml(body);
+
+      const g = root.m[PV_ROWTOTAL] || { t: 0, a: 0 };
+      document.getElementById(prefix + 'Total').innerText = goalRateText(g.t, g.a);
+    }
+
+    // 기존 진입점(VIEW_CONFIG·filters.js·view-router.js)이 그대로 동작하도록 이름을 남긴다.
+    function renderGoalTrendPivotTable() { renderGoalPivot('goalTrendPivot'); }
 
     // ── 목표 피벗 엑셀 다운로드 ──────────────────────────────────────────────
     // 화면의 넓은 표(연×월×3지표)를 그대로 옮기지 않고, 다른 피벗 export와 같은 **롱 포맷**
@@ -517,32 +716,41 @@
     function exportGoalPivotExcel(kind) {
       if (revenueBasisMode === 'accounting') { alert('목표 대비 실적은 취급고 기준에서만 제공됩니다.'); return; }
 
-      const axis = buildGoalPivotAxis();
-      if (axis.years.length === 0) { alert(GOAL_NO_TARGET_MSG + '.'); return; }
-      const src = goalPivotSourceRows(axis.scopeSet);
       const isDept = kind === 'dept';
+      const viewKey = isDept ? 'goalDeptPivot' : 'goalTrendPivot';
+      const scopeSet = buildGoalScopeSet();
+      if (scopeSet.size === 0) { alert(GOAL_NO_TARGET_MSG + '.'); return; }
 
-      // 키: 연|월|(부서|담당자|)대분류
+      // **화면의 축을 그대로 따라간다.** 표 편집으로 축을 바꿨는데 파일이 예전 축으로 나오면
+      // 엑셀에서 다시 합산해 대조하는 이 표의 쓰임이 깨진다. 연·월은 롱 포맷의 고정 열이므로 뺀다.
+      const cfg = pvConfigFor(viewKey);
+      const axisFields = cfg.rows.concat(cfg.columns)
+        .filter(f => f !== 'year' && f !== 'month')
+        .filter((f, i, arr) => arr.indexOf(f) === i);
+
       const map = {};
-      const keyOf = (y, m, dept, mgr, cat) => isDept ? `${y}|${m}|${dept}|${mgr}|${cat}` : `${y}|${m}|${cat}`;
-      const ensure = (y, m, dept, mgr, cat) => {
-        const k = keyOf(y, m, dept, mgr, cat);
-        if (!map[k]) map[k] = { y: y, m: m, dept: dept, mgr: mgr, cat: cat, t: 0, a: 0 };
-        return map[k];
-      };
-      src.targets.forEach(t => { ensure(t.year, t.month, t.dept || '(미지정)', t.manager || '(미지정)', t.categoryReclassified || '기타광고').t += t.targetWon; });
-      src.actuals.forEach(r => { ensure(r.year, r.month, r.dept || '(미지정)', r.manager || '(미지정)', r.categoryReclassified || '기타광고').a += r.amount; });
+      goalRecords(goalPivotSourceRows(scopeSet)).forEach(r => {
+        const keys = axisFields.map(f => r[f]);
+        const k = [r.year, r.month].concat(keys).join('|');
+        if (!map[k]) map[k] = { y: r.year, m: r.month, keys: keys, t: 0, a: 0 };
+        map[k].t += r.t; map[k].a += r.a;
+      });
 
       const list = Object.values(map).filter(v => v.t !== 0 || v.a !== 0);
       if (list.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
-      list.sort((x, y2) => x.y - y2.y || x.m - y2.m
-        || (isDept ? (compareDeptOrder(x.dept, y2.dept) || x.mgr.localeCompare(y2.mgr)) : 0)
-        || compareGoalCategoryOrder(x.cat, y2.cat));
+      const cmpField = (f, a, b) => f === 'dept' ? compareDeptOrder(a, b)
+        : f === 'categoryReclassified' ? compareGoalCategoryOrder(a, b)
+        : String(a).localeCompare(String(b), 'ko');
+      list.sort((x, y2) => {
+        if (x.y !== y2.y) return x.y - y2.y;
+        if (x.m !== y2.m) return x.m - y2.m;
+        for (let i = 0; i < axisFields.length; i++) { const c = cmpField(axisFields[i], x.keys[i], y2.keys[i]); if (c) return c; }
+        return 0;
+      });
 
       const exportRows = list.map(v => {
         const row = { '연도': v.y, '귀속월': `${v.y}-${String(v.m).padStart(2, '0')}` };
-        if (isDept) { row['부서'] = v.dept; row['담당자'] = v.mgr; }
-        row['대분류'] = v.cat;
+        axisFields.forEach((f, i) => { row[detailDataFieldLabel(f)] = v.keys[i]; });
         row['목표(원)'] = Math.round(v.t);
         row['실적(원)'] = Math.round(v.a);
         row['달성률(%)'] = v.t > 0 ? Number((v.a / v.t * 100).toFixed(1)) : '';
@@ -563,50 +771,7 @@
       return a.localeCompare(b);
     }
 
-    // ── 부서별 목표 대비 실적 피벗 — 행: 부서 → 담당자 → 대분류 ──────────────
-    function renderGoalDeptPivotTable() {
-      if (revenueBasisMode === 'accounting') { renderGoalPivotUnavailable('goalDeptPivot', '취급고 기준에서만 제공됩니다'); return; }
-
-      const axis = buildGoalPivotAxis(); const years = axis.years; const yearMonthsMap = axis.yearMonthsMap;
-      if (years.length === 0) { renderGoalPivotUnavailable('goalDeptPivot', GOAL_NO_TARGET_MSG); return; }
-      const src = goalPivotSourceRows(axis.scopeSet);
-      const expandedMap = expandedGoalDeptYearColumns;
-
-      const hdr = goalPivotHeaderHtml('goalDept', years, yearMonthsMap, expandedMap, '구분');
-      document.getElementById('goalDeptPivotHeaderRow1').innerHTML = mapPivotHtml(hdr.h1);
-      document.getElementById('goalDeptPivotHeaderRow2').innerHTML = mapPivotHtml(hdr.h2);
-      document.getElementById('goalDeptPivotHeaderRow3').innerHTML = mapPivotHtml(hdr.h3);
-
-      const tree = {}; const grand = goalNode();
-      const ensure = (l1, l2, l3) => {
-        if (!tree[l1]) tree[l1] = { node: goalNode(), subs: {} };
-        if (!tree[l1].subs[l2]) tree[l1].subs[l2] = { node: goalNode(), subs: {} };
-        if (!tree[l1].subs[l2].subs[l3]) tree[l1].subs[l2].subs[l3] = { node: goalNode() };
-        return [tree[l1].node, tree[l1].subs[l2].node, tree[l1].subs[l2].subs[l3].node, grand];
-      };
-      src.targets.forEach(t => ensure(t.dept || '(미지정)', t.manager || '(미지정)', t.categoryReclassified || '기타광고')
-        .forEach(n => goalAddToNode(n, t.year, t.month, t.targetWon, 0)));
-      src.actuals.forEach(r => ensure(r.dept || '(미지정)', r.manager || '(미지정)', r.categoryReclassified || '기타광고')
-        .forEach(n => goalAddToNode(n, r.year, r.month, 0, r.amount)));
-
-      let html = '';
-      Object.keys(tree).sort(compareDeptOrder).forEach(l1 => {
-        const isL1Exp = !!expandedGoalDeptPivot[l1];
-        html += `<tr><td class="indent-step-1" style="background:#1E293B; color:#F8FAFC; font-weight:700;"><span class="toggle-icon" onclick="toggleGoalDeptPivotNode('${l1}')">${isL1Exp ? '-' : '+'}</span>${l1}</td>${goalCellsHtml(tree[l1].node, years, yearMonthsMap, expandedMap, '700')}</tr>`;
-        if (!isL1Exp) return;
-        // 담당자는 목표+실적 합이 큰 순 (부서만 팀 번호 순서를 따른다)
-        const l2Keys = Object.keys(tree[l1].subs).sort((a, b) => (tree[l1].subs[b].node.t + tree[l1].subs[b].node.a) - (tree[l1].subs[a].node.t + tree[l1].subs[a].node.a));
-        l2Keys.forEach(l2 => {
-          const isL2Exp = !!expandedGoalDeptPivot[`${l1}||${l2}`];
-          html += `<tr><td class="indent-step-2" style="background:#151C2C; color:#CBD5E1; font-weight:700;"><span class="toggle-icon" onclick="toggleGoalDeptPivotNode('${l1}','${l2}')">${isL2Exp ? '-' : '+'}</span>${l2}</td>${goalCellsHtml(tree[l1].subs[l2].node, years, yearMonthsMap, expandedMap, '600')}</tr>`;
-          if (!isL2Exp) return;
-          Object.keys(tree[l1].subs[l2].subs).sort(compareGoalCategoryOrder).forEach(l3 => {
-            html += `<tr><td class="indent-step-3" style="background:#11151F; color:#94A3B8;">${l3}</td>${goalCellsHtml(tree[l1].subs[l2].subs[l3].node, years, yearMonthsMap, expandedMap, '400')}</tr>`;
-          });
-        });
-      });
-      html += `<tr class="row-grand-total"><td class="indent-step-1">총합계</td>${goalCellsHtml(grand, years, yearMonthsMap, expandedMap, '500')}</tr>`;
-      document.getElementById('goalDeptPivotTableBody').innerHTML = mapPivotHtml(html);
-      document.getElementById('goalDeptPivotTotal').innerText = goalRateText(grand.t, grand.a);
-    }
+    // ── 부서별 목표 대비 실적 피벗 — 처음 행 축: 부서 → 담당자 → 대분류 ──────
+    // 본체는 renderGoalPivot() 하나이고 여기서는 뷰 키만 넘긴다.
+    function renderGoalDeptPivotTable() { renderGoalPivot('goalDeptPivot'); }
 

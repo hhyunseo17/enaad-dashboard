@@ -42,6 +42,11 @@
        세 번째 줄 규칙을 공통에 두면 쓰지도 않는 sticky 계산이 붙으므로 이 클래스에만 건다.
        top:64px = 1줄(32px) + 2줄(32px). 앞의 두 줄과 같은 높이 가정을 그대로 이어받는다. */
     .pivot-tree-table.pivot-tri-header thead tr:nth-child(3) th { top: 64px; background: var(--pivot-header-bg) !important; z-index: 32; }
+    /* 표 편집으로 열 축을 세 단계 이상 쌓으면 헤더가 3줄을 넘는다(축 깊이 + 지표 한 줄).
+       기본 배치인 [연, 월]에서는 위의 3줄까지만 쓰이고 아래 세 줄은 걸리지 않는다. */
+    .pivot-tree-table.pivot-tri-header thead tr:nth-child(4) th { top: 96px; background: var(--pivot-header-bg) !important; z-index: 32; }
+    .pivot-tree-table.pivot-tri-header thead tr:nth-child(5) th { top: 128px; background: var(--pivot-header-bg) !important; z-index: 32; }
+    .pivot-tree-table.pivot-tri-header thead tr:nth-child(6) th { top: 160px; background: var(--pivot-header-bg) !important; z-index: 32; }
     /* 3줄 헤더에서는 지표 3칸이 촘촘해 기본 좌우 여백(12px)이면 가로폭이 과하게 늘어난다. */
     .pivot-tree-table.pivot-tri-header th,
     .pivot-tree-table.pivot-tri-header td { padding-left: 8px; padding-right: 8px; }

@@ -55,6 +55,9 @@
     let expandedDeptPivot = {};
     let expandedMgrPivot = {};
     let expandedGoalDeptPivot = {}; // 목표 대비 실적 피벗(부서별): 부서 → 담당자 트리 펼침 상태 (기본 전부 접힘)
+    // 월별 목표 피벗은 원래 행이 대분류 한 단계뿐이라 펼침 상태가 필요 없었다. 표 편집으로 부서·담당자를
+    // 더 얹을 수 있게 되면서 자기 맵이 생겼다(부서별 피벗과 섞이면 안 되므로 별도).
+    let expandedGoalTrendPivot = {};
 
     // 세부데이터 탐색 탭(자유 피벗 빌더): 상단 전역 필터바(연/월/부서/채널/방송디지털/대분류/매출기준 등)를 그대로 받아서
     // 시작하고(getDetailDataBaseRows()가 filteredData를 기준으로 삼음), 아래쪽 드래그앤드롭 필터는 전역 필터바가

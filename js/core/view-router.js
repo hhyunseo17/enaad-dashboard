@@ -120,7 +120,9 @@
     function toggleCatPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedCatPivot[k] = !expandedCatPivot[k]; renderCategoryPivotTable(); }
     function toggleDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedDeptPivot[k] = !expandedDeptPivot[k]; renderDeptPivotTable(); }
     function toggleMgrPivotNode(l1, l2, l3, l4) { let k = l1; if(l2) k += `||${l2}`; if(l3) k += `||${l3}`; if(l4) k += `||${l4}`; expandedMgrPivot[k] = !expandedMgrPivot[k]; renderManagerPivotTable(); }
-    function toggleGoalDeptPivotNode(l1, l2) { const k = l2 ? `${l1}||${l2}` : l1; expandedGoalDeptPivot[k] = !expandedGoalDeptPivot[k]; renderGoalDeptPivotTable(); }
+    // 목표 피벗의 행 토글은 이제 toggleGoalPivotNode(뷰키, 경로)가 처리한다(행 축이 뷰마다 다르므로).
+    // 이 이름은 예전 표기가 남아 있을 경우를 위한 얇은 래퍼로만 둔다.
+    function toggleGoalDeptPivotNode(l1, l2) { toggleGoalPivotNode('goalDeptPivot', l2 ? `${l1}||${l2}` : l1); }
     function toggleDetailDataNode(path) { expandedDetailDataPivot[path] = !expandedDetailDataPivot[path]; renderDetailDataPivot(); }
     function toggleDetailDataColNode(path) { expandedDetailDataColPivot[path] = !expandedDetailDataColPivot[path]; renderDetailDataPivot(); }
 
