@@ -353,7 +353,7 @@
 
     function onDetailDataChipDrop(ev, wellName, targetKey) {
       ev.preventDefault(); ev.stopPropagation();
-      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over');
+      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over', 'dd-drop-before');
       const payload = getDetailDataDragPayload(ev);
       detailDataDragPayload = null;
       if (!payload || !payload.field) return;
@@ -415,20 +415,39 @@
       return DETAIL_DATA_FIELDS.map(f => {
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
         const title = DD_FILTER_BAR_COVERED_FIELDS.has(f.key) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
-        return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="this.classList.remove('dd-dragging')">${f.label}</div>`;
+        return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="onDetailDataDragEnd(event)">${f.label}</div>`;
       }).join('');
     }
 
+    // 행/열 well은 **순서가 곧 위계**다(앞이 상위). 칩만 나열하면 그게 보이지 않아서 순번을 붙이고,
+    // 드래그 중에는 어느 칩 앞에 끼워지는지 왼쪽 막대로 미리 보여준다 — onDetailDataChipDrop이
+    // 대상 칩 "앞"에 삽입하기 때문에 표시도 왼쪽이어야 한다.
     function renderDetailDataWellFieldChips(wellName, fieldKeys) {
-      return fieldKeys.map(key => {
+      const ordered = (wellName === 'rows' || wellName === 'columns');
+      return fieldKeys.map((key, i) => {
         const label = detailDataFieldLabel(key);
+        const order = ordered ? `<span class="dd-chip-order">${i + 1}</span>` : '';
         return `<div class="dd-field-chip dd-field-chip-placed" draggable="true" data-field="${key}"
-          ondragstart="onDetailDataDragStart(event,'${key}')" ondragend="this.classList.remove('dd-dragging')"
-          ondragover="event.preventDefault(); event.stopPropagation();"
+          ondragstart="onDetailDataDragStart(event,'${key}')" ondragend="onDetailDataDragEnd(event)"
+          ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
           ondrop="onDetailDataChipDrop(event,'${wellName}','${key}')">
-          <span>${label}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
+          ${order}<span>${label}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('${wellName}','${key}')">✕</span>
         </div>`;
       }).join('');
+    }
+
+    function onDetailDataChipDragOver(ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.add('dd-drop-before');
+    }
+    function onDetailDataChipDragLeave(ev) {
+      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('dd-drop-before');
+    }
+    // 드래그가 끝나면 화면 어디에 남아 있을지 모르는 표시들을 한 번에 걷는다.
+    function onDetailDataDragEnd(ev) {
+      if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('dd-dragging');
+      document.querySelectorAll('.dd-drop-before').forEach(el => el.classList.remove('dd-drop-before'));
+      document.querySelectorAll('.dd-well.drag-over').forEach(el => el.classList.remove('drag-over'));
     }
 
     function renderDetailDataFilterChips(cfg) {
@@ -445,8 +464,8 @@
           ).join('')}</div>`;
         }
         return `<div class="dd-field-chip dd-field-chip-filter" draggable="true" data-field="${f.field}"
-          ondragstart="onDetailDataDragStart(event,'${f.field}')" ondragend="this.classList.remove('dd-dragging')"
-          ondragover="event.preventDefault(); event.stopPropagation();"
+          ondragstart="onDetailDataDragStart(event,'${f.field}')" ondragend="onDetailDataDragEnd(event)"
+          ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
           ondrop="onDetailDataChipDrop(event,'filters','${f.field}')">
           <span onclick="event.stopPropagation(); toggleDetailDataFilterPopover('${f.field}')">${label} (${countText})</span>
           <span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('filters','${f.field}')">✕</span>
@@ -464,8 +483,8 @@
           `<option value="${a}" ${a === v.agg ? 'selected' : ''}>${DETAIL_DATA_AGG_LABELS[a]}</option>`
         ).join('')}</select>`;
         return `<div class="dd-field-chip dd-field-chip-placed dd-field-chip-value" draggable="true" data-field="${v.field}" data-value-id="${v.id}"
-          ondragstart="onDetailDataDragStart(event,'${v.field}', ${v.id})" ondragend="this.classList.remove('dd-dragging')"
-          ondragover="event.preventDefault(); event.stopPropagation();"
+          ondragstart="onDetailDataDragStart(event,'${v.field}', ${v.id})" ondragend="onDetailDataDragEnd(event)"
+          ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
           ondrop="onDetailDataChipDrop(event,'values', ${v.id})">
           <span>${label}</span>${select}<span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('values', ${v.id})">✕</span>
         </div>`;

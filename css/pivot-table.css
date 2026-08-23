@@ -106,6 +106,10 @@
        ========================================================================== */
     /* 엑셀 피벗과 동일하게: 표가 메인(좌측, 상단부터 바로 시작), 필드 패널은 우측에 고정 */
     .dd-layout { display: grid; grid-template-columns: 1fr 340px; gap: 14px; align-items: start; margin-bottom: 16px; }
+    /* 일반 피벗은 조회가 목적이라 빌더를 접어 둔다('⚙ 표 편집'으로 펼침). 세부데이터는 패널이
+       화면의 본체이므로 이 클래스를 쓰지 않는다. */
+    .dd-layout-collapsed { grid-template-columns: 1fr; }
+    .dd-layout-collapsed > .dd-sidebar { display: none; }
     .dd-main { min-width: 0; }
     .dd-sidebar { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
 
@@ -128,6 +132,13 @@
     .dd-agg-select { font-family: inherit; font-size: 12px; padding: 2px 4px; background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; }
     .dd-chip-remove { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; text-align: center; border-radius: 50%; color: var(--text-tertiary); font-size: 11px; cursor: pointer; }
     .dd-chip-remove:hover { color: var(--accent-red); background: var(--accent-red-bg); }
+
+    /* 행/열 well에서 순서가 곧 위계다(1이 최상위). 번호가 없으면 칩이 그냥 나열된 것으로 보인다. */
+    .dd-chip-order { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; background: var(--primary-blue); color: var(--text-on-accent);
+      font-size: 10px; font-weight: 600; }
+    /* 드래그 중 "이 칩 앞에 들어간다"는 표시. onDetailDataChipDrop이 대상 앞에 삽입하므로 왼쪽에 긋는다. */
+    .dd-field-chip.dd-drop-before { box-shadow: inset 3px 0 0 var(--primary-blue); }
 
     .dd-well { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 90px; background: var(--bg-subtle); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md); transition: border-color 0.15s, background 0.15s; }
     .dd-well.drag-over { border-color: var(--primary-blue); background: var(--primary-blue-glow); border-style: solid; }

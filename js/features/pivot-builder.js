@@ -366,6 +366,7 @@
         dom: { head1: 'catPivotHeaderRow1', head2: 'catPivotHeaderRow2', body: 'catPivotTableBody', total: 'categoryPivotTotalAmount' },
         // 1단계-B 시범: 이 피벗에만 세부데이터식 빌더 사이드바를 붙였다.
         resetBtn: 'catPivotResetBtn',
+        layoutId: 'catPivotLayout', builderBtn: 'catPivotBuilderBtn',
         builderDom: { fieldList:'catDdFieldList', filterBar:'catDdFilterBar', filters:'catDdWellFilterBody', columns:'catDdWellColumnsBody', rows:'catDdWellRowsBody', values:'catDdWellValuesBody' },
       },
 
@@ -495,8 +496,12 @@
     // 집계 방식을 안 보고 무조건 1e6으로 나누면 '개수 : 광고주' 같은 값이 통째로 0이 된다.
     function pvFormatCell(value, agg) {
       if (agg === 'count' || agg === 'distinct') return value ? value.toLocaleString() : '-';
-      const m = (value || 0) / 1000000;
-      return m > 0 ? Math.round(m).toLocaleString() : '-';
+      // 값이 없을 때만 대시. **음수를 대시로 감추지 않는다** — 회계조정은 음수인 경우가 많아서,
+      // `m > 0`으로 거르던 원래 조건에서는 회계 기준으로 보면 그 행이 통째로 '-'였다.
+      // -0.4백만이 Math.round로 -0이 되는 것만 0으로 되돌린다(그대로 두면 "-0"으로 찍힌다).
+      if (!value) return '-';
+      const r = Math.round(value / 1000000);
+      return (Object.is(r, -0) ? 0 : r).toLocaleString();
     }
 
     // 정렬은 **레벨 번호가 아니라 필드**에 붙는다. 사용자가 축 순서를 바꿔도 부서는 팀 순서,
@@ -577,6 +582,16 @@
       return c.filters.length === 0 && same(c.rows, p.rows) && same(c.columns, p.columns)
         && c.values.length === p.values.length && c.values.every((v, i) => v.field === p.values[i].field && v.agg === p.values[i].agg);
     }
+    // 빌더 사이드바 접기/펼치기. 일반 피벗은 조회가 목적이라 기본은 접힘이다.
+    function pvToggleBuilder(viewKey) {
+      const preset = PIVOT_PRESETS[viewKey]; if (!preset || !preset.layoutId) return;
+      const el = document.getElementById(preset.layoutId); if (!el) return;
+      const open = el.classList.toggle('dd-layout-collapsed') === false;
+      const btn = preset.builderBtn && document.getElementById(preset.builderBtn);
+      if (btn) btn.innerText = open ? '⚙ 편집 닫기' : '⚙ 표 편집';
+      if (open) renderPvBuilderPanel(viewKey); // 접혀 있는 동안 갱신을 건너뛴 경우를 대비
+    }
+
     function pvResetPivot(viewKey) {
       pvResetConfig(viewKey);
       const m = PIVOT_PRESETS[viewKey].expandedRows(); Object.keys(m).forEach(k => { delete m[k]; });
