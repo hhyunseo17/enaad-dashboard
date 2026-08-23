@@ -238,8 +238,6 @@ select
   end as channel,
 
   r.industry,
-  r.industry_mid,
-  r.industry_sub,
   r.broad_digital,
   r.category_original,
   r.sub_category,
@@ -288,7 +286,12 @@ select
     else null
   end as excluded_reason,
 
-  r.id as raw_id   -- 재배분으로 쪼개진 행의 원본 raw_sales_rows.id 추적용. CREATE OR REPLACE VIEW 제약상 새 컬럼은 항상 맨 뒤에 추가.
+  r.id as raw_id,   -- 재배분으로 쪼개진 행의 원본 raw_sales_rows.id 추적용. CREATE OR REPLACE VIEW 제약상 새 컬럼은 항상 맨 뒤에 추가.
+
+  -- 업종 중·소분류. 자리는 industry 옆이 자연스럽지만 **맨 뒤여야 한다** — CREATE OR REPLACE VIEW는
+  -- 기존 컬럼의 이름·순서를 바꿀 수 없어서, 중간에 끼우면 뷰를 drop 하지 않는 한 적용 자체가 실패한다.
+  r.industry_mid,
+  r.industry_sub
 
 from raw_sales_rows r
 join v_manager_split s on s.raw_id = r.id

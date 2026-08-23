@@ -19,6 +19,38 @@ node run.mjs "C:\경로\addata.xlsx"
 3. 직전 배치 대비 diff 검증(`validate.mjs`) — 카테고리·연도별 합계, 행 수 비교
 4. 검증 통과 시에만 `current_batch` 포인터를 새 배치로 원자적 갱신(컷오버). 실패 시 컷오버하지 않고 종료(exit code 1) — 이전 배치가 계속 서빙되므로 안전.
 
+## 컬럼을 새로 추가할 때 (예: 업종 중·소분류)
+
+`raw_sales_rows`에 컬럼을 더할 때는 **테이블 → 뷰 두 개 → 재적재** 순서를 지킨다. 순서를 바꾸면
+중간 단계에서 실패한다(뷰가 없는 컬럼을 참조하거나, ETL이 없는 컬럼에 insert를 시도한다).
+
+1. **테이블에 컬럼 추가** — SQL Editor에서. `if not exists`라 여러 번 돌려도 안전하다.
+   ```sql
+   alter table raw_sales_rows add column if not exists industry_mid text not null default '(미지정)';
+   alter table raw_sales_rows add column if not exists industry_sub text not null default '(미지정)';
+   ```
+2. **`v_sales_normalized` 다시 만들기** — `schema.sql`의 `create or replace view v_sales_normalized …`
+   블록만 복사해 실행한다(파일 전체를 다시 돌려도 되지만 불필요하다).
+3. **`v_bonbu_sales` 다시 만들기** — `select *`는 만들 때 컬럼 목록이 **박제되므로**, 아래 뷰를
+   다시 만들지 않으면 새 컬럼이 프론트까지 오지 않는다. 2번만 하고 끝내기 쉬운 지점이다.
+   ```sql
+   create or replace view v_bonbu_sales as
+   select * from v_sales_normalized where is_bonbu and not is_excluded;
+   ```
+4. **ETL 재실행** — `node run.mjs "…\addata.xlsx"`. 이때부터 실제 값이 들어간다.
+   그전까지는 새 컬럼이 기본값(`(미지정)`)으로만 보인다. 에러가 아니다.
+
+> ⚠ **뷰의 새 컬럼은 반드시 SELECT 목록 맨 뒤에 적는다.** `create or replace view`는 기존 컬럼의
+> 이름·순서를 바꿀 수 없어서, 의미상 어울리는 자리(예: `industry` 옆)에 끼워 넣으면
+> `cannot change name of view column` 으로 적용 자체가 실패한다. 자리를 옮기려면 뷰를 drop 해야 하는데,
+> `v_bonbu_sales`가 딸려 있어 cascade가 필요하다 — 그럴 이유가 없다.
+
+확인:
+```sql
+select industry, industry_mid, industry_sub, count(*)
+from v_bonbu_sales group by 1,2,3 order by 4 desc limit 10;
+```
+
 ## 롤백
 배치는 삭제되지 않고 `superseded`로만 표시된다. 문제가 늦게 발견되면 `current_batch.batch_id`를 이전 `etl_load_batches.id`로 직접 UPDATE하면 즉시 이전 상태로 돌아간다.
 
