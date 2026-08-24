@@ -93,7 +93,7 @@
     let expandedNewAdvGroups = {}; // ?�규광고�??�세 ?�벗: ????그룹�??�침 ?�태 (기본 ?��? ?�힘)
     let expandedNewAdvYears = {}; // ?�규광고�??�세 ?�벗: ??레벨 ?�침 ?�태 (기본 ?��? ?�힘)
     let upfrontContracts = []; // ?�프론트 계약 목록 (광고�??�프론트??+계약기간 기�? ?�일 그룹)
-    let salesTargets = []; // 목표 목록 (담당자 x 5대분류 x 연월 단위, sales_targets 테이블)
+    let salesTargets = []; // 목표 목록 (담당자 x 5대분류 x 연월 x 매출기준(basis) 단위, sales_targets 테이블)
     let expandedUpfrontDepts = {}; let expandedUpfrontAdvertisers = {}; // ?�프론트 ?�적 ?�벗 ?�리 ?�침 ?�태 (기본 ?��? ?�힘)
     let isFirstLoad = true;
 
