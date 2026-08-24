@@ -153,6 +153,13 @@
     Chart.defaults.set('plugins.datalabels', { display: false });
     function dataLabelTextColor() { return currentTheme === 'light' ? '#191F28' : '#F2F4F6'; }
 
+    // 차트 글자 두께. 화면 쪽 --fw-ui와 같은 이유로 라이트만 한 단계 올린다 — 밝은 바탕의 어두운
+    // 글자는 같은 두께라도 어두운 바탕의 밝은 글자보다 가늘어 보인다. 다크가 읽기 좋은 쪽이므로
+    // 그쪽을 기준으로 두고 라이트를 맞춘다.
+    // CSS 변수로 못 하는 이유: Chart.js는 캔버스에 직접 그려서 --fw-ui가 닿지 않는다. 값을 여기서 준다.
+    // (테마를 토글하면 toggleTheme이 현재 뷰를 다시 그리므로 차트가 새 값으로 다시 만들어진다.)
+    function FW() { return currentTheme === 'light' ? '500' : '400'; }
+
     // 차트 채움용 톤 조정 — **채도는 그대로 두고 명도만 올린다.**
     //
     // HIG 시스템 컬러는 버튼·아이콘 같은 '작은 강조'를 전제로 만든 값이라, 그대로 차트에 쓰면
