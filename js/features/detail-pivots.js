@@ -40,7 +40,7 @@
         years.forEach(yr => {
           const isExp = expandedCatYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right;">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: var(--fw-ui); background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
         cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
@@ -113,7 +113,7 @@
         years.forEach(yr => {
           const isExp = expandedDeptYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right;">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: var(--fw-ui); background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
         cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
@@ -190,7 +190,7 @@
         years.forEach(yr => {
           const isExp = expandedMgrYearColumns[yr] !== false; const activeM = yearMonthsMap[yr] || []; const yrObj = (node && node.yrs[yr]) ? node.yrs[yr] : {sum:0, m:{}};
           if(isExp) { activeM.forEach(m => { cells += `<td style="text-align:right; font-weight:${fontW};">${yrObj.m[m]>0?Math.round(yrObj.m[m]).toLocaleString():'-'}</td>`; }); }
-          cells += `<td style="text-align:right; font-weight: 400; background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
+          cells += `<td style="text-align:right; font-weight: var(--fw-ui); background:rgba(30,58,138,0.1);">${yrObj.sum>0?Math.round(yrObj.sum).toLocaleString():'-'}</td>`;
         });
         cells += `<td style="text-align:right; font-weight: 500; background:rgba(30,64,175,0.2);">${node?Math.round(node.total).toLocaleString():'-'}</td>`;
         return cells;
@@ -288,7 +288,7 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleChannelNode('${ch}')">${isChExpanded ? '-' : '+'}</span>${ch}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = chData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
           else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
         tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(chData.totalSum).toLocaleString()}</td></tr>`;
@@ -303,7 +303,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui); background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
 
             if (isCatExpanded) {
               const subCategories = Object.keys(catData.subCategories).sort();
@@ -312,7 +312,7 @@
                 tbodyHtml += `<tr class="row-subcategory"><td class="indent-step-3" style="background: #11151F; color: #94A3B8;">${subCat}</td>`;
                 years.forEach(yr => {
                   const isYrExpanded = expandedYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = subCatData.years[yr] || { yearSum: 0, months: {} };
-                  if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
+                  if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; } 
                   else { tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
                 });
                 tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #1A2234; color: #93C5FD;">${Math.round(subCatData.totalSum).toLocaleString()}</td></tr>`;
@@ -374,7 +374,7 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleAdvertiserNode('${advEsc}')">${isAdvExpanded ? '-' : '+'}</span>${adv}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedAdvertiserYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = advData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
           else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
         tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(advData.totalSum).toLocaleString()}</td></tr>`;
@@ -389,7 +389,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui); background: #1E293B; color: #93C5FD;">${Math.round(catData.totalSum).toLocaleString()}</td></tr>`;
           });
         }
       });
@@ -451,7 +451,7 @@
         tbodyHtml += `<tr class="row-channel"><td class="indent-step-1"><strong><span class="toggle-icon" onclick="toggleAgencyGroupNode('${esc(grp)}')">${isGrpExpanded ? '-' : '+'}</span>${grp}</strong></td>`;
         years.forEach(yr => {
           const isYrExpanded = expandedAgencyYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = grpData.years[yr] || { yearSum: 0, months: {} };
-          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+          if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
           else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
         });
         tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #60A5FA; background: #1E3A8A;">${Math.round(grpData.totalSum).toLocaleString()}</td></tr>`;
@@ -466,7 +466,7 @@
               if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 500;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
               else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
             });
-            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${Math.round(agyData.totalSum).toLocaleString()}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui); background: #1E293B; color: #93C5FD;">${Math.round(agyData.totalSum).toLocaleString()}</td></tr>`;
 
             if (isAgyExpanded) {
               const advertisers = Object.keys(agyData.advertisers).sort((a,b) => agyData.advertisers[b].totalSum - agyData.advertisers[a].totalSum);
@@ -475,7 +475,7 @@
                 tbodyHtml += `<tr class="row-subcategory"><td class="indent-step-3" style="background: #11151F; color: #94A3B8;">${adv}</td>`;
                 years.forEach(yr => {
                   const isYrExpanded = expandedAgencyYearColumns[yr] !== false; const activeMonths = yearMonthsMap[yr] || []; const yrObj = advData.years[yr] || { yearSum: 0, months: {} };
-                  if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: 400;">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
+                  if (isYrExpanded) { activeMonths.forEach(m => { const val = yrObj.months[m] || 0; tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${val > 0 ? Math.round(val).toLocaleString() : '-'}</td>`; }); tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
                   else { tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${yrObj.yearSum > 0 ? Math.round(yrObj.yearSum).toLocaleString() : '-'}</td>`; }
                 });
                 tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #1A2234; color: #93C5FD;">${Math.round(advData.totalSum).toLocaleString()}</td></tr>`;

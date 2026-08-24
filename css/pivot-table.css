@@ -35,7 +35,7 @@
     
     /* 헤더는 채도 높은 파랑 대신 중립 표면으로 두고, 강조는 맨 아래 굵은 선 하나로만 준다.
        넓은 면적을 색으로 덮으면 정작 주인공인 숫자가 뒤로 밀린다. */
-    .pivot-tree-table th { background: var(--pivot-header-bg) !important; color: var(--pivot-header-fg) !important; font-weight: 400; text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
+    .pivot-tree-table th { background: var(--pivot-header-bg) !important; color: var(--pivot-header-fg) !important; font-weight: var(--fw-ui); text-align: center; position: sticky; z-index: 30; padding: 8px 12px !important; }
     .pivot-tree-table thead tr:nth-child(1) th { top: 0; background: var(--pivot-header-bg-alt) !important; z-index: 32; }
     .pivot-tree-table thead tr:nth-child(2) th { top: 32px; background: var(--pivot-header-bg) !important; z-index: 32; }
     /* 목표 대비 실적 피벗만 헤더가 3줄이다(연도 → 월 → 목표/실적/달성률). 나머지 피벗은 2줄이라
@@ -68,7 +68,7 @@
        왼쪽 정렬돼 제 그룹에서 어긋나 보인다. 목표 피벗은 월 헤더가 colspan=3이라 이 어긋남이 특히
        크게 드러났지만, 원인은 2줄 헤더 피벗 전부가 공유하던 규칙이다. */
     .pivot-tree-table td:first-child,
-    .pivot-tree-table thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 25; font-weight: 400; border-right: 1px solid var(--pivot-sticky-border); }
+    .pivot-tree-table thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 25; font-weight: var(--fw-ui); border-right: 1px solid var(--pivot-sticky-border); }
     /* 배경·글자색에는 !important를 쓰지 않는다. 렌더러가 인라인으로 넣는 행 깊이별 색이 이겨야
        하기 때문이다. 여기 값은 인라인 배경이 없는 피벗(세부데이터 등)을 위한 불투명 fallback이다
        — sticky 열은 반드시 불투명해야 아래 내용이 비쳐 보이지 않는다. */
@@ -77,7 +77,7 @@
 
     /* 총합계 행: 파란 블록 대신 위쪽 강조선 + 살짝 올라온 표면. 표에서 유일하게 강조되는 행이므로
        색으로 덮지 않아도 충분히 눈에 들어온다. */
-    .row-grand-total { font-weight: 400; }
+    .row-grand-total { font-weight: var(--fw-ui); }
     .row-grand-total td { background: var(--pivot-total-bg) !important; color: var(--text-primary) !important; border-top: 2px solid var(--primary-blue); border-bottom: 0; padding: 8px 12px !important; }
     .row-grand-total td:first-child { background: var(--pivot-total-bg) !important; z-index: 26; }
 

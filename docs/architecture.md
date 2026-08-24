@@ -32,7 +32,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 ## 스크립트 로드 순서 (dashboard.html) — 중요
 전역 스코프 공유 방식이므로 **순서가 곧 의존성**이다. dashboard.html은 아래 순서로 로드한다:
 ```
-[CDN] xlsx, chart.js, chartjs-plugin-datalabels, Pretendard
+[CDN] xlsx, chart.js, chartjs-plugin-datalabels, IBM Plex Sans KR(+Pretendard 폴백)
 [CSS] css/theme.css → layout.css → pivot-table.css
 [JS]
   js/core/state.js                 전역변수·색상팔레트 (가장 먼저)

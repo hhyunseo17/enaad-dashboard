@@ -84,7 +84,7 @@
               let cVal = 0, sVal = 0;
               bucketTierOrder.forEach(b => { const mo = cellData[b].years[yr].months[m]; if (mo) { cVal += mo.count; sVal += mo.sum; } });
               const val = sec.key === '광고주수' ? cVal : sec.key === '평균매출' ? (cVal>0 ? sVal/cVal/1e6 : 0) : sVal/1e6;
-              tbodyHtml += `<td style="text-align: right; font-weight: 400;">${fmtBucketVal(val, isCount)}</td>`;
+              tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${fmtBucketVal(val, isCount)}</td>`;
             });
             tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`;
           } else { tbodyHtml += `<td style="text-align: right; font-weight: 500; color: #93C5FD; background: #1E293B;">${fmtBucketVal(yVal, isCount)}</td>`; }
@@ -110,7 +110,7 @@
               } else { tbodyHtml += `<td style="text-align: right; font-weight: 600; background: #172033;">${fmtBucketVal(yVal, isCount)}</td>`; }
             });
             const bTotal = sec.key === '광고주수' ? bData.totalCount : sec.key === '평균매출' ? (bData.totalCount>0 ? bData.totalSum/bData.totalCount/1e6 : 0) : bData.totalSum/1e6;
-            tbodyHtml += `<td style="text-align: right; font-weight: 400; background: #1E293B; color: #93C5FD;">${fmtBucketVal(bTotal, isCount)}</td></tr>`;
+            tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui); background: #1E293B; color: #93C5FD;">${fmtBucketVal(bTotal, isCount)}</td></tr>`;
 
             if (isBucketAdvExpanded) {
               const advertisers = Object.keys(bData.advertisers).sort((a,b) => bData.advertisers[b].totalSum - bData.advertisers[a].totalSum);
@@ -124,7 +124,7 @@
                     activeMonths.forEach(m => {
                       const mv = aYrObj.months[m] || 0;
                       const aVal = sec.key === '광고주수' ? (mv > 0 ? 1 : 0) : mv / 1e6;
-                      tbodyHtml += `<td style="text-align: right; font-weight: 400;">${fmtBucketVal(aVal, isCount)}</td>`;
+                      tbodyHtml += `<td style="text-align: right; font-weight: var(--fw-ui);">${fmtBucketVal(aVal, isCount)}</td>`;
                     });
                     tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${fmtBucketVal(aYVal, isCount)}</td>`;
                   } else { tbodyHtml += `<td style="text-align: right; font-weight: 500; background: #141824;">${fmtBucketVal(aYVal, isCount)}</td>`; }

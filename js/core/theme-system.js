@@ -544,6 +544,6 @@
       currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', currentTheme);
       const btn = document.getElementById('themeToggleBtn');
-      if (btn) btn.innerText = currentTheme === 'dark' ? '☀️ 라이트' : '🌙 다크';
+      if (btn) btn.innerText = currentTheme === 'dark' ? '☀️ 라이트모드' : '🌙 다크모드';
       if (rawData.length > 0) switchView(currentView, false);
     }

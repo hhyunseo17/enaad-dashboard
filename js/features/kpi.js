@@ -584,9 +584,9 @@
     const GOAL_ROW_STYLES = [
       { label: 'background:#1E293B; color:#F8FAFC; font-weight:700;', fontW: '700' },
       { label: 'background:#151C2C; color:#CBD5E1; font-weight:700;', fontW: '600' },
-      { label: 'background:#11151F; color:#94A3B8;', fontW: '400' },
-      { label: 'background:#0D1117; color:#64748B;', fontW: '400' },
-      { label: 'background:#090C10; color:#475569; font-size:12px;', fontW: '400' },
+      { label: 'background:#11151F; color:#94A3B8;', fontW: 'var(--fw-ui)' },
+      { label: 'background:#0D1117; color:#64748B;', fontW: 'var(--fw-ui)' },
+      { label: 'background:#090C10; color:#475569; font-size:12px;', fontW: 'var(--fw-ui)' },
     ];
 
     function goalRenderRows(node, viewKey, depth, ancestorPath, visibleColumns, rowFields, cfg, expandedRows, out) {

@@ -5,7 +5,7 @@ KT ENA 광고사업본부(광고전략팀)의 광고 매출 분석용 내부 대
 - 데이터 원천: `addata.xlsx`의 `변환` 시트 (약 27,000행). 현재는 클라이언트에서 SheetJS로 직접 파싱.
 - 배포: Cloudflare R2(파일 저장) + Worker(서빙) + Zero Trust(접근 통제). GitHub로 버전 관리, Cloudflare Pages/Worker로 배포.
 - 프론트엔드: 순수 정적 파일. 빌드 도구 없음. `<script src>`/`<link>`로 분리 로드하며 전역 스코프 공유.
-- 차트: Chart.js + chartjs-plugin-datalabels. 폰트: Pretendard.
+- 차트: Chart.js + chartjs-plugin-datalabels. 폰트: **IBM Plex Sans KR**(Pretendard는 폴백으로만 남아 있음).
 - 장기 방향: 엑셀 파싱 → Supabase 기반으로 이전 (아래 "장기 로드맵" 참고).
 
 > **응답/보고 스타일**: 사용자는 임원 보고용 격식 있는 보고서체(문어체)를 선호. 수치 중심, 표·그래프 적극 활용.

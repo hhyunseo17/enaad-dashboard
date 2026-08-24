@@ -96,9 +96,9 @@
     // 깊이별 셀 색. 원본이 인라인으로 넣던 값 그대로다(mapPivotHtml의 치환 키라 표기를 바꾸지 말 것).
     const UP_STYLES = [
       { rowClass: 'row-channel', label: '', wrap: (s) => `<strong>${s}</strong>`,
-        num: 'text-align: right; font-weight: 400;', total: 'text-align: right; font-weight: 500; color: #60A5FA;' },
+        num: 'text-align: right; font-weight: var(--fw-ui);', total: 'text-align: right; font-weight: 500; color: #60A5FA;' },
       { rowClass: 'row-category', label: 'background: #151C2C; color: #CBD5E1;',
-        num: 'text-align: right;', total: 'text-align: right; font-weight: 400; color: #93C5FD;' },
+        num: 'text-align: right;', total: 'text-align: right; font-weight: var(--fw-ui); color: #93C5FD;' },
       { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
         num: 'text-align: right;', total: 'text-align: right;' },
       { rowClass: '', label: 'background:#0D1117; color:#64748B;', num: 'text-align: right;', total: 'text-align: right;' },

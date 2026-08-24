@@ -136,7 +136,7 @@
     // **문자열 표기를 바꾸지 말 것**. 4단계 아래는 담당자별 피벗과 같은 램프를 이어 붙였다.
     const AC_STYLES = [
       { rowClass: 'row-channel', label: '', wrap: (s) => `<strong>${s}</strong>`,
-        num: 'text-align: right; font-weight: 400;', cur: 'text-align: right; font-weight: 500; color: #60A5FA;', w: 'font-weight: 400; ' },
+        num: 'text-align: right; font-weight: var(--fw-ui);', cur: 'text-align: right; font-weight: 500; color: #60A5FA;', w: 'font-weight: var(--fw-ui); ' },
       { rowClass: 'row-category', label: 'background: #151C2C; color: #CBD5E1;',
         num: 'text-align: right;', cur: 'text-align: right; color: #93C5FD;', w: '' },
       { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
