@@ -150,7 +150,9 @@
        값 칸의 집계 셀렉트가 그 열만 넓혀서 2×2가 어긋난다. */
     .dd-wells { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
-    .dd-field-chip { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); cursor: grab; user-select: none; word-break: keep-all; }
+    /* 값 칩은 우클릭(=iPad에서는 길게 누르기)으로 집계 방식을 바꾼다. iOS Safari가 먼저 띄우는
+       '글쓰기 도구' 팝업이 그 메뉴를 덮지 않도록 콜아웃을 끈다(표 헤더에 건 것과 같은 이유). */
+    .dd-field-chip { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); cursor: grab; user-select: none; -webkit-touch-callout: none; -webkit-user-select: none; word-break: keep-all; }
     .dd-field-chip:active { cursor: grabbing; }
     /* well 안에서는 칩이 한 줄을 꽉 채우므로 space-between이면 라벨이 가운데로 밀린다.
        라벨은 왼쪽에 붙이고 ✕만 오른쪽 끝으로 보낸다. */
@@ -159,19 +161,14 @@
     /* 칸이 좁아지면 칩이 밀려 나가지 않고 라벨이 줄어든다 — ✕는 언제나 보여야 한다. */
     .dd-well-body .dd-field-chip { min-width: 0; }
     .dd-well-body .dd-field-chip > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .dd-well-body .dd-agg-select { min-width: 0; flex-shrink: 1; }
+    /* 값 칩은 '합계 : 금액'처럼 글자가 길다. 집계 셀렉트를 우클릭 메뉴로 옮겨 폭을 되찾았지만,
+       그래도 넘칠 때가 있어 잘림 규칙은 그대로 둔다. */
     .dd-field-chip.dd-dragging { opacity: 0.4; }
     .dd-field-chip-active { border-color: var(--primary-blue); box-shadow: 0 0 0 1px var(--primary-blue) inset; }
     .dd-field-chip-placed { background: var(--bg-card-hover); border-color: var(--primary-blue); }
     .dd-field-chip-filter { background: var(--bg-card-hover); border-color: var(--accent-orange); }
     .dd-field-chip-filter > span:first-child { cursor: pointer; }
     .dd-field-chip-value { border-color: var(--accent-green); }
-    /* select은 body의 font-family를 상속하지 않는다(UA 기본 글꼴로 그려진다).
-       화면의 유일한 진짜 폼 컨트롤이라, 여기만 다른 글꼴로 남아 있었다. */
-    .dd-agg-select { font-family: inherit; font-size: 12px; padding: 2px 4px; background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; }
-    /* 행/열 칩의 정렬 선택. 라벨과 ✕ 사이에 들어가므로 폭을 최소로 잡는다. */
-    .dd-sort-select { font-family: inherit; font-size: 11px; padding: 1px 2px; margin-left: auto; background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-default); border-radius: 4px; cursor: pointer; max-width: 76px; }
-    .dd-well-body .dd-sort-select + .dd-chip-remove { margin-left: 4px; }
     .dd-chip-remove { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; text-align: center; border-radius: 50%; color: var(--text-tertiary); font-size: 11px; cursor: pointer; }
     .dd-chip-remove:hover { color: var(--accent-red); background: var(--accent-red-bg); }
 

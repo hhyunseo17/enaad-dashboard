@@ -555,22 +555,28 @@
       }).join('');
     }
 
+    // 집계 방식은 **우클릭 메뉴**로 고른다. 예전에는 칩 안에 <select>를 넣었는데, well이 사이드바를
+    // 반으로 나눠 쓰는 폭(약 160px)이라 셀렉트가 자리를 먹고 필드 이름이 "금.."으로 잘렸다.
+    // 표 안의 정렬도 같은 방식(우클릭)이라 조작이 하나로 모인다.
     function renderDetailDataValuesChips(cfg) {
       cfg = cfg || ddCfg();
       return ddCfg().values.map(v => {
-        const label = detailDataFieldLabel(v.field);
-        const opts = getDetailDataAggOptions(v.field);
-        const select = `<select class="dd-agg-select" onclick="event.stopPropagation();" onchange="setDetailDataValueAgg(${v.id}, this.value)">${opts.map(a =>
-          `<option value="${a}" ${a === v.agg ? 'selected' : ''}>${DETAIL_DATA_AGG_LABELS[a]}</option>`
-        ).join('')}</select>`;
         return `<div class="dd-field-chip dd-field-chip-placed dd-field-chip-value" draggable="true" data-field="${v.field}" data-value-id="${v.id}"
           ondragstart="onDetailDataDragStart(event,'${v.field}', ${v.id})" ondragend="onDetailDataDragEnd(event)"
           ondragover="onDetailDataChipDragOver(event)" ondragleave="onDetailDataChipDragLeave(event)"
-          ondrop="onDetailDataChipDrop(event,'values', ${v.id})">
-          <span>${label}</span>${select}<span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('values', ${v.id})">✕</span>
+          ondrop="onDetailDataChipDrop(event,'values', ${v.id})"
+          oncontextmenu="return ddOpenValueAggMenu(event, ${v.id})" title="우클릭: 집계 방식 변경">
+          <span>${getDetailDataValueLabel(v)}</span><span class="dd-chip-remove" onclick="event.stopPropagation(); removeDetailDataField('values', ${v.id})">✕</span>
         </div>`;
       }).join('');
     }
+    function ddOpenValueAggMenu(ev, id) {
+      const v = ddCfg().values.find(x => x.id === id);
+      if (!v) return true;
+      return pvShowMenu(ev, `${detailDataFieldLabel(v.field)} 집계`,
+        getDetailDataAggOptions(v.field).map(a => [DETAIL_DATA_AGG_LABELS[a], a === v.agg, `ddPickValueAgg(${id},'${a}')`]));
+    }
+    function ddPickValueAgg(id, agg) { pvCloseRowSortMenu(); setDetailDataValueAgg(id, agg); }
 
     // ctx를 넘기면 그 피벗의 패널에 그린다(일반 피벗). 안 넘기면 세부데이터 자신.
     // **cfg는 ddCfg()가 아니라 ctx에서 꺼낸다** — renderPresetPivot은 보고 있지 않은 화면을 그릴 수도
