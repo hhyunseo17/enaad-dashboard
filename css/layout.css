@@ -63,7 +63,9 @@
     /* 켜짐/꺼짐이 있는 토글 버튼(빌더 패널 열고 닫기). 눌린 상태가 눈에 보여야 '들어갔다 나갔다'가
        읽힌다. btn-primary를 쓰면 옆의 진짜 주요 동작(엑셀 다운로드)과 경쟁하므로 옅은 파랑 + 테두리로만
        구분한다. 화살표는 패널이 오른쪽에서 들고 나는 방향을 가리킨다. */
-    .btn-toggle.is-on { background: var(--primary-blue-glow); border-color: var(--primary-blue); color: var(--primary-blue); font-weight: 500; }
+    /* 글자만 --primary-blue-on-glow로 간다. 테두리는 --primary-blue 그대로 두는데, 테두리는 카드면 위에
+       놓이므로(글자처럼 자기 색 바탕 위가 아니다) 대비가 이미 충분하고 비문자 요소라 기준도 3:1이다. */
+    .btn-toggle.is-on { background: var(--primary-blue-glow); border-color: var(--primary-blue); color: var(--primary-blue-on-glow); font-weight: 500; }
     .btn-toggle.is-on:hover { background: var(--primary-blue-glow); border-color: var(--primary-blue); }
     /* 화살표 방향은 JS가 글자로 바꾼다(◀/▶) — 이 자리는 flex 아이템이라 display가 block으로
        블록화되고 transform 회전이 기대대로 걸리지 않았다. */
@@ -123,10 +125,12 @@
         면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
     .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
-    .pill-btn:hover { color: var(--primary-blue); background: var(--primary-blue-glow); }
-    /* 선택 상태는 옅은 파란 면 위의 파란 글자라 대비가 낮다 — 취급고/회계 토글과 달리
-       광학 보정이 필요 없으므로 굵기를 기본과 같이 둔다. */
-    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue); font-weight: 500; }
+    .pill-btn:hover { color: var(--primary-blue-on-glow); background: var(--primary-blue-glow); }
+    /* 선택 상태는 옅은 파란 면 위의 파란 글자다. 대비는 글자색을 --primary-blue-on-glow로 갈라서
+       해결했고(theme.css 참고), 굵기는 기본과 같이 둔다 — 취급고/회계 토글과 달리 광학 보정이
+       필요 없다. **여기서 --primary-blue로 되돌리지 말 것**: 이 면은 자기 색을 깐 바탕이라
+       같은 파랑을 다시 올리면 대비가 3.2로 주저앉는다. */
+    .pill-btn.active { background: var(--primary-blue-glow); color: var(--primary-blue-on-glow); font-weight: 500; }
     .pill-btn:disabled, .pill-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; background: transparent; color: var(--text-disabled); }
     /* KPI 카드 6장에 서로 다른 accent 색을 주던 규칙을 걷어냈다. 그 색들은 아무 의미도 담고
        있지 않았는데, 바로 아래 차트에서는 색이 5대분류라는 의미를 갖는다. 한 화면에서

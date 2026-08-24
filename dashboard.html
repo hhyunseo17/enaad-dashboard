@@ -12,9 +12,15 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   
-  <!-- SheetJS & Chart.js CDN -->
+  <!-- SheetJS & Chart.js CDN
+       **버전을 반드시 적는다.** chart.js는 버전 없이 불러오고 있었는데, 그러면 jsDelivr가 그때그때의
+       최신 메이저를 준다 — 지금은 4.5.1이지만 Chart.js 5가 나오는 날 우리 쪽 커밋 하나 없이 5로 갈아탄다.
+       datalabels@2는 Chart.js 3·4까지만 지원하므로 그 순간 12개 차트가 한꺼번에 멎고, 원인은 저장소
+       어디에도 남지 않는다(배포도 안 했는데 깨진 화면이 된다).
+       메이저만 고정하는 이유: 4 안에서의 패치·마이너는 받되 메이저 경계만 막으면 충분하다.
+       datalabels도 같은 이유로 @2에 묶여 있고, xlsx는 이미 완전 고정이다. -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   
   <!-- Styles (분리된 CSS 모듈) -->
