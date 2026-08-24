@@ -54,8 +54,8 @@
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
     .sync-time { font-size: 11px; color: var(--text-tertiary); }
 
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 400; border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
-    .btn:hover { background: var(--border-default); border-color: var(--border-strong); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 400; border-radius: var(--radius-md); border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+    .btn:hover { background: var(--btn-bg-hover); border-color: var(--btn-border-hover); }
     .btn-primary { background: var(--primary-blue); color: var(--text-on-primary); border: none; box-shadow: var(--shadow-blue-glow); }
     .btn-primary:hover { background: var(--primary-blue-hover); }
     .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--radius-sm); }
