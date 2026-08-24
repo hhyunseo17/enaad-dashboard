@@ -202,7 +202,7 @@
             .reduce((sum, t) => sum + t.targetWon, 0);
           if (annualTargetTotal > 0) {
             const annualRate = actualTotal / annualTargetTotal * 100;
-            annualEl.innerText = `연간 목표 대비 진도율: ${annualRate.toFixed(1)}% (연간 목표 약 ${(annualTargetTotal / 1e8).toFixed(2)}억원)`;
+            annualEl.innerText = `연간 목표 대비 진도율: ${annualRate.toFixed(1)}% (목표 약 ${(annualTargetTotal / 1e8).toFixed(2)}억원)`;
           } else {
             annualEl.innerText = `연간 목표 미등록`;
           }
