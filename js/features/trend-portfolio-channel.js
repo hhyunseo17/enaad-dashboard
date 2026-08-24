@@ -60,7 +60,21 @@
         }
       // cutout 68% → 60%. 링이 얇으면 비중이 작은 조각은 색면이 아니라 실선처럼 보여
       // 5대분류 계열색을 알아보기 어렵고, 안쪽 % 라벨도 호를 넘어간다.
-      }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '60%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 11, weight: FW() } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } } });
+      }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '60%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 11, weight: FW() } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } },
+        plugins: [{
+          id: 'portfolioCenterText',
+          afterDraw(chart) {
+            const { ctx, chartArea: { left, right, top, bottom } } = chart;
+            const cx = (left + right) / 2; const cy = (top + bottom) / 2;
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = `600 18px 'IBM Plex Sans KR', 'Pretendard', sans-serif`;
+            ctx.fillStyle = CH('#F2F4F6');
+            ctx.fillText(`${totalSum.toFixed(2)}억원`, cx, cy);
+            ctx.restore();
+          }
+        }]
+      });
     }
 
     function renderChannelChart() {
