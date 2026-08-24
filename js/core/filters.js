@@ -51,7 +51,10 @@
         return a.localeCompare(b);
       });
       const broads = keepSelected('Broad', [...new Set(baseFiltered.map(r => r.broadDigital))].filter(Boolean)).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
-      const cats = [...categoryOrderList];
+      // 5대분류는 스코프와 무관하게 항상 다 보여주고(대분류는 다섯 개로 고정된 축이다),
+      // 원본에서 넘어온 미지의 대분류만 지금 스코프에 있을 때 뒤에 붙인다. 목록에 없으면
+      // 걸러낼 수도 없고, 다른 대분류를 하나만 해제해도 선택 목록에서 빠져 조용히 제외된다.
+      const cats = categoryListWithUnknown(baseFiltered);
 
       renderCheckboxList('Dept', depts, isInit);
       renderCheckboxList('Channel', channels, isInit);

@@ -226,9 +226,16 @@
     }
 
     // 5대분류 계열색을 현재 테마에 맞춰 돌려준다. 색상(hue)은 두 테마 동일, 명도만 다르다.
+    //
+    // **항상 색을 돌려준다(undefined 없음).** 5대분류에 없는 이름 — 원본에 새 대분류가 들어와
+    // classifyCategory가 그대로 통과시킨 값 — 이면 전용 보라를 준다(state.js 주석 참고).
+    // 그래서 호출부에 남아 있는 `catColor(cat) || catColor('기타광고')` 폴백은 이제 닿지 않는다.
+    // 지우지 않고 두는 이유는 그 자리들이 전부 인라인 한 줄짜리 dataset 정의라, 폴백을 걷어내는
+    // 편집이 얻는 것보다 잘못 건드릴 위험이 크기 때문이다.
     function catColor(name) {
       const hex = (currentTheme === 'light' ? categoryColorsLight : categoryColorsDark)[name];
-      return hex;
+      if (hex) return hex;
+      return currentTheme === 'light' ? categoryColorUnknownLight : categoryColorUnknownDark;
     }
 
     // 값축 그리드 — 아주 흐리게. 막대마다 합계 라벨이 이미 붙어 있어 촘촘한 눈금은 대부분 중복이고,

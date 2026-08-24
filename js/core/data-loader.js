@@ -294,11 +294,65 @@
       setupYearPills(isFirstLoad);
       updateFilterCheckboxes(isFirstLoad);
       applyFilters();
+      reportUnknownCategories();
       // 최초 적재에서만 주소의 #뷰키를 따라간다(view-router.js). 여기서 부르는 이유는 피벗 렌더러가
       // filteredData를 읽기 때문 — 적재 전에 부르면 빈 표가 그려진다. 이후 재적재(배치 갱신 폴링 등)
       // 때는 보고 있던 화면을 그대로 두어야 하므로 다시 부르지 않는다.
       if (isFirstLoad) restoreViewFromHash();
       isFirstLoad = false;
+    }
+
+    // ============================================================
+    // 5대분류에 없는 대분류 감지
+    //
+    // classifyCategory(와 schema.sql의 같은 case 식)는 모르는 category_original을 **그대로 통과시킨다.**
+    // 의도된 동작이다 — 새 상품이나 표기 변경을 기타광고에 조용히 섞어 버리면 아무도 모르게 되므로,
+    // 원래 값을 그대로 화면에 올려 확인받고 분류 규칙을 갱신하는 쪽을 택했다.
+    //
+    // 다만 통과시키는 것만으로는 부족하다. 금액이 작으면 도넛의 얇은 조각 하나, 피벗의 행 하나로
+    // 나타나고 총합계는 어차피 맞으므로 눈에 띄지 않는다. 그래서 (1) 여기서 배너로 알리고,
+    // (2) catColor()가 전용 보라를 줘서 기타광고 회색에 묻히지 않게 한다(state.js 주석 참고).
+    //
+    // **rawData를 보는 이유**: xlsx 경로는 classifyCategory가, Supabase 경로는 v_sales_normalized가
+    // 재분류를 끝낸 뒤라 두 경로의 결과가 여기 한자리에 모인다. 어느 쪽으로 들어와도 같이 잡힌다.
+    // ============================================================
+    function reportUnknownCategories() {
+      const known = new Set(categoryOrderList);
+      const found = {};
+      rawData.forEach(r => {
+        const c = r.categoryReclassified;
+        if (!c || known.has(c)) return;
+        if (!found[c]) found[c] = { rows: 0, amount: 0 };
+        found[c].rows++;
+        found[c].amount += r.amount;
+      });
+
+      const names = Object.keys(found).sort();
+      const banner = document.getElementById('unknownCategoryBanner');
+      if (!banner) return;
+      if (names.length === 0) { banner.style.display = 'none'; return; }
+
+      // 같은 목록을 이미 확인했으면 다시 띄우지 않는다(배치 폴링이 재적재할 때마다 뜨는 것을 막는다).
+      const sig = names.join('|');
+      if (sig === dismissedUnknownCategorySig) { banner.style.display = 'none'; return; }
+
+      const detail = names
+        .map(n => `<b>${n}</b> (${found[n].rows.toLocaleString()}건 · ${(found[n].amount / 1e8).toFixed(2)}억원)`)
+        .join(', ');
+      document.getElementById('unknownCategoryMessage').innerHTML =
+        `5대분류에 없는 대분류가 원본에 있습니다 — ${detail}. `
+        + `값을 바꾸지 않고 그대로 집계·표시하고 있으며, 차트에서는 보라색으로 나옵니다. `
+        + `어느 분류로 넣을지 정해지면 분류 규칙에 반영해 주세요.`;
+      banner.style.display = 'flex';
+      console.warn('[대분류] 5대분류에 없는 값:', found);
+    }
+
+    function dismissUnknownCategoryNotice() {
+      const banner = document.getElementById('unknownCategoryBanner');
+      if (banner) banner.style.display = 'none';
+      const known = new Set(categoryOrderList);
+      dismissedUnknownCategorySig = [...new Set(rawData.map(r => r.categoryReclassified))]
+        .filter(c => c && !known.has(c)).sort().join('|');
     }
 
     // ============================================================
@@ -444,6 +498,13 @@
       if (rawCat === '일반광고') return '일반광고'; if (rawCat === '인포머셜') return '인포머셜'; if (rawCat === 'IMC') return 'IMC';
       if (rawCat === '큐톤광고' || lowerSub.includes('skylife')) return '큐톤광고';
       if (['기타광고', '어드레서블', '콘텐츠편성', '기타수익', 'ARA', '대행수익'].includes(rawCat) || rawSub === '자사큐톤' || rawSub === '티온애드') return '기타광고';
+      // **모르는 값은 그대로 통과시킨다 — 의도된 동작이다. '기타광고'로 접지 말 것.**
+      // 대분류는 5종뿐이라는 원칙(CLAUDE.md 3번)만 보면 여기서 흡수하는 게 맞아 보이지만,
+      // 그러면 새 상품이나 표기 변경(예: '어드레서블' → '어드레서블광고')이 기타광고에 조용히
+      // 섞여 아무도 알아채지 못한다. 원래 값을 그대로 올려 확인받고, 어디로 넣을지 정해지면
+      // 위 목록에 추가하는 것이 이 프로젝트가 택한 방식이다.
+      // 통과된 값은 reportUnknownCategories()가 배너로 알리고 catColor()가 보라로 칠한다.
+      // (schema.sql의 category_reclassified case 식 마지막 else도 같은 규칙이다 — 같이 고칠 것.)
       return rawCat || '기타광고';
     }
 

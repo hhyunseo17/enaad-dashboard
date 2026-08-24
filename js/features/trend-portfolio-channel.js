@@ -4,7 +4,9 @@
 // ============================================================
     function renderTrendChart() {
       const ctx = document.getElementById('chartTrend').getContext('2d'); if (chartInstances.trend) chartInstances.trend.destroy();
-      const sortedMonths = [...new Set(filteredData.map(r => r.monthStr))].sort(); const categories = [...categoryOrderList];
+      // 계열은 categoryOrderList가 아니라 categoryListWithUnknown()에서 가져온다 — 고정 배열로 만들면
+      // 5대분류에 없는 대분류의 금액이 어느 막대에도 쌓이지 못하고 사라진다(state.js 주석 참고).
+      const sortedMonths = [...new Set(filteredData.map(r => r.monthStr))].sort(); const categories = categoryListWithUnknown(filteredData);
       const datasets = categories.map(cat => {
         let cumulativeSum = 0;
         const data = sortedMonths.map(m => {
@@ -40,7 +42,10 @@
       const ctx = document.getElementById('chartPortfolio').getContext('2d'); if (chartInstances.portfolio) chartInstances.portfolio.destroy();
       const groupMap = {}; filteredData.forEach(r => { const k = r[portfolioMode] || '기타'; groupMap[k] = (groupMap[k] || 0) + r.amount; });
       let sorted = Object.entries(groupMap);
-      if (portfolioMode === 'broadDigital') sorted.sort((a, b) => (broadOrderMap[a[0]] || 99) - (broadOrderMap[b[0]] || 99)); else if (portfolioMode === 'categoryReclassified') sorted.sort((a, b) => categoryOrderList.indexOf(a[0]) - categoryOrderList.indexOf(b[0])); else { sorted.sort((a, b) => b[1] - a[1]); sorted = sorted.slice(0, 8); }
+      if (portfolioMode === 'broadDigital') sorted.sort((a, b) => (broadOrderMap[a[0]] || 99) - (broadOrderMap[b[0]] || 99));       // 도넛은 groupMap을 데이터에서 만들므로 미지의 대분류가 조각으로는 나온다. 다만 정렬을
+      // indexOf 차로 하면 목록에 없는 값이 -1이라 **맨 앞**에 서서 일반광고보다 먼저 온다.
+      // 아는 것 먼저, 모르는 것은 뒤에 이름순 — 다른 표·차트와 같은 규칙으로 맞춘다.
+      else if (portfolioMode === 'categoryReclassified') { const ord = categoryListWithUnknown(filteredData); sorted.sort((a, b) => ord.indexOf(a[0]) - ord.indexOf(b[0])); } else { sorted.sort((a, b) => b[1] - a[1]); sorted = sorted.slice(0, 8); }
       const labels = sorted.map(s => s[0]); const dataVals = sorted.map(s => s[1] / 1e8);
       const bgColors = labels.map((k, i) => (portfolioMode === 'categoryReclassified' && catColor(k)) ? catColor(k) : seriesColor(i));
 
@@ -63,11 +68,14 @@
       const targetOrder = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
       const channelMap = {}; filteredData.forEach(r => { channelMap[r.channel || '기타'] = true; });
       const labels = [...targetOrder]; let hasOther = false; Object.keys(channelMap).forEach(ch => { if (!targetOrder.includes(ch) && ch !== '(미지정)') hasOther = true; }); if (hasOther) labels.push('기타');
-      const datasets = categoryOrderList.map(cat => {
+      // 추이 차트와 같은 이유로 고정 배열을 쓰지 않는다(state.js의 categoryListWithUnknown 주석 참고).
+      const chCategories = categoryListWithUnknown(filteredData);
+      const datasets = chCategories.map(cat => {
         const data = labels.map(chLabel => { if (chLabel === '기타') return filteredData.filter(r => !targetOrder.includes(r.channel) && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; return filteredData.filter(r => r.channel === chLabel && r.categoryReclassified === cat).reduce((s, r) => s + r.amount, 0) / 1e8; });
         return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || catColor('기타광고')), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
-            display: (ctx) => cat === categoryOrderList[categoryOrderList.length - 1],
+            // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다 — 목록이 길어졌으므로 그 '마지막'도 같이 따라가야 한다.
+            display: (ctx) => cat === chCategories[chCategories.length - 1],
             anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() },
             formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
           }

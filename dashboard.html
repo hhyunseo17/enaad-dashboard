@@ -96,6 +96,14 @@
       <button class="btn btn-sm" onclick="hideErrorMessage()">닫기</button>
     </div>
 
+    <!-- 5대분류에 없는 대분류가 원본에 들어왔을 때 뜨는 알림.
+         실패가 아니라 '확인해 달라'는 신호라 errorBanner(빨강)와 따로 둔다 — 같이 쓰면
+         적재 실패 메시지를 덮어쓰고, 적재 성공 직후 hideErrorMessage()에 지워진다. -->
+    <div id="unknownCategoryBanner" class="notice-banner">
+      <span id="unknownCategoryMessage"></span>
+      <button class="btn btn-sm" onclick="dismissUnknownCategoryNotice()">확인</button>
+    </div>
+
     <!-- Zone 1: Global Filters Bar -->
     <section class="filter-bar">
       <!-- 1행: 매출기준 + 전역 동작. 항상 보인다.

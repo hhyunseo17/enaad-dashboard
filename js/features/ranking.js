@@ -53,7 +53,9 @@
       // **부서 정렬 로직 적용 (매출순이 아닌 팀 순서)**
       const topDepts = Object.keys(deptSumMap).sort(compareDeptOrder);
 
-      let subKeys = deptMode === 'categoryReclassified' ? [...categoryOrderList] : [...new Set(filteredData.map(r => r[deptMode]))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
+      // 대분류 모드의 계열은 고정 배열이 아니라 categoryListWithUnknown()에서 가져온다 — 고정 배열이면
+      // 5대분류에 없는 대분류의 금액이 어느 계열에도 안 쌓여 사라진다(state.js 주석 참고).
+      let subKeys = deptMode === 'categoryReclassified' ? categoryListWithUnknown(filteredData) : [...new Set(filteredData.map(r => r[deptMode]))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
       const datasets = subKeys.map((subK, idx) => ({ label: subK, data: topDepts.map(dept => filteredData.filter(r => r.dept === dept && r[deptMode] === subK).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill((deptMode === 'categoryReclassified' && catColor(subK)) ? catColor(subK) : seriesColor(idx)), borderRadius: 0, ...ddStackSeparator(),
         datalabels: { display: (ctx) => idx === subKeys.length - 1, anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 10, weight: FW() },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }
@@ -65,7 +67,7 @@
       const ctx = document.getElementById('chartManager').getContext('2d'); if (chartInstances.manager) chartInstances.manager.destroy();
       const managerSumMap = {}; filteredData.forEach(r => { managerSumMap[r.manager] = (managerSumMap[r.manager] || 0) + r.amount; });
       const topManagers = Object.entries(managerSumMap).sort((a,b) => b[1] - a[1]).slice(0, 10).map(s => s[0]);
-      let subKeys = managerMode === 'categoryReclassified' ? [...categoryOrderList] : [...new Set(filteredData.map(r => r[managerMode]))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
+      let subKeys = managerMode === 'categoryReclassified' ? categoryListWithUnknown(filteredData) : [...new Set(filteredData.map(r => r[managerMode]))].filter(Boolean).sort((a, b) => (broadOrderMap[a] || 99) - (broadOrderMap[b] || 99));
       const datasets = subKeys.map((subK, idx) => ({ label: subK, data: topManagers.map(mgr => filteredData.filter(r => r.manager === mgr && r[managerMode] === subK).reduce((s, r) => s + r.amount, 0) / 1e8), backgroundColor: ddBarFill((managerMode === 'categoryReclassified' && catColor(subK)) ? catColor(subK) : seriesColor(idx)), borderRadius: 0, ...ddStackSeparator(),
         datalabels: { display: (ctx) => idx === subKeys.length - 1, anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 10, weight: FW() },
           formatter: (v, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; } }

@@ -23,6 +23,11 @@
     // 세션 안에서만 유지된다 — 새로고침하면 프리셋으로 돌아간다.
     let pivotConfigs = {};
     let lastSeenBatchId = null; // Supabase 모드에서 배치 변경 감지 폴링에 사용
+    // 사용자가 '확인'을 누른 미지의 대분류 목록(정렬 후 join한 문자열).
+    // 배치 갱신 폴링이 돌 때마다 같은 배너를 다시 띄우지 않기 위한 것이다.
+    // localStorage가 아니라 메모리에 두는 이유: 새로고침하면 다시 보이는 편이 맞다 —
+    // 아직 분류 규칙이 갱신되지 않았다는 사실 자체는 그대로이기 때문이다.
+    let dismissedUnknownCategorySig = '';
     let rawData = [];
     let filteredData = [];
     let tableDisplayData = [];
@@ -189,9 +194,43 @@
       '큐톤광고': '#FF9F0A',
       '기타광고': '#98989D'
     };
+    // 5대분류에 없는 대분류가 원본에 들어왔을 때 쓰는 색.
+    //
+    // **회색으로 두면 안 된다.** 예전에는 catColor()가 undefined를 돌려주고 호출부가
+    // `catColor(cat) || catColor('기타광고')`로 받아 무채색으로 떨어뜨렸다. 그러면 화면에서
+    // 기타광고와 완전히 같은 색이 되어, 새 분류가 들어와도 차트만 봐서는 알 방법이 없다.
+    // (게다가 도넛과 부서·담당자 차트는 같은 상황에서 seriesColor(i)로 빠져 서수 팔레트 색을 썼다.
+    //  즉 같은 미지의 분류가 차트마다 다른 색으로 나왔다.)
+    //
+    // 보라를 고른 이유: 5대분류가 파랑·빨강·초록·주황·무채를 전부 차지하고 있어 남은 자리가 없다.
+    // 보라는 서수 팔레트 4번(#B88AE5/#AB6EE7)으로 이미 화면에 있는 색이라 새 색상을 들이는 게
+    // 아니고, 5대분류 어느 것과도 헷갈리지 않는다. 값도 그 팔레트에서 그대로 가져와 5대분류
+    // 명도대(라이트 L72 · 다크 L67) 안에 들어온다 — 옆 막대보다 뜨거나 무겁지 않다.
+    const categoryColorUnknownLight = '#B88AE5';
+    const categoryColorUnknownDark = '#AB6EE7';
     // 테마를 모르는 곳(레거시 참조)을 위한 기본값. 새 코드는 catColor()를 쓴다.
     const categoryColors = categoryColorsDark;
     const categoryOrderList = ['일반광고', 'IMC', '인포머셜', '큐톤광고', '기타광고'];
+
+    // 화면에 세울 대분류 목록 = 5대분류 고정 순서 + 데이터에 실제로 있는 미지의 값(뒤에 이름순).
+    //
+    // **차트 계열과 대분류 필터 목록은 categoryOrderList를 직접 쓰면 안 되고 이 함수를 거쳐야 한다.**
+    // classifyCategory가 모르는 대분류를 그대로 통과시키므로(의도된 동작 — data-loader.js 주석 참고)
+    // 고정 배열로 계열을 만들면 그 행들이 **어느 계열에도 속하지 못해 금액이 통째로 사라진다.**
+    // 실제로 그랬다: 추이 차트가 KPI보다 2.43억 적게 나왔고, 총합계는 KPI 쪽만 맞아서
+    // "차트가 좀 낮네" 정도로만 보였다. 스택 막대는 빠진 계열이 눈에 띄지 않는다.
+    // 대분류 필터 목록도 같은 이유로 이 함수를 쓴다 — 목록에 없으면 체크박스로 걸러낼 수 없고,
+    // 사용자가 다른 대분류를 하나라도 해제하는 순간 선택 목록에서 빠져 조용히 제외된다.
+    //
+    // 순서를 '뒤'로 두는 이유: 앞에 오면 5대분류의 고정 순서(일반광고부터)가 흔들려 매번 다른 표처럼
+    // 읽힌다. 피벗들(detail-pivots.js, pivot-builder.js의 pvOrderListCompare, kpi.js의
+    // compareGoalCategoryOrder)이 이미 '아는 것 먼저, 모르는 것 뒤에 이름순'으로 정렬하고 있어 그와도 맞다.
+    function categoryListWithUnknown(rows) {
+      const known = new Set(categoryOrderList);
+      const extra = [...new Set((rows || rawData).map(r => r.categoryReclassified))]
+        .filter(c => c && !known.has(c)).sort();
+      return [...categoryOrderList, ...extra];
+    }
     const broadOrderMap = { '방송': 1, '디지털': 2, '기타': 3 };
 
     // 부서 정렬용 커스텀 배열 (매출이 아닌 팀 번호 순서 정렬). 광고사업1팀이 항상 최우선.

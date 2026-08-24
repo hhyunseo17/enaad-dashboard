@@ -252,6 +252,10 @@ select
     when r.category_original = '큐톤광고' or r.sub_category ilike '%skylife%' then '큐톤광고'
     when r.category_original in ('기타광고', '어드레서블', '콘텐츠편성', '기타수익', 'ARA', '대행수익')
       or r.sub_category = '자사큐톤' or r.sub_category = '티온애드' then '기타광고'
+    -- **모르는 값은 그대로 통과시킨다 — 의도된 동작이다. '기타광고'로 접지 말 것.**
+    -- 새 상품이나 표기 변경을 기타광고에 조용히 섞으면 아무도 알아채지 못하므로, 원래 값을 그대로
+    -- 올려 확인받고 분류가 정해지면 위 목록에 추가한다. 프론트는 이 값을 받아 배너로 알리고
+    -- 보라색으로 칠한다(js/core/data-loader.js의 reportUnknownCategories / classifyCategory 주석 참고).
     else coalesce(nullif(r.category_original, ''), '기타광고')
   end as category_reclassified,
 
