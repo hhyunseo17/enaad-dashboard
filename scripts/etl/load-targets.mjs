@@ -19,6 +19,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CHUNK_SIZE = 1000;
 const SHEET_NAME = '목표 합산';
 const VALID_CATEGORIES = new Set(['일반광고', 'IMC', '인포머셜', '큐톤광고', '기타광고']);
+const BASIS_MAP = { '취급고': 'performance', '회계': 'accounting' };
 
 function assertEnv() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -70,6 +71,12 @@ export function readTargetRows(buffer) {
       throw new Error(`${idx + 2}행: 귀속월 파싱 실패 (값: ${JSON.stringify(r['귀속월'])})`);
     }
 
+    const basisRaw = s(r['매출기준']);
+    const basis = BASIS_MAP[basisRaw];
+    if (!basis) {
+      throw new Error(`${idx + 2}행: 매출기준 값이 올바르지 않습니다 (값: ${JSON.stringify(r['매출기준'])}, 허용: 취급고/회계)`);
+    }
+
     const categoryReclassified = classifyCategory(r['대분류'], '');
     if (!VALID_CATEGORIES.has(categoryReclassified)) {
       throw new Error(`${idx + 2}행: 재분류 결과가 5대분류 밖입니다 (원본 대분류: ${JSON.stringify(r['대분류'])}, 재분류 결과: ${categoryReclassified})`);
@@ -81,20 +88,21 @@ export function readTargetRows(buffer) {
       category_reclassified: categoryReclassified,
       year: ym.year,
       month: ym.month,
+      basis,
       target_amount_won: Math.round(Number(targetRaw) || 0),
     });
   });
   return mergeDuplicateKeys(rows);
 }
 
-// 재분류(예: 대행수익→기타광고) 결과 같은 (manager, category_reclassified, year, month) 키로
+// 재분류(예: 대행수익→기타광고) 결과 같은 (manager, category_reclassified, year, month, basis) 키로
 // 합쳐지는 행이 있을 수 있다 — upsert 배치 안에서 같은 키가 두 번 나오면 Postgres가
 // "ON CONFLICT DO UPDATE command cannot affect row a second time" 에러를 낸다.
 // 원본이 서로 다른 대분류였을 뿐 재분류 후에는 같은 목표 버킷이므로 금액을 합산한다.
 function mergeDuplicateKeys(rows) {
   const merged = new Map();
   rows.forEach(r => {
-    const key = [r.manager, r.category_reclassified, r.year, r.month].join('|');
+    const key = [r.manager, r.category_reclassified, r.year, r.month, r.basis].join('|');
     const existing = merged.get(key);
     if (existing) existing.target_amount_won += r.target_amount_won;
     else merged.set(key, { ...r });
@@ -105,7 +113,7 @@ function mergeDuplicateKeys(rows) {
 async function upsertAll(supabase, rows) {
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const { error } = await supabase.from('sales_targets').upsert(chunk, { onConflict: 'manager,category_reclassified,year,month' });
+    const { error } = await supabase.from('sales_targets').upsert(chunk, { onConflict: 'manager,category_reclassified,year,month,basis' });
     if (error) throw new Error(`sales_targets upsert 실패 (rows ${i}~${i + chunk.length}): ${error.message}`);
   }
 }

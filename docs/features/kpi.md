@@ -5,7 +5,8 @@
 ## 개요
 본부 총매출 / 전년동기 대비 증감 / 광고주당 매출 / 신규 광고주 / 업프론트 실적 / 본부 목표 대비 달성률.
 - 카드별 강조색 + 클릭 가능한 카드는 해당 색 윤곽선. 연결 없는 카드(총매출·전년동기·목표 대비 달성률)는 hover 무반응.
-- 6번째 카드 "본부 목표 대비 달성률"(`kpi-accent-teal`)은 `sales_targets`(담당자×5대분류×연월 목표, `/api/targets` → `salesTargets` 전역) 대비 **본부 전체 실적 합산 하나만** 보여준다. 카드 자체의 담당자별/대분류별 드릴다운은 범위 밖 — 대신 아래 차트가 부서/담당자 분해 뷰를 담당.
+- 6번째 카드 "본부 목표 대비 달성률"(`kpi-accent-teal`)은 `sales_targets`(담당자×5대분류×연월×매출기준 목표, `/api/targets` → `salesTargets` 전역) 대비 **본부 전체 실적 합산 하나만** 보여준다. 카드 자체의 담당자별/대분류별 드릴다운은 범위 밖 — 대신 아래 차트가 부서/담당자 분해 뷰를 담당.
+- `sales_targets`는 취급고(`basis:'performance'`)·회계(`basis:'accounting'`) 두 기준이 같은 (담당자·대분류·연월) 자리에 별도 행으로 공존한다. 목표를 쓰는 모든 곳은 `targetsForCurrentBasis()`로 `revenueBasisMode`와 같은 `basis`만 골라 쓴다 — 다른 기준 목표가 섞여 들어가면 분모가 거짓으로 커지거나 작아진다.
 - 선택 연도가 1개일 때는 카드 하단에 "연간 목표 대비 진도율"(해당 기간 실적 ÷ 선택 연도 전체(12개월) 목표)을 작은 글씨로 추가 표시. 연도 미선택/복수선택 시 숨김.
 
 ## 핵심 함수
@@ -14,11 +15,13 @@
 - `renderUpfrontKPI()` — 업프론트 실적 합계 + 달성률 + "약 XX.XX억원(월할 추정치)".
 - `buildGoalScopeSet()` — 목표 관련 KPI/차트/피벗이 **모두 공유하는 연-월 스코프**. 월 미선택 시 그 연도에 실적이 있는 월까지만 넣고(진행 중 연도의 9~12월 목표가 분모에 끼는 것 방지), 마지막에 **목표가 등록된 연-월만 남긴다**(`buildRegisteredTargetMonthSet()`, 월 목표 합 > 0). 목표는 2023-01~2026-12만 등록돼 있고 실적은 2019년부터 있어, 좁히지 않으면 2019~2022 실적이 분자에만 들어가 달성률이 138.3%로 부풀려졌다. 목표가 없는 기간은 달성을 따질 구간이 아니므로 **분자·분모 양쪽에서 함께 뺀다.**
 - 스코프가 비면(예: 2019~2022만 선택) 달성률을 계산하지 않는다 — KPI는 `-` + "선택 기간에 등록된 목표 없음", 두 차트는 placeholder("선택 기간에 등록된 목표가 없습니다"), 두 피벗은 같은 문구의 빈 표. 예전에는 이때 목표 없이 실적 금액만 띄워, "무엇 대비"인지 알 수 없는 숫자가 남았다.
-- `computeRevenueTargetForScope()` — 선택 연/월 스코프와 겹치는 `salesTargets` 전부(담당자·대분류 불문) 합산.
-- `computeRevenuePerformanceActualForScope()` — 본부매출+실적(취급고)+선택 연/월 스코프로 `rawData` 집계. 좌측 부서/채널/대분류 체크박스 필터와 무관(목표가 그 축으로 안 쪼개지므로, 업프론트 계약금액 집계와 동일 원칙).
-- `renderGoalKPI()` — 위 두 compute 함수로 달성률 배지(`kpiGoalAchieveBadge`)와 실적/목표 텍스트(`kpiGoalActual`/`kpiGoalSub`) 렌더 + 연간 목표 대비 진도율(`kpiGoalAnnualProgress`, `selectedYears.length === 1`일 때만 노출) 렌더. `revenueBasisMode === 'accounting'`(회계기준)이면 계산하지 않고 `-`/배지 숨김/진도율 숨김/"회계기준 목표 미제공"으로 빈칸 처리(목표가 취급고 전용이라 회계기준과 섞으면 기준이 어긋나기 때문).
+- `targetsForCurrentBasis()` — `salesTargets`(취급고·회계 두 기준이 `basis` 컬럼으로 같은 담당자×대분류×연월 자리에 별도 행으로 공존) 중 `revenueBasisMode`와 `basis`가 같은 행만. 목표를 읽는 모든 함수가 `salesTargets`를 직접 필터링하지 않고 이걸 거친다.
+- `matchesCurrentBasis(r)` — `rawData` 실적 행이 현재 매출기준에 해당하는지. `applyFilters()`와 동일 규칙(취급고 모드는 `revenueBasis === '실적'`만, 회계 모드는 실적+회계조정 전부).
+- `computeRevenueTargetForScope()` — 선택 연/월 스코프와 겹치는 `targetsForCurrentBasis()` 전부(담당자·대분류 불문) 합산.
+- `computeRevenuePerformanceActualForScope()` — 본부매출+`matchesCurrentBasis()`+선택 연/월 스코프로 `rawData` 집계. 좌측 부서/채널/대분류 체크박스 필터와 무관(목표가 그 축으로 안 쪼개지므로, 업프론트 계약금액 집계와 동일 원칙).
+- `renderGoalKPI()` — 위 두 compute 함수로 달성률 배지(`kpiGoalAchieveBadge`)와 실적/목표 텍스트(`kpiGoalActual`/`kpiGoalSub`) 렌더 + 연간 목표 대비 진도율(`kpiGoalAnnualProgress`, `selectedYears.length === 1`일 때만 노출) 렌더. 취급고/회계 둘 다 같은 경로로 계산한다(취급고 전용이던 시절의 조기 반환은 `basis` 컬럼이 생기며 제거).
 - `renderGoalTrendChart()` — `chartGoalTrend` 캔버스에 연/월 스코프의 월별 목표·실적 막대. `goalTrendMode`(`'monthly'`|`'cumulative'`, 기본 `'monthly'`, `setGoalTrendMode()`로 토글, 버튼 id `btnGoalTrendMonthly`/`btnGoalTrendCumulative`)로 월별/누적 전환. **누적은 `cumulativeByYear()`로 연도가 바뀔 때 0에서 다시 쌓는다** — 목표가 연 단위 편성이라 "연초부터 얼마나 왔는가"가 읽는 값이고, 2025+2026을 함께 볼 때 24개월을 통으로 누적하면 연도 간 비교가 불가능해지기 때문. 누적 모드에서는 범례가 "누적 목표/누적 실적", 툴팁이 "(연초부터 누적)"·"누적 달성률"로 바뀐다.
-- `renderGoalBreakdownChart()` — `chartGoalBreakdown` 캔버스에 **현재 선택된 연/월 스코프** 기준 부서별 또는 담당자별 목표(line) 대비 실적(bar) 콤보 차트. `goalBreakdownMode`(`'dept'`|`'manager'`, 기본 `'dept'`, `js/features/shared-helpers.js`의 `setGoalBreakdownMode()`로 토글, 버튼 id `btnGoalBreakdownDept`/`btnGoalBreakdownManager`)로 그룹 축 전환. 그룹키는 `salesTargets[].dept`/`rawData[].dept`(부서 모드) 또는 `salesTargets[].manager`/`rawData[].manager`(담당자 모드) — 좌측 부서/채널/대분류 체크박스 필터는 미반영(목표가 그 축으로 안 쪼개지므로 KPI 카드와 동일 원칙), 연/월 스코프만 반영. 부서 모드는 `customDeptOrder` 순서로, 담당자 모드는 목표+실적 합산 큰 순으로 정렬(상한 없음 — 목표가 있는 담당자는 전부 포함). 툴팁에 그룹별 달성률(%) 표시. 회계기준일 때는 캔버스를 숨기고 `chartGoalBreakdownPlaceholder`에 "취급고 기준에서만 제공됩니다" 안내 문구를 표시.
+- `renderGoalBreakdownChart()` — `chartGoalBreakdown` 캔버스에 **현재 선택된 연/월 스코프** 기준 부서별 또는 담당자별 목표(line) 대비 실적(bar) 콤보 차트. `goalBreakdownMode`(`'dept'`|`'manager'`, 기본 `'dept'`, `js/features/shared-helpers.js`의 `setGoalBreakdownMode()`로 토글, 버튼 id `btnGoalBreakdownDept`/`btnGoalBreakdownManager`)로 그룹 축 전환. 그룹키는 `targetsForCurrentBasis()[].dept`/`rawData[].dept`(부서 모드) 또는 `targetsForCurrentBasis()[].manager`/`rawData[].manager`(담당자 모드) — 좌측 부서/채널/대분류 체크박스 필터는 미반영(목표가 그 축으로 안 쪼개지므로 KPI 카드와 동일 원칙), 연/월 스코프만 반영. 부서 모드는 `customDeptOrder` 순서로, 담당자 모드는 목표+실적 합산 큰 순으로 정렬(상한 없음). 포함 대상은 목표·실적 중 하나라도 0보다 큰 그룹 전부 — 목표 없이 실적만 있는 담당자/부서도 막대로 보여주고, 그 경우 툴팁 달성률은 `-`(목표 0으로는 나눌 수 없으므로).
 
 ## 목표 대비 실적 피벗 (두 차트의 드릴다운)
 두 차트 카드를 클릭하면 각각 피벗 뷰로 진입한다 — `openGoalTrendPivotView()`(`goalTrendPivot`) / `openGoalDeptPivotView()`(`goalDeptPivot`).
@@ -33,10 +36,10 @@
 - **헤더가 3줄이라 이 두 표만 `.pivot-tri-header` 클래스를 단다**(`css/pivot-table.css`). 다른 피벗은 2줄이다. 줄 수는 **열 축 깊이 + 지표 한 줄**이라 축을 바꾸면 2~6줄이 되므로 `thead`를 통째로 다시 그리고, sticky `top`은 각 줄 32px 가정으로 6줄까지 정의돼 있다.
 - 행 트리 펼침: `expandedGoalDeptPivot` / `expandedGoalTrendPivot`(뷰별로 따로, 기본 전부 접힘), `toggleGoalPivotNode(viewKey, pathKey)`.
 - 연도 열 펼침: `expandedGoalTrendYearColumns` / `expandedGoalDeptYearColumns`, 헤더의 `+/-`는 `togglePvColNode(viewKey, 값)`(일반 피벗과 공용). `expandAllYears()`는 이 둘만 `filteredData`가 아니라 `buildGoalScopeSet()`에서 연도를 뽑고 `applyFilters()`를 거치지 않는다(열 축이 목표 스코프에서 나오므로).
-- 달성률은 **실적합 ÷ 목표합**이다(개별 달성률의 평균이 아니다). 목표가 0이면 `-`. 금액 단위는 다른 피벗과 같이 백만원.
-- 회계기준이면 차트와 동일하게 "취급고 기준에서만 제공됩니다"만 표시(`renderGoalPivotUnavailable()`).
-- 엑셀 다운로드: `exportGoalPivotExcel('trend'|'dept')`. 화면의 넓은 표가 아니라 **롱 포맷**(한 행 = 연월×축 조합)으로 내보낸다 — 병합 헤더는 엑셀에서 다시 피벗을 돌릴 수 없기 때문. 축 열은 **현재 화면의 행·열 구성을 그대로 따라간다**(연·월은 고정 열이라 제외). 회계기준·목표 미등록 스코프에서는 alert로 차단.
-- **집계 규칙은 연결된 차트와 반드시 같아야 한다** — 스코프 `buildGoalScopeSet()`, 본부매출+실적만, 좌측 체크박스 필터 미반영. 검증: 4개 시나리오(전체/2026/2026 1~3월/2025)에서 피벗 총합계 = `computeRevenueTargetForScope()`/`computeRevenuePerformanceActualForScope()` 일치 확인.
+- 달성률은 **실적합 ÷ 목표합**이다(개별 달성률의 평균이 아니다). 목표가 0이면 `-`(목표 없이 실적만 있는 칸도 이 규칙으로 자연히 `-`가 된다). 금액 단위는 다른 피벗과 같이 백만원.
+- 취급고/회계 둘 다 같은 경로로 렌더한다(`renderGoalPivotUnavailable()`은 이제 "등록된 목표 없음"·"행 영역에 필드를 놓으세요" 같은 스코프/구성 오류에만 쓰인다).
+- 엑셀 다운로드: `exportGoalPivotExcel('trend'|'dept')`. 화면의 넓은 표가 아니라 **롱 포맷**(한 행 = 연월×축 조합)으로 내보낸다 — 병합 헤더는 엑셀에서 다시 피벗을 돌릴 수 없기 때문. 축 열은 **현재 화면의 행·열 구성을 그대로 따라간다**(연·월은 고정 열이라 제외). 목표 미등록 스코프에서는 alert로 차단.
+- **집계 규칙은 연결된 차트와 반드시 같아야 한다** — 스코프 `buildGoalScopeSet()`, 본부매출+`matchesCurrentBasis()`, 좌측 체크박스 필터 미반영. 검증: 4개 시나리오(전체/2026/2026 1~3월/2025)에서 피벗 총합계 = `computeRevenueTargetForScope()`/`computeRevenuePerformanceActualForScope()` 일치 확인.
 
 ### 금액은 원 단위로 들고 있다가 표시할 때만 줄인다
 목표 피벗의 누적(`goalBuildTree`)은 **원 단위 정수**로 하고 백만원 환산은 `goalTriCells()`에서만 한다. 차트의 누적(`cumulativeByYear`)도 원 단위로 더한 뒤 마지막에 억으로 나눈다. 엑셀 export는 `목표(원)`/`실적(원)` 컬럼으로 **반올림 없이** 원 단위 정수를 낸다(기존 `exportPivotExcel()` 시트들이 백만원 정수를 쓰는 것과 다르다).
@@ -44,7 +47,7 @@
 축소된 단위로 쌓으면 행마다 반올림이 겹친다. 부서별 피벗은 행이 연월×부서×담당자×대분류까지 쪼개져 2026년 기준 248행인데, 백만원으로 줄여 내보냈을 때 합계가 대시보드와 **8백만원** 어긋났다(소수 1자리로도 1백만원이 남았다). 엑셀에서 다시 합산해 화면과 대조하는 표라 그 차이가 그대로 드러난다. 원 단위로 내면 오차가 정확히 0이다.
 
 ## 규칙/주의
-- 총매출/전년동기/광고주당/신규광고주 카드는 filteredData(applyFilters() 적용) 기준. 목표 대비 달성률(KPI+차트+피벗)만 예외적으로 본부매출+실적+연월 스코프 고정 집계(좌측 체크박스 필터 미반영).
+- 총매출/전년동기/광고주당/신규광고주 카드는 filteredData(applyFilters() 적용) 기준. 목표 대비 달성률(KPI+차트+피벗)만 예외적으로 본부매출+현재 매출기준(matchesCurrentBasis)+연월 스코프 고정 집계(좌측 체크박스 필터 미반영), 목표(salesTargets)는 targetsForCurrentBasis()로 basis까지 맞춰 골라 쓴다.
 - 클릭 연결: 광고주당매출→bucket, 신규광고주→newAdvPivot, 업프론트→upfrontPivot, 월별 목표차트→goalTrendPivot, 부서별 목표차트→goalDeptPivot. 목표 대비 달성률 **카드**는 클릭 연결 없음.
 - 금액: 억원.
 - `renderGoalBreakdownChart()`는 `js/core/view-router.js`의 `renderDashboard()`에서 `renderTrendChart()` 옆에 같이 호출됨.

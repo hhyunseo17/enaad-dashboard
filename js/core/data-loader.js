@@ -480,7 +480,7 @@
     function mapSalesTargetFromSupabase(t) {
       return {
         manager: t.manager, dept: t.dept, categoryReclassified: t.category_reclassified,
-        year: t.year, month: t.month, targetWon: Number(t.target_amount_won) || 0
+        year: t.year, month: t.month, basis: t.basis, targetWon: Number(t.target_amount_won) || 0
       };
     }
 

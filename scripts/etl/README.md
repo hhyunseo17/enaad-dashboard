@@ -58,11 +58,38 @@ from v_bonbu_sales group by 1,2,3 order by 4 desc limit 10;
 R2(`addata.xlsx`)에도 계속 업로드하는 것을 권장(백업/xlsx 모드 안전망 목적). 이 스크립트는 R2 업로드를 대체하지 않고 별도로 실행한다.
 
 ## 목표 적재 (`load-targets.mjs`)
-`run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 대분류 | 귀속월 | 목표)를
+`run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 매출기준 | 대분류 | 귀속월 | 목표)를
 읽어 5대분류로 재분류(`대행수익` 등은 `기타광고`로 흡수)한 뒤 `sales_targets` 테이블에 upsert한다. 배치/컷오버 개념이
 없으므로 목표를 분기·반기 단위로 갱신할 때마다 아래 명령을 재실행하면 된다.
 ```
 node load-targets.mjs "C:\경로\target.xlsx"
 ```
+`매출기준` 컬럼 값은 `취급고`/`회계` 둘 중 하나여야 한다(`js`의 `revenueBasisMode` 값에 맞춰 각각 `performance`/`accounting`으로 변환해 적재). 두 기준이 같은 (담당자, 대분류, 연월)에 별도 행으로 공존하므로 `sales_targets`의 유니크 키는 `basis`까지 포함한다.
+
 주의: upsert만 수행하므로 파일에서 삭제되거나 하향 수정된 과거 목표 행은 자동으로 정리되지 않는다 — 목표가
 줄거나 없어진 경우 재적재 후 Supabase에서 `sales_targets`를 수동으로 확인/삭제해야 한다.
+
+### `basis` 컬럼 마이그레이션 (기존 `sales_targets`에 1회만)
+기존 테이블은 `basis` 컬럼과 그걸 포함한 유니크 제약이 없다. SQL Editor에서 한 번만 실행:
+```sql
+alter table sales_targets add column if not exists basis text not null default 'performance';
+alter table sales_targets add constraint sales_targets_basis_check check (basis in ('performance', 'accounting'));
+
+-- 기존 (manager, category_reclassified, year, month) 유니크 제약을 basis 포함으로 교체.
+-- 제약 이름이 자동 생성돼 환경마다 다를 수 있어 카탈로그에서 직접 찾아 드롭한다.
+do $$
+declare
+  v_name text;
+begin
+  select conname into v_name
+  from pg_constraint
+  where conrelid = 'sales_targets'::regclass and contype = 'u';
+  if v_name is not null then
+    execute format('alter table sales_targets drop constraint %I', v_name);
+  end if;
+end $$;
+
+alter table sales_targets add constraint sales_targets_basis_unique
+  unique (manager, category_reclassified, year, month, basis);
+```
+그 다음 `load-targets.mjs`를 재실행하면 취급고/회계 두 기준이 각자 행으로 채워진다.

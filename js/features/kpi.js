@@ -102,10 +102,23 @@
       document.getElementById('kpiUpfrontSub').innerText = `계약금액 약 ${targetEok}억원(월할 추정치) 대비`;
     }
 
+    // 현재 매출기준(revenueBasisMode)에 해당하는 목표 행만. sales_targets는 취급고/회계 두 기준이
+    // basis 컬럼으로 같은 (담당자·대분류·연월) 자리에 별도 행으로 공존하므로, 토글과 다른 기준의
+    // 목표가 섞여 들어가지 않도록 목표를 쓰는 모든 곳에서 이 필터를 거친다.
+    function targetsForCurrentBasis() {
+      return salesTargets.filter(t => t.basis === revenueBasisMode);
+    }
+
+    // 실적(rawData) 행이 현재 매출기준에 해당하는지. applyFilters()와 동일 규칙 —
+    // 취급고 모드는 실적 행만, 회계 모드는 실적+회계조정 행을 전부 포함한다.
+    function matchesCurrentBasis(r) {
+      return revenueBasisMode === 'accounting' || r.revenueBasis === '실적';
+    }
+
     // 목표가 실제로 등록된 연-월 집합. 목표 합이 0인 달은 분모가 될 수 없으므로 제외한다.
     function buildRegisteredTargetMonthSet() {
       const sums = {};
-      salesTargets.forEach(t => { const k = t.year + '-' + t.month; sums[k] = (sums[k] || 0) + t.targetWon; });
+      targetsForCurrentBasis().forEach(t => { const k = t.year + '-' + t.month; sums[k] = (sums[k] || 0) + t.targetWon; });
       const set = new Set();
       Object.keys(sums).forEach(k => { if (sums[k] > 0) set.add(k); });
       return set;
@@ -143,30 +156,23 @@
     function computeRevenueTargetForScope() {
       // 선택된 연/월 스코프(미선택 시 실적 존재 월까지)와 겹치는 담당자×대분류 목표를 전부 합산 (본부 전체 합산 기준)
       const scopeSet = buildGoalScopeSet();
-      return salesTargets
+      return targetsForCurrentBasis()
         .filter(t => scopeSet.has(t.year + '-' + t.month))
         .reduce((sum, t) => sum + t.targetWon, 0);
     }
 
     function computeRevenuePerformanceActualForScope() {
       // 목표가 부서/채널/대분류 축으로 쪼개져 있지 않으므로, 좌측 체크박스 필터와 무관하게
-      // 본부매출 + 실적(취급고) + 선택 연/월 스코프로만 집계 (업프론트 KPI의 계약금액 집계와 동일 원칙)
+      // 본부매출 + 현재 매출기준 + 선택 연/월 스코프로만 집계 (업프론트 KPI의 계약금액 집계와 동일 원칙)
       const scopeSet = buildGoalScopeSet();
       return rawData
-        .filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && scopeSet.has(r.year + '-' + r.month))
+        .filter(r => r.bonbuRevenueStatus === '본부매출' && matchesCurrentBasis(r) && scopeSet.has(r.year + '-' + r.month))
         .reduce((sum, r) => sum + r.amount, 0);
     }
 
     function renderGoalKPI() {
       const badge = document.getElementById('kpiGoalAchieveBadge');
       const annualEl = document.getElementById('kpiGoalAnnualProgress');
-      if (revenueBasisMode === 'accounting') {
-        document.getElementById('kpiGoalActual').innerText = '-';
-        if (badge) badge.style.display = 'none';
-        document.getElementById('kpiGoalSub').innerText = `회계기준 목표 미제공`;
-        if (annualEl) annualEl.style.display = 'none';
-        return;
-      }
 
       const targetTotal = computeRevenueTargetForScope();
       const actualTotal = computeRevenuePerformanceActualForScope();
@@ -191,7 +197,7 @@
       if (annualEl) {
         if (selectedYears.length === 1) {
           annualEl.style.display = '';
-          const annualTargetTotal = salesTargets
+          const annualTargetTotal = targetsForCurrentBasis()
             .filter(t => t.year === selectedYears[0])
             .reduce((sum, t) => sum + t.targetWon, 0);
           if (annualTargetTotal > 0) {
@@ -219,7 +225,7 @@
       });
     }
 
-    // 차트를 지우고 안내 문구만 남긴다(회계기준 / 목표 미등록 두 경우 공용).
+    // 차트를 지우고 안내 문구만 남긴다(목표 미등록 스코프용).
     function showGoalChartPlaceholder(canvas, placeholder, chartKey, message) {
       if (chartInstances[chartKey]) { chartInstances[chartKey].destroy(); chartInstances[chartKey] = null; }
       canvas.style.display = 'none';
@@ -232,8 +238,6 @@
       const canvas = document.getElementById('chartGoalTrend');
       const placeholder = document.getElementById('chartGoalTrendPlaceholder');
       if (!canvas) return;
-
-      if (revenueBasisMode === 'accounting') { showGoalChartPlaceholder(canvas, placeholder, 'goalTrend', '취급고 기준에서만 제공됩니다'); return; }
 
       const months = [...buildGoalScopeSet()].sort((a, b) => {
         const [ay, am] = a.split('-').map(Number); const [by, bm] = b.split('-').map(Number);
@@ -249,12 +253,12 @@
       // 집계·누적은 원 단위로 하고, 억 환산은 차트에 넘기기 직전 한 번만 한다.
       let actualWon = months.map(ym => {
         const [y, m] = ym.split('-').map(Number);
-        return rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && r.year === y && r.month === m)
+        return rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && matchesCurrentBasis(r) && r.year === y && r.month === m)
           .reduce((s, r) => s + r.amount, 0);
       });
       let targetWon = months.map(ym => {
         const [y, m] = ym.split('-').map(Number);
-        return salesTargets.filter(t => t.year === y && t.month === m).reduce((s, t) => s + t.targetWon, 0);
+        return targetsForCurrentBasis().filter(t => t.year === y && t.month === m).reduce((s, t) => s + t.targetWon, 0);
       });
 
       const isCumulative = goalTrendMode === 'cumulative';
@@ -302,8 +306,6 @@
       const placeholder = document.getElementById('chartGoalBreakdownPlaceholder');
       if (!canvas) return;
 
-      if (revenueBasisMode === 'accounting') { showGoalChartPlaceholder(canvas, placeholder, 'goalBreakdown', '취급고 기준에서만 제공됩니다'); return; }
-
       const scopeSet = buildGoalScopeSet();
       if (scopeSet.size === 0) { showGoalChartPlaceholder(canvas, placeholder, 'goalBreakdown', GOAL_NO_TARGET_MSG); return; }
 
@@ -314,15 +316,16 @@
       const groupField = goalBreakdownMode === 'dept' ? 'dept' : 'manager';
       const groupLabelText = goalBreakdownMode === 'dept' ? '부서' : '담당자';
 
-      const scopedTargets = salesTargets.filter(t => scopeSet.has(t.year + '-' + t.month));
-      const scopedActuals = rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && scopeSet.has(r.year + '-' + r.month));
+      const scopedTargets = targetsForCurrentBasis().filter(t => scopeSet.has(t.year + '-' + t.month));
+      const scopedActuals = rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && matchesCurrentBasis(r) && scopeSet.has(r.year + '-' + r.month));
 
       const groupSet = new Set();
       scopedTargets.forEach(t => { if (t[groupField]) groupSet.add(t[groupField]); });
       scopedActuals.forEach(r => { if (r[groupField]) groupSet.add(r[groupField]); });
       let groups = [...groupSet].filter(g => {
         const t = scopedTargets.filter(x => x[groupField] === g).reduce((s, x) => s + x.targetWon, 0);
-        return t > 0; // 목표가 아예 없는 그룹만 제외 — 목표는 있는데 실적이 0인 경우(0% 달성)는 의미 있는 정보라 보여준다
+        const a = scopedActuals.filter(x => x[groupField] === g).reduce((s, x) => s + x.amount, 0);
+        return t > 0 || a > 0; // 목표·실적 둘 다 0인 그룹만 제외. 목표 없이 실적만 있는 그룹도 보여주고(달성률은 툴팁에서 '-'), 목표는 있는데 실적이 0인 경우(0% 달성)도 의미 있는 정보라 보여준다
       });
 
       if (goalBreakdownMode === 'dept') {
@@ -378,7 +381,7 @@
     // **연결된 차트와 숫자가 어긋나면 안 되므로** 스코프·필터 규칙을 renderGoalTrendChart()/
     // renderGoalBreakdownChart()와 동일하게 유지한다:
     //   - 기간: buildGoalScopeSet() (월 미선택 시 실적이 있는 월까지만 — 진행 중 연도의 달성률 왜곡 방지)
-    //   - 대상: 본부매출 + 실적(취급고)만. 회계조정 행 제외
+    //   - 대상: 본부매출 + matchesCurrentBasis()(취급고 모드는 실적만, 회계 모드는 실적+회계조정)
     //   - **좌측 체크박스 필터(부서/채널/방송·디지털/대분류·대행사·광고주 검색)는 반영하지 않는다.**
     //     목표(salesTargets)가 그 축들로 쪼개져 있지 않아, 필터를 걸면 실적만 줄고 목표는 그대로라
     //     달성률이 거짓으로 낮아진다. 차트도 같은 이유로 미반영이며, 화면 상단에 그 사실을 명시한다.
@@ -389,8 +392,8 @@
     // 달은 열로 세워야 "목표는 있는데 실적 0"이 보이기 때문이다 — buildGoalScopeSet()이 그 범위를 준다.
     function goalPivotSourceRows(scopeSet) {
       return {
-        targets: salesTargets.filter(t => scopeSet.has(t.year + '-' + t.month)),
-        actuals: rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && r.revenueBasis === '실적' && scopeSet.has(r.year + '-' + r.month))
+        targets: targetsForCurrentBasis().filter(t => scopeSet.has(t.year + '-' + t.month)),
+        actuals: rawData.filter(r => r.bonbuRevenueStatus === '본부매출' && matchesCurrentBasis(r) && scopeSet.has(r.year + '-' + r.month))
       };
     }
 
@@ -480,7 +483,7 @@
       return cells;
     }
 
-    // 표가 성립하지 않는 경우(회계기준 / 등록된 목표 없음 / 행이 빈 경우) 공용 빈 상태.
+    // 표가 성립하지 않는 경우(등록된 목표 없음 / 행이 빈 경우) 공용 빈 상태.
     // 헤더는 줄 수가 열 축 깊이에 따라 달라지므로 thead를 통째로 쓴다.
     function goalTheadEl(prefix) { return document.querySelector('#' + prefix + 'Table thead'); }
     function renderGoalPivotUnavailable(prefix, message) {
@@ -639,7 +642,6 @@
       const resetBtn = preset.resetBtn && document.getElementById(preset.resetBtn);
       if (resetBtn) resetBtn.style.display = pvIsConfigDefault(viewKey) ? 'none' : '';
 
-      if (revenueBasisMode === 'accounting') { renderGoalPivotUnavailable(prefix, '취급고 기준에서만 제공됩니다'); return; }
       const scopeSet = buildGoalScopeSet();
       if (scopeSet.size === 0) { renderGoalPivotUnavailable(prefix, GOAL_NO_TARGET_MSG); return; }
       if (rowFields.length === 0) { renderGoalPivotUnavailable(prefix, '행 영역에 필드를 놓으세요'); return; }
@@ -702,8 +704,6 @@
     // 다르지만, 숫자는 어디서나 원 단위로 들고 있다가 보여줄 때만 줄인다는 원칙을 따른 것이다.
     // 달성률은 소수 1자리 숫자(목표 0이면 빈칸).
     function exportGoalPivotExcel(kind) {
-      if (revenueBasisMode === 'accounting') { alert('목표 대비 실적은 취급고 기준에서만 제공됩니다.'); return; }
-
       const isDept = kind === 'dept';
       const viewKey = isDept ? 'goalDeptPivot' : 'goalTrendPivot';
       const scopeSet = buildGoalScopeSet();

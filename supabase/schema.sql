@@ -344,9 +344,9 @@ where load_batch_id = (select batch_id from current_batch where id = 1);
 
 -- ------------------------------------------------------------
 -- 4b. sales_targets — 목표 적재 실체 테이블(scripts/etl/load-targets.mjs가 채움, target.xlsx `목표 합산` 시트)
---     담당자 x 5대분류 x 연월 단위. 배치/컷오버 개념 없음(분기/반기 단위로 담당자가 수동 재적재,
+--     담당자 x 5대분류 x 연월 x 매출기준 단위. 배치/컷오버 개념 없음(분기/반기 단위로 담당자가 수동 재적재,
 --     upsert만 수행하므로 파일에서 삭제된 과거 행은 자동 정리되지 않음 — README 참고).
---     현재는 취급고(실적) 기준 목표만 존재. 회계기준 목표가 생기면 basis 컬럼을 추가할 것.
+--     취급고(실적)·회계 두 기준 목표가 basis 컬럼으로 나뉘어 공존한다(js의 revenueBasisMode와 동일 값).
 -- ------------------------------------------------------------
 
 create table if not exists sales_targets (
@@ -356,9 +356,11 @@ create table if not exists sales_targets (
   category_reclassified  text not null,                          -- 5대분류 값(일반광고/IMC/인포머셜/큐톤광고/기타광고)
   year                   int not null,
   month                  int not null,
-  target_amount_won      bigint not null,                        -- 취급고(실적) 기준 원 단위
+  basis                  text not null default 'performance',    -- 'performance'(취급고) | 'accounting'(회계)
+  target_amount_won      bigint not null,                        -- basis 기준 원 단위
   updated_at             timestamptz not null default now(),
-  unique (manager, category_reclassified, year, month)
+  unique (manager, category_reclassified, year, month, basis),
+  check (basis in ('performance', 'accounting'))
 );
 
 -- ------------------------------------------------------------
