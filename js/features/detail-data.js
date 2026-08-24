@@ -373,7 +373,15 @@
     function onDetailDataWellDragOver(ev) {
       ev.preventDefault();
       pvClearDropLines(); // 빈 공간 위 = 맨 뒤에 붙는다
-      if (ev.currentTarget.classList) ev.currentTarget.classList.add('drag-over');
+      // 칩이 이미 있는 well이면 마지막 칩 아래에 선을 그어 "맨 뒤에 붙는다"를 표시한다
+      // (well 전체를 칠하면 어디에 붙는지 안 보인다). 빈 well은 칩이 없어 선을 그을 데가
+      // 없으니 기존대로 well 전체를 강조한다.
+      const lastChip = ev.currentTarget.querySelector(':scope > .dd-well-body > .dd-field-chip:last-child');
+      if (lastChip) {
+        lastChip.classList.add('dd-drop-after');
+      } else if (ev.currentTarget.classList) {
+        ev.currentTarget.classList.add('drag-over');
+      }
     }
     function onDetailDataWellDragLeave(ev) { if (ev.currentTarget.classList) ev.currentTarget.classList.remove('drag-over'); }
 
@@ -514,7 +522,7 @@
     // 정렬은 표 안에서 정한다 — 행은 라벨 우클릭, 열은 헤더 우클릭(pivot-builder.js).
     // 패널에도 셀렉트를 두었었지만 같은 일을 두 번 하는 자리가 되어 걷어냈다.
     function pvClearDropLines() {
-      document.querySelectorAll('.dd-drop-before').forEach(el => el.classList.remove('dd-drop-before'));
+      document.querySelectorAll('.dd-drop-before, .dd-drop-after').forEach(el => el.classList.remove('dd-drop-before', 'dd-drop-after'));
     }
     // dragleave로 지우면 칩 안의 라벨/✕로 커서가 넘어갈 때마다 선이 깜빡인다.
     // 대신 dragover마다 전부 지우고 지금 칩에만 다시 긋는다 — 항상 한 곳에만 선이 선다.
@@ -527,7 +535,7 @@
     // 드래그가 끝나면 화면 어디에 남아 있을지 모르는 표시들을 한 번에 걷는다.
     function onDetailDataDragEnd(ev) {
       if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove('dd-dragging');
-      document.querySelectorAll('.dd-drop-before').forEach(el => el.classList.remove('dd-drop-before'));
+      document.querySelectorAll('.dd-drop-before, .dd-drop-after').forEach(el => el.classList.remove('dd-drop-before', 'dd-drop-after'));
       document.querySelectorAll('.dd-well.drag-over').forEach(el => el.classList.remove('drag-over'));
     }
 

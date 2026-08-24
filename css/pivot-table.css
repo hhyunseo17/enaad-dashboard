@@ -184,6 +184,12 @@
       content: ''; position: absolute; top: -5px; left: 0; right: 0; height: 3px;
       border-radius: 2px; background: var(--primary-blue);
     }
+    /* 맨 끝(마지막 칩 아래 빈 공간)에 놓을 때는 well 전체를 칠하는 대신 마지막 칩
+       아래에 같은 선을 하나 더 그어 "여기 맨 뒤에 붙는다"를 다른 위치와 같은 언어로 보여준다. */
+    .dd-field-chip.dd-drop-after::after {
+      content: ''; position: absolute; bottom: -5px; left: 0; right: 0; height: 3px;
+      border-radius: 2px; background: var(--primary-blue);
+    }
 
     .dd-well { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 90px; background: var(--bg-subtle); border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md); transition: border-color 0.15s, background 0.15s; }
     .dd-well.drag-over { border-color: var(--primary-blue); background: var(--primary-blue-glow); border-style: solid; }
