@@ -124,7 +124,7 @@
        (매출기준 토글처럼 둘 중 하나만 켜지는 컨트롤은 채워진 파랑을 그대로 둔다 — 거기서는
         면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 12px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
+    .pill-btn { padding: 5px 10px; font-size: 13px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
     .pill-btn:hover { color: var(--primary-blue-on-glow); background: var(--primary-blue-glow); }
     /* 선택 상태는 옅은 파란 면 위의 파란 글자다. 대비는 글자색을 --primary-blue-on-glow로 갈라서
        해결했고(theme.css 참고), 굵기는 기본과 같이 둔다 — 취급고/회계 토글과 달리 광학 보정이
