@@ -648,10 +648,10 @@
       // 값이 2개 이상이면 맨 아래에 "합계 : 금액" 식 값 라벨 행을 추가로 붙인다(엑셀의 Σ값 다중 표시와 동일).
       if (multiValue) {
         const valueRowCells = [];
-        visibleColumns.forEach(() => { valueDefs.forEach(v => valueRowCells.push(`<th style="text-align:center; font-size:11px; font-weight:700;">${getDetailDataValueLabel(v)}</th>`)); });
+        visibleColumns.forEach(() => { valueDefs.forEach(v => valueRowCells.push(`<th style="text-align:center; font-size:13px; font-weight:700;">${getDetailDataValueLabel(v)}</th>`)); });
         rows.push(valueRowCells);
         const lastIdx = rows.length - 1;
-        valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:11px; font-weight:500; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
+        valueDefs.forEach(v => rows[lastIdx].push(`<th style="text-align:center; font-size:13px; font-weight:500; background:#1E40AF !important; color:#FFFFFF !important;">${getDetailDataValueLabel(v)}</th>`));
       }
       const ddCs = ddCfg().colSort;
       const grandMark = (ddCs && ddCs.pathKey === PV_GRAND) ? (ddCs.dir === 'asc' ? ' ▲' : ' ▼') : '';

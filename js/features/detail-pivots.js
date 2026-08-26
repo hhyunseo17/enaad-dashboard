@@ -220,7 +220,7 @@
                     html += `<tr><td class="indent-step-4" style="background:#0D1117; color:#64748B;"><span class="toggle-icon" onclick="toggleMgrPivotNode('${l1}','${l2}','${l3}','${l4}')">${isL4Exp?'-':'+'}</span>${l4}</td>${genCells(tree[l1].subs[l2].subs[l3].subs[l4], '400')}</tr>`;
                     if(isL4Exp) {
                       const l5Keys = Object.keys(tree[l1].subs[l2].subs[l3].subs[l4].subs).sort((a,b)=>tree[l1].subs[l2].subs[l3].subs[l4].subs[b].total - tree[l1].subs[l2].subs[l3].subs[l4].subs[a].total);
-                      l5Keys.forEach(l5 => { html += `<tr><td class="indent-step-5" style="background:#090C10; color:#475569; font-size:12px;">${l5}</td>${genCells(tree[l1].subs[l2].subs[l3].subs[l4].subs[l5], '400')}</tr>`; });
+                      l5Keys.forEach(l5 => { html += `<tr><td class="indent-step-5" style="background:#090C10; color:#475569; font-size:14px;">${l5}</td>${genCells(tree[l1].subs[l2].subs[l3].subs[l4].subs[l5], '400')}</tr>`; });
                     }
                   });
                 }

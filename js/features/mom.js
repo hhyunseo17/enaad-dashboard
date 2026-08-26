@@ -83,23 +83,23 @@
           labels: orderedKeys.map(k => `${k} (${buckets[k].count.toLocaleString()}개사)`),
           datasets: [
             { label: '전월 금액(억원)', data: orderedKeys.map(k => buckets[k].prevSum / 1e8), backgroundColor: ddBarFill(RC('ref')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 13, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             },
             // ddBarFill()은 색 문자열이 아니라 스크립터블 '함수'를 돌려준다. 함수 배열을 넘기면
             // Chart.js가 인덱싱만 하고 호출하지 않아 색 자리에 함수 객체가 들어가고 막대가 비어 보인다.
             // 막대마다 색이 다를 때는 배열이 아니라 스크립터블 하나로 감싸서 직접 호출해야 한다.
             { label: '당월 금액(억원)', data: orderedKeys.map(k => buckets[k].currSum / 1e8), backgroundColor: ddBarFill(RC('curr')), borderRadius: 5, ...ddGroupSeparator(), barPercentage: 1, categoryPercentage: 0.8,
-              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+              datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 13, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
             }
           ]
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: {
-            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
+            legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 14, weight: FW() } } },
             tooltip: { callbacks: { label: (ctx) => { const k = orderedKeys[ctx.dataIndex]; const b = buckets[k]; const d = b.currSum - b.prevSum; return `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} 억원 (전월비 ${d >= 0 ? '+' : ''}${(d/1e8).toFixed(2)}억)`; } } }
           },
-          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), x: { ticks: { color: CH('#F2F4F6'), font: { size: 11, weight: FW() } }, grid: { display: false } } }
+          scales: { y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), x: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } } }
         }
       });
     }

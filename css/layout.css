@@ -44,22 +44,22 @@
        흰 칩이 읽히던 흔적인데, 헤더가 카드 표면이 된 지금은 제목이 태그처럼 보인다.
        배경·테두리를 걷어내고 크기와 굵기로 위계를 준다. 로고와는 얇은 구분선으로 나눈다. */
     .brand-title { min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-default); }
-    .brand-title h1.title-pill { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 500; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
+    .brand-title h1.title-pill { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-full); font-size: 14px; font-weight: 500; background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-fg); white-space: nowrap; }
 
     .header-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     /* 상태 표시는 배경·테두리 없이 점 + 조용한 텍스트로. 칩으로 두르면 제목과 경쟁한다. */
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 11px; font-weight: var(--fw-ui); color: var(--text-tertiary); }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 13px; font-weight: var(--fw-ui); color: var(--text-tertiary); }
     .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-green); box-shadow: none; }
 
     .status-dot.manual { background: var(--accent-orange); box-shadow: none; }
-    .sync-time { font-size: 11px; color: var(--text-tertiary); }
+    .sync-time { font-size: 13px; color: var(--text-tertiary); }
 
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: var(--fw-ui); border-radius: var(--radius-md); border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; font-size: 15px; font-weight: var(--fw-ui); border-radius: var(--radius-md); border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--text-primary); cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
     .btn:hover { background: var(--btn-bg-hover); border-color: var(--btn-border-hover); }
     .btn-primary { background: var(--primary-blue); color: var(--text-on-primary); border: none; box-shadow: var(--shadow-blue-glow); }
     .btn-primary:hover { background: var(--primary-blue-hover); }
-    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--radius-sm); }
+    .btn-sm { padding: 5px 10px; font-size: 14px; border-radius: var(--radius-sm); }
     /* 켜짐/꺼짐이 있는 토글 버튼(빌더 패널 열고 닫기). 눌린 상태가 눈에 보여야 '들어갔다 나갔다'가
        읽힌다. btn-primary를 쓰면 옆의 진짜 주요 동작(엑셀 다운로드)과 경쟁하므로 옅은 파랑 + 테두리로만
        구분한다. 화살표는 패널이 오른쪽에서 들고 나는 방향을 가리킨다. */
@@ -69,12 +69,12 @@
     .btn-toggle.is-on:hover { background: var(--primary-blue-glow); border-color: var(--primary-blue); }
     /* 화살표 방향은 JS가 글자로 바꾼다(◀/▶) — 이 자리는 flex 아이템이라 display가 block으로
        블록화되고 transform 회전이 기대대로 걸리지 않았다. */
-    .btn-toggle .btn-caret { font-size: 11px; opacity: 0.8; }
+    .btn-toggle .btn-caret { font-size: 13px; opacity: 0.8; }
 
     .file-dropzone-container { background: var(--bg-elevated); border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 24px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 12px; transition: border-color 0.2s ease; }
     .file-dropzone-container.active { border-color: var(--primary-blue); background: var(--bg-card-hover); }
-    .dropzone-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-    .dropzone-desc { font-size: 13px; color: var(--text-tertiary); }
+    .dropzone-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+    .dropzone-desc { font-size: 15px; color: var(--text-tertiary); }
 
     .filter-bar { position: sticky; top: 10px; z-index: 100; background: var(--surface-filterbar); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -89,7 +89,7 @@
     .filter-group { display: flex; align-items: center; gap: 8px; position: relative; }
     .checkbox-item-all { font-weight: 500; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; }
     /* 라벨은 값이 아니라 안내다 — 한 단계 물러나게 둔다 */
-    .filter-label { font-size: 12px; font-weight: var(--fw-ui); color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
+    .filter-label { font-size: 14px; font-weight: var(--fw-ui); color: var(--text-secondary); white-space: nowrap; min-width: 62px; }
     /* min-width는 **각 행의 첫 라벨에만** 필요하다. 매출 기준·연도 선택·월 선택·부서의 컨트롤이
        같은 x에서 시작하도록 폭을 맞춰 주는 자리이기 때문이다. 그런데 이 값이 행 중간의 라벨에까지
        걸리면서, 짧은 라벨은 남는 폭만큼 밀려나 라벨과 드롭다운 사이가 제각각이 됐다 —
@@ -98,21 +98,21 @@
     .filter-group:not(:first-child) .filter-label { min-width: 0; }
     /* pill의 Ctrl+클릭 복수 선택은 발견되기 어려운 조작이라 한 줄 안내를 붙인다. 필터바에서
        가장 조용해야 할 요소이므로 본문보다 작고 흐리게 두고, 좁은 화면에서는 숨긴다. */
-    .filter-hint { font-size: 11px; color: var(--text-disabled); white-space: nowrap; margin-left: 4px; }
+    .filter-hint { font-size: 13px; color: var(--text-disabled); white-space: nowrap; margin-left: 4px; }
     @media (max-width: 768px) { .filter-hint { display: none; } }
 
     .multi-dropdown { position: relative; display: inline-block; }
-    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: var(--fw-ui); color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
+    .multi-dropdown-btn { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 15px; font-weight: var(--fw-ui); color: var(--control-fg-strong); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 140px; font-family: inherit; }
     .multi-dropdown-btn:hover { border-color: var(--primary-blue); background: var(--control-bg-hover); }
     .multi-dropdown-panel { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--surface-popover); border: 1px solid var(--control-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; z-index: 250; min-width: 200px; max-height: 260px; overflow-y: auto; display: none; }
     .multi-dropdown-panel.show { display: block; }
-    .checkbox-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 13px; color: var(--text-primary); cursor: pointer; border-radius: var(--radius-sm); user-select: none; }
+    .checkbox-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 15px; color: var(--text-primary); cursor: pointer; border-radius: var(--radius-sm); user-select: none; }
     .checkbox-item:hover { background: var(--control-bg-hover); }
     .checkbox-item input[type="checkbox"] { accent-color: var(--primary-blue); width: 15px; height: 15px; cursor: pointer; }
     .checkbox-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; border-top: 1px solid var(--border-strong); padding-top: 4px; }
 
     .revenue-basis-toggle { display: flex; align-items: center; background: var(--control-bg); border: 1px solid var(--control-border); padding: 4px; border-radius: var(--radius-md); }
-    .revenue-basis-btn { padding: 6px 16px; font-size: 13px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
+    .revenue-basis-btn { padding: 6px 16px; font-size: 15px; font-weight: 600; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; font-family: inherit; white-space: nowrap; }
     .revenue-basis-btn:hover { color: var(--control-fg-strong); background: var(--chip-bg-subtle); }
     /* 선택된 쪽은 한 단계 낮춘다. 채도 높은 파란 면 위의 흰 글자는 같은 굵기라도 더 두껍게
        보이므로, 굵기를 맞추면 오히려 선택된 쪽만 뭉쳐 보인다(광학 보정). */
@@ -124,7 +124,7 @@
        (매출기준 토글처럼 둘 중 하나만 켜지는 컨트롤은 채워진 파랑을 그대로 둔다 — 거기서는
         면적이 작고 현재 모드를 단번에 알려주는 역할을 한다.) */
     .pills-group { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); flex-wrap: wrap; }
-    .pill-btn { padding: 5px 10px; font-size: 13px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
+    .pill-btn { padding: 5px 10px; font-size: 15px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; }
     .pill-btn:hover { color: var(--primary-blue-on-glow); background: var(--primary-blue-glow); }
     /* 선택 상태는 옅은 파란 면 위의 파란 글자다. 대비는 글자색을 --primary-blue-on-glow로 갈라서
        해결했고(theme.css 참고), 굵기는 기본과 같이 둔다 — 취급고/회계 토글과 달리 광학 보정이
@@ -138,7 +138,7 @@
        카드에서 색이 남는 곳은 실제 상태를 나타내는 .badge-growth(증감)뿐이다. */
 
     .text-input { width: 150px; }
-    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 13px; font-weight: var(--fw-ui); color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
+    .select-input, .text-input { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 15px; font-weight: var(--fw-ui); color: var(--control-fg-strong); font-family: inherit; outline: none; min-width: 120px; transition: border-color 0.15s ease; }
     .select-input:focus, .text-input:focus { border-color: var(--border-focus); background: var(--control-bg-hover); }
 
     /* 6장은 한 줄에 놓여야 서로 비교된다. auto-fit + minmax(260px)는 한 줄에 1640px을
@@ -153,18 +153,18 @@
     .kpi-card.clickable { cursor: pointer; }
     .kpi-card.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .kpi-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .kpi-title { font-size: 13px; font-weight: var(--fw-ui); color: var(--text-secondary); line-height: 1.3; overflow-wrap: anywhere; }
+    .kpi-title { font-size: 15px; font-weight: var(--fw-ui); color: var(--text-secondary); line-height: 1.3; overflow-wrap: anywhere; }
     /* 아이콘은 이모지 대신 단색 SVG. 이모지는 OS마다 다르게 렌더되고 색을 물려받지 못한다. */
     /* 아이콘 칩: --bg-subtle은 흰 카드에서 회색 얼룩으로, 다크 카드에서는 아예 안 보였다.
        강조색을 옅게 깐 원으로 바꿔 두 테마 모두에서 '의도한 요소'로 읽히게 한다. */
     .kpi-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue-glow); display: grid; place-items: center; color: var(--primary-blue); flex-shrink: 0; }
     .kpi-icon svg { width: 15px; height: 15px; display: block; }
     .kpi-value-box { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-    .kpi-value { font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
-    .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
-    .kpi-annual-progress { font-size: 11px; color: var(--text-tertiary); }
+    .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.2; white-space: nowrap; }
+    .kpi-sub { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-tertiary); flex-wrap: wrap; min-width: 0; }
+    .kpi-annual-progress { font-size: 13px; color: var(--text-tertiary); }
 
-    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: var(--fw-ui); display: inline-flex; align-items: center; gap: 2px; }
+    .badge-growth { padding: 2px 8px; border-radius: var(--radius-full); font-size: 13px; font-weight: var(--fw-ui); display: inline-flex; align-items: center; gap: 2px; }
     .badge-growth.up { background: var(--accent-green-bg); color: var(--accent-green); }
     .badge-growth.down { background: var(--accent-red-bg); color: var(--accent-red); }
 
@@ -200,8 +200,8 @@
        2.7배였는데 참조 사이트는 5.0~7.2배였다. 22→30 / 24→34로 3.8배까지 벌린다.
        클래스로 옮긴 이유: 인라인 스타일은 미디어 쿼리로 덮을 수 없어 좁은 화면에서도
        34px이 그대로 나온다. 아래 반응형 단계가 동작하려면 클래스여야 한다. */
-    .hero-title  { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; }
-    .hero-metric { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+    .hero-title  { font-size: 32px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; }
+    .hero-metric { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
     /* 오른쪽 위에서 흘러드는 빛 한 겹 — 앰비언트 워시와 같은 발상 */
     .pivot-hero-card::after {
       content: ''; position: absolute; z-index: 0; width: 420px; height: 420px;
@@ -270,21 +270,21 @@
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
     .card-box-title { display: flex; align-items: center; gap: 8px; }
-    .card-box-title h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
+    .card-box-title h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
-    .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; font-weight: 500; color: var(--text-tertiary); }
+    .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 16px; font-weight: 500; color: var(--text-tertiary); }
 
     .table-container { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
     .table-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .table-wrapper { position: relative; width: 100%; overflow-x: auto; overflow-y: auto; max-height: 700px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-table); overscroll-behavior-x: contain; }
 
-    table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.45; text-align: left; }
+    table.data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.45; text-align: left; }
     table.data-table th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: var(--fw-ui); padding: 10px 14px; border-bottom: 1px solid var(--border-default); white-space: nowrap; cursor: pointer; user-select: none; }
     table.data-table th:hover { color: var(--primary-blue); }
     table.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-default); color: var(--text-primary); white-space: nowrap; }
     table.data-table tr:hover td { background: var(--bg-card-hover); }
     .amount-cell { font-weight: 500; color: var(--primary-blue); text-align: right; }
-    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: var(--fw-ui); background: var(--bg-subtle); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: 13px; font-weight: var(--fw-ui); background: var(--bg-subtle); border: 1px solid var(--border-default); color: var(--text-secondary); }
 
     /* ========================================================================
        모바일 반응형 - 캐스케이드 우선순위 확보를 위해 스타일 맨 끝에 배치.
@@ -300,8 +300,8 @@
     @media (max-width: 1400px) {
       .kpi-grid { gap: 12px; }
       .kpi-card { padding: 14px 15px; gap: 8px; }
-      .kpi-value { font-size: 21px; }
-      .kpi-title { font-size: 12px; }
+      .kpi-value { font-size: 23px; }
+      .kpi-title { font-size: 14px; }
       .kpi-icon { width: 26px; height: 26px; }
       .kpi-icon svg { width: 14px; height: 14px; }
     }
@@ -311,9 +311,9 @@
     @media (max-width: 1150px) {
       .kpi-grid { gap: 10px; }
       .kpi-card { padding: 12px; }
-      .kpi-value { font-size: 19px; white-space: normal; }
-      .kpi-title { font-size: 11.5px; }
-      .kpi-sub { font-size: 10.5px; gap: 6px; }
+      .kpi-value { font-size: 21px; white-space: normal; }
+      .kpi-title { font-size: 13.5px; }
+      .kpi-sub { font-size: 12.5px; gap: 6px; }
       .kpi-icon { width: 24px; height: 24px; }
       .kpi-icon svg { width: 13px; height: 13px; }
     }
@@ -324,9 +324,9 @@
     @media (max-width: 1100px) {
       .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
       .kpi-card { padding: 16px; }
-      .kpi-value { font-size: 22px; white-space: nowrap; }
-      .kpi-title { font-size: 12.5px; }
-      .kpi-sub { font-size: 11px; gap: 8px; }
+      .kpi-value { font-size: 24px; white-space: nowrap; }
+      .kpi-title { font-size: 14.5px; }
+      .kpi-sub { font-size: 13px; gap: 8px; }
       .kpi-icon { width: 28px; height: 28px; }
       .kpi-icon svg { width: 14px; height: 14px; }
     }
@@ -334,13 +334,13 @@
     @media (max-width: 900px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       .kpi-card { padding: 14px; }
-      .kpi-value { font-size: 19px !important; }
-      .kpi-title { font-size: 11px !important; }
-      .kpi-sub { font-size: 10px; gap: 6px; }
+      .kpi-value { font-size: 21px !important; }
+      .kpi-title { font-size: 13px !important; }
+      .kpi-sub { font-size: 12px; gap: 6px; }
       /* 히어로는 좁은 화면에서 제목과 총합계가 위아래로 접히므로 한 단계 줄인다.
          비율(제목:총합계 ≈ 1:1.13)은 유지해서 위계가 흐트러지지 않게 한다. */
-      .hero-title  { font-size: 24px; }
-      .hero-metric { font-size: 27px; }
+      .hero-title  { font-size: 26px; }
+      .hero-metric { font-size: 29px; }
     }
 
     @media (max-width: 768px) {
@@ -366,7 +366,7 @@
       .brand-title h1.title-pill {
         width: auto;
         max-width: none;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.25;
         white-space: nowrap;
       }
@@ -384,14 +384,14 @@
       }
       .header-status .status-badge {
         padding: 5px 10px;
-        font-size: 11px;
+        font-size: 13px;
       }
       .header-status .sync-time {
-        font-size: 11px;
+        font-size: 13px;
       }
 
       /* 모바일 피벗 테이블: 셀 여백·폰트 축소로 화면에 더 많은 열이 들어오게 함 */
-      .pivot-tree-table { font-size: 11px !important; }
+      .pivot-tree-table { font-size: 13px !important; }
       .pivot-tree-table th, .pivot-tree-table td { padding: 4px 6px !important; }
       .indent-step-1 { padding-left: 8px !important; }
       .indent-step-2 { padding-left: 20px !important; }
@@ -415,10 +415,10 @@
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .kpi-card { padding: 10px; min-width: 0; }
       .kpi-header { align-items: flex-start; }
-      .kpi-title { font-size: 10.5px !important; line-height: 1.25; }
-      .kpi-value { font-size: 17px !important; white-space: normal; line-height: 1.15; }
-      .kpi-sub { font-size: 9.5px; gap: 4px; }
-      .badge-growth { font-size: 9px; padding: 2px 6px; }
-      .hero-title  { font-size: 20px; }
-      .hero-metric { font-size: 23px; }
+      .kpi-title { font-size: 12.5px !important; line-height: 1.25; }
+      .kpi-value { font-size: 19px !important; white-space: normal; line-height: 1.15; }
+      .kpi-sub { font-size: 11.5px; gap: 4px; }
+      .badge-growth { font-size: 11px; padding: 2px 6px; }
+      .hero-title  { font-size: 22px; }
+      .hero-metric { font-size: 25px; }
     }
