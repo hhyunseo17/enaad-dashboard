@@ -16,7 +16,7 @@
         return { label: cat, data: data, backgroundColor: ddBarFill(catColor(cat) || catColor('기타광고')), borderRadius: 0, ...ddStackSeparator(),
           datalabels: {
             display: (ctx) => cat === categories[categories.length - 1],
-            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 14, weight: FW() },
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 13, weight: FW() },
             formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? `${total.toFixed(1)}억` : ''; }
           }
         };
@@ -25,7 +25,7 @@
         type: 'bar', data: { labels: sortedMonths, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 14, weight: FW() } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } },
             tooltip: { callbacks: { title: (t) => `귀속월: ${t[0].label}`, label: () => null, afterBody: (t) => {
                   let mt = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; mt += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); });
                   return [`💰 총 매출: ${mt.toFixed(2)} 억원`, ``, ...bd];
@@ -33,7 +33,7 @@
               }
             }
           },
-          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 14, weight: FW() } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -55,12 +55,12 @@
         // spacing은 조각을 바깥으로 밀어 원이 어긋나 보인다. 배경색 테두리는 형태를 건드리지 않는다.
         data: dataVals, backgroundColor: (c) => ddArcFill(bgColors[c.dataIndex])(c), ddFlatList: bgColors, borderWidth: 0.3, borderColor: ddSurfaceColor(), borderAlign: 'inner', hoverOffset: 6,
         datalabels: {
-          display: 'auto', color: '#FFFFFF', font: { size: 14, weight: FW() }, textStrokeColor: 'rgba(0,0,0,0.22)', textStrokeWidth: 1.5,
+          display: 'auto', color: '#FFFFFF', font: { size: 13, weight: FW() }, textStrokeColor: 'rgba(0,0,0,0.22)', textStrokeWidth: 1.5,
           formatter: (value) => `${((value / totalSum) * 100).toFixed(1)}%`
         }
       // cutout 68% → 60%. 링이 얇으면 비중이 작은 조각은 색면이 아니라 실선처럼 보여
       // 5대분류 계열색을 알아보기 어렵고, 안쪽 % 라벨도 호를 넘어간다.
-      }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '60%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } },
+      }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } }, cutout: '60%', plugins: { legend: { position: 'right', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} 억원 (${((ctx.raw / (dataVals.reduce((a,b)=>a+b,0)||1))*100).toFixed(1)}%)` } } } },
         plugins: [{
           id: 'portfolioCenterText',
           afterDraw(chart) {
@@ -68,7 +68,7 @@
             const cx = (left + right) / 2; const cy = (top + bottom) / 2;
             ctx.save();
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.font = `600 20px 'IBM Plex Sans KR', 'Pretendard', sans-serif`;
+            ctx.font = `600 19px 'IBM Plex Sans KR', 'Pretendard', sans-serif`;
             ctx.fillStyle = CH('#F2F4F6');
             ctx.fillText(`${totalSum.toFixed(2)}억원`, cx, cy);
             ctx.restore();
@@ -90,7 +90,7 @@
           datalabels: {
             // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다 — 목록이 길어졌으므로 그 '마지막'도 같이 따라가야 한다.
             display: (ctx) => cat === chCategories[chCategories.length - 1],
-            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 13, weight: FW() },
+            anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
             formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
           }
         };
@@ -100,8 +100,8 @@
         type: 'bar', data: { labels: labels, datasets: datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 14, weight: FW() } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
-          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 14, weight: FW() } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, type: channelScaleMode, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } }, tooltip: { callbacks: { title: (t) => `채널명: ${t[0].label}`, label: () => null, afterBody: (t) => { let ct = 0; let bd = []; t[0].chart.data.datasets.forEach(ds => { const v = ds.data[t[0].dataIndex] || 0; ct += v; if (v > 0) bd.push(`  • ${ds.label}: ${v.toFixed(2)} 억원`); }); return [`💰 채널 매출: ${ct.toFixed(2)} 억원`, ``, ...bd]; } } } },
+          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } }, y: ddValueAxis({ stacked: true, type: channelScaleMode, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
         }
       });
     }
@@ -141,13 +141,13 @@
         // 실어 나르는 값만 서로 바꿨다 — 꺾은선 라벨의 판(backgroundColor)과 offset은 선이 막대 위를
         // 지나가서 필요한 것이지 '매출액'이라서 붙은 게 아니므로, 내용이 바뀌어도 선 쪽에 남는다.
         data: { labels: labels, datasets: [ { type: 'bar', label: '합산 매출액', data: sumVals, backgroundColor: ddDuoFill(...ddDuoPair()), yAxisID: 'y', borderRadius: 6, order: 2,
-          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 13, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
+          datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 12, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         }, { type: 'line', label: '광고주 수', data: countVals, borderColor: RC('line'), backgroundColor: ddAreaFill(RC('line')), fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RC('line'), pointBorderWidth: 0, yAxisID: 'y1', order: 1,
           datalabels: { display: 'auto', anchor: 'end', align: 'top', offset: 8, color: dataLabelTextColor(),
             backgroundColor: ddSurfaceColor(), borderRadius: 4, padding: { top: 2, bottom: 1, left: 4, right: 4 },
-            font: { size: 13, weight: FW() }, formatter: (v) => v > 0 ? v + '개' : '' }
+            font: { size: 12, weight: FW() }, formatter: (v) => v > 0 ? v + '개' : '' }
         } ] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { size: 14, weight: FW() } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `합산 매출액: ${ctx.raw.toFixed(2)} 억원` : `광고주 수: ${ctx.raw.toLocaleString()} 개사` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 14, weight: FW() } }, grid: { display: false } },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 32 } }, plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), padding: 20, font: { size: 13, weight: FW() } } }, tooltip: { callbacks: { title: (t) => `구간: ${t[0].label}`, label: (ctx) => ctx.dataset.type === 'bar' ? `합산 매출액: ${ctx.raw.toFixed(2)} 억원` : `광고주 수: ${ctx.raw.toLocaleString()} 개사` } } }, scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
           // 보이는 축(y)은 막대를 따라간다. 이제 억 단위라 stepSize:1을 뺐다 — 개수일 때는 눈금을
           // 정수로 묶는 값이었지만 억에 그대로 두면 1억 간격으로 눈금이 박혀 축이 뭉갠다.
           y: ddValueAxis({ type: 'linear', position: 'left', grace: '20%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }), y1: { type: 'linear', position: 'right', min: y1Min, max: y1Max, display: false } } }

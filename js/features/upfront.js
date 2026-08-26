@@ -102,7 +102,7 @@
       { rowClass: 'row-subcategory', label: 'background: #11151F; color: #94A3B8;',
         num: 'text-align: right;', total: 'text-align: right;' },
       { rowClass: '', label: 'background:#0D1117; color:#64748B;', num: 'text-align: right;', total: 'text-align: right;' },
-      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:14px;', num: 'text-align: right;', total: 'text-align: right;' },
+      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:13px;', num: 'text-align: right;', total: 'text-align: right;' },
     ];
 
     function upOpenRowSortMenu(ev, depth) {

@@ -316,7 +316,7 @@
       { rowClass: '', label: 'background:#151C2C; color:#CBD5E1; font-weight:700;', month: 'text-align:right; font-weight:600;' },
       { rowClass: '', label: 'background:#11151F; color:#94A3B8;', month: 'text-align:right; font-weight:500;' },
       { rowClass: '', label: 'background:#0D1117; color:#64748B;', month: 'text-align:right; font-weight:var(--fw-ui);' },
-      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:14px;', month: 'text-align:right; font-weight:var(--fw-ui);' },
+      { rowClass: '', label: 'background:#090C10; color:#475569; font-size:13px;', month: 'text-align:right; font-weight:var(--fw-ui);' },
     ];
     // 항목/부서/담당자 계열이 공유하는 소계·총합계 칸 색.
     const PV_SUBTOTAL_STYLE_TREE = 'text-align:right; font-weight: var(--fw-ui); background:rgba(30,58,138,0.1);';
