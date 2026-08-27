@@ -426,10 +426,13 @@
 /* ============================================================
    Supabase Auth 로그인 오버레이 (js/core/auth.js가 렌더링)
    ============================================================ */
+/* 뒤 대시보드가 비치면 안 되므로(로그인 전 데이터 노출) 반투명 --bg-overlay(로딩 오버레이 등과
+   공유하는 토큰) 대신 완전 불투명한 페이지 배경(--bg-base)을 쓴다 — 카드(--bg-elevated)가 그
+   위에 뜨는 구조는 대시보드 본문과 똑같은 명도 단계라 카드와 자연스럽게 어울린다. */
 #authLoginOverlay {
   position: fixed; inset: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-overlay);
+  background: var(--bg-base);
 }
 /* 카드 뒤에만 옅게 깔리는 빛 — body::before의 앰비언트 워시와 같은 어휘(토큰 재사용)를
    로그인 화면에도 이어서, 대시보드 진입 전부터 같은 제품이라는 인상을 준다. */
@@ -462,7 +465,7 @@
   position: absolute; top: 14px; right: 14px; z-index: 1;
   display: flex; align-items: center; gap: 4px; white-space: nowrap;
   padding: 5px 10px; font-size: 12.5px; font-weight: var(--fw-ui); font-family: inherit;
-  background: var(--control-bg); border: 1px solid var(--control-border); color: var(--text-secondary);
+  background: transparent; border: none; color: var(--text-secondary);
   border-radius: var(--radius-full); cursor: pointer; transition: background 0.15s ease;
 }
 .auth-theme-toggle:hover { background: var(--bg-card-hover); }
