@@ -30,6 +30,7 @@ KT ENA 광고사업본부(광고전략팀)의 광고 매출 분석용 내부 대
 | Supabase 스키마/RLS | `supabase/schema.sql` | `docs/data-rules.md` |
 | ETL(엑셀→Supabase 적재, K2병합) | `scripts/etl/*` | `scripts/etl/README.md` |
 | Supabase 프록시 API (`/api/sales` 등) | `shared/supabase-proxy.mjs`(공용 로직) + `functions/api/*.js`(**Pages 배포 시 실제 실행 경로**) + `worker.js`(standalone Worker 배포용, 현재 미사용) | `docs/architecture.md` |
+| 인증 (Zero Trust IP 허용목록 + Supabase Auth 로그인 + JWT 검증) | `js/core/auth.js`(로그인 화면) + `shared/supabase-proxy.mjs`의 `requireAuth()`(JWT 검증) + `scripts/etl/provision-auth-users.mjs`(계정 생성) | `docs/auth.md` |
 | 새 화면(뷰) 등록 | `js/core/view-router.js` | `docs/architecture.md` |
 | 전역 상태 변수 | `js/core/state.js` | `docs/architecture.md` |
 | 테마(다크/라이트) 색상 | `js/core/theme-system.js` + `css/theme.css` | - |
@@ -86,5 +87,5 @@ KT ENA 광고사업본부(광고전략팀)의 광고 매출 분석용 내부 대
 - **매출기준(취급고/회계) 토글은 뷰에서 좁히지 않는다.** `v_bonbu_sales`는 실적+회계조정 행을 전부 반환하고, 토글은 기존과 동일하게 `js/core/filters.js`의 `applyFilters()`가 클라이언트에서 처리한다.
 - K2 병합·업프론트 계약금액 파싱 → `scripts/etl/`(수동 실행, `docs 참고: scripts/etl/README.md`)에서만 수행. `data-loader.js`는 결과를 읽기만 한다.
 - **데이터 조회는 Cloudflare 프록시(`/api/sales`, `/api/upfront-contracts`, `/api/latest-batch`, `/api/targets`)를 경유.** 이 프로젝트는 Cloudflare **Pages**(Git 연동 자동배포)로 서빙되므로 실제 실행되는 코드는 `functions/api/*.js`이며, 공용 로직은 `shared/supabase-proxy.mjs`에 있다(standalone Worker로 전환할 경우를 대비해 `worker.js`도 같은 모듈을 재사용하도록 유지 — 현재는 배포에 쓰이지 않음). Supabase(`*.supabase.co`)는 별도 도메인이라 브라우저가 데이터를 직접 쿼리하지 않는다 — Pages Functions가 서버 측에서 `SUPABASE_SERVICE_ROLE_KEY`로 대신 조회해 프록시한다.
-- **개인별 인증은 Supabase Auth(로그인 화면, `js/core/auth.js`)가 담당한다.** Cloudflare Access(Zero Trust) 무료 플랜의 인증 사용자 50명 제한 때문에 옮겼다. anon(publishable) key는 이 로그인 SDK 전용으로만 발급했고(`js/core/state.js`의 `SUPABASE_ANON_KEY`), 노출돼도 무해하다 — `schema.sql`이 `anon`/`authenticated`의 테이블·뷰 권한을 전부 회수해 이 키만으로는 데이터를 못 읽는다. 로그인 후 발급되는 JWT는 프론트가 `/api/*` 요청의 `Authorization: Bearer`로 실어 보내고, `shared/supabase-proxy.mjs`의 `requireAuth()`가 Web Crypto(ECDSA)로 로컬 검증한다(SUPABASE_URL의 공개 JWKS 엔드포인트를 모듈 스코프에 캐시 — Supabase는 이미 HS256 공유 비밀키에서 비대칭 ES256 서명키로 전환돼 있어 별도 시크릿 없이 공개키만으로 검증 가능하다). 계정은 `scripts/etl/provision-auth-users.mjs`로 관리자가 미리 만든 것만 존재하며 공개 회원가입은 꺼져 있다. Zero Trust는 향후 IP 허용목록 전용으로 격하할 예정이나 아직 미실행 — 그 전까지는 Access 이메일 정책이 도메인 전체에 남아있을 수 있다.
+- **접근통제는 이중 게이트다: Zero Trust(IP 허용목록+Bypass, 네트워크 경계) + Supabase Auth(로그인 화면, `js/core/auth.js`) + JWT 검증(`shared/supabase-proxy.mjs`).** 상세 설계·로그인 흐름·트러블슈팅은 `docs/auth.md` 참고.
 - 전환 스위치: `js/core/state.js`의 `DATA_SOURCE_MODE`(`'xlsx'`|`'supabase'`, 현재 `'supabase'`). 문제 발생 시 이 한 줄을 `'xlsx'`로 되돌리는 배포만으로 즉시 롤백 가능 — xlsx 관련 코드(`fetchDataHttp`/`processWorkbookBuffer` 등)와 수동 업로드 폴백은 안전망으로 계속 유지한다.

@@ -47,10 +47,11 @@ cat js/core/state.js js/core/theme-system.js js/core/data-loader.js js/core/filt
 id↔getElementById, onclick↔function 대조는 reviewer 에이전트가 자동 수행.
 
 ## 배포 (Cloudflare)
-- GitHub 푸시 → Cloudflare Pages/Worker 배포. 데이터는 R2, 서빙은 `worker.js`, 접근통제는 Zero Trust(Access).
+- GitHub 푸시 → Cloudflare **Pages** 자동배포(`functions/` 디렉터리 실행, `worker.js`는 standalone Worker 전환 대비용 미사용 코드).
+- 접근통제는 이중 게이트: Zero Trust(Access)는 IP 허용목록 + Bypass 결정으로 네트워크 경계만 담당(이메일 인증 아님), 개인별 인증은 Supabase Auth 로그인 화면(`js/core/auth.js`) + JWT 검증(`shared/supabase-proxy.mjs`).
 - `wrangler.toml`의 `bucket_name`을 실제 R2 버킷명으로 수정.
 
-## Supabase 전환 (진행 중)
-- 엑셀 파싱 → Supabase 이전 중(병행 운영). `js/core/data-loader.js`가 프론트/백 경계, `rawData`/`filteredData` shape 유지.
-- 스키마 `supabase/schema.sql`, 적재 `scripts/etl/*`(수동 실행, `scripts/etl/README.md` 참고), 접근은 `/api/*` 프록시 경유(Pages 배포 시 `functions/api/*.js` 실행, 공용 로직은 `shared/supabase-proxy.mjs`; Supabase anon key는 발급하지 않음).
-- 전환 스위치는 `js/core/state.js`의 `DATA_SOURCE_MODE`. 상세는 `CLAUDE.md`/`docs/data-rules.md`.
+## Supabase 전환 (완료 — 운영 중)
+- 엑셀 파싱 → Supabase 이전 완료(xlsx 경로는 안전망으로 코드 유지). `js/core/data-loader.js`가 프론트/백 경계, `rawData`/`filteredData` shape 유지.
+- 스키마 `supabase/schema.sql`, 적재 `scripts/etl/*`(수동 실행, `scripts/etl/README.md` 참고), 접근은 `/api/*` 프록시 경유(Pages 배포 시 `functions/api/*.js` 실행, 공용 로직은 `shared/supabase-proxy.mjs`; Supabase anon key는 로그인 SDK 전용으로만 사용, 데이터 쿼리에는 쓰지 않음).
+- 전환 스위치는 `js/core/state.js`의 `DATA_SOURCE_MODE`. 상세는 `CLAUDE.md`/`docs/architecture.md`.

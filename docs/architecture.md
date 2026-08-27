@@ -118,15 +118,10 @@ features/*.js    →  filteredData/rawData를 읽어 차트·피벗 렌더
 대가로 `/api/latest-batch`가 `/api/sales`보다 앞에 서게 됐다(프론트가 ID를 알아야 URL을 만든다). 그래서 거기에도 **60초 TTL**을 건다 — 배치 변경 감지가 최대 그만큼 늦어지지만 ETL이 수동이라 무해하다. `upfront-contracts`/`targets`는 병렬 그대로다.
 
 - **`sales_targets`는 캐시하지 않는다.** 배치와 무관하게(ETL 없이) 수정될 수 있어서 배치 ID를 키로 삼으면 낡은 값이 고착된다.
-- **인증이 캐시보다 앞이다.** 각 `handle*Request`가 `withEdgeCache`를 부르기 전에 `requireAuth()`로 Supabase Auth JWT를 Web Crypto(로컬 서명 검증, JWKS는 모듈 스코프에 캐시)로 검증하므로 인증된 요청만 도달하고, `caches.default`는 함수 안에서만 접근하는 서버 측 캐시다. 브라우저로 나가는 헤더는 `private`으로 바꿔 공용 프록시에 남지 않게 한다(캐시에 넣는 사본만 `public` — Cache API가 `private` 응답을 저장하지 않는다).
+- **인증이 캐시보다 앞이다.** 각 `handle*Request`가 `withEdgeCache`를 부르기 전에 `requireAuth()`로 인증을 검증한다(상세는 `docs/auth.md`). `caches.default`는 함수 안에서만 접근하는 서버 측 캐시다. 브라우저로 나가는 헤더는 `private`으로 바꿔 공용 프록시에 남지 않게 한다(캐시에 넣는 사본만 `public` — Cache API가 `private` 응답을 저장하지 않는다).
 
-### 인증 게이트 — Zero Trust 이메일 인증 → Supabase Auth JWT
-개인별 인증(Cloudflare Access 이메일 정책)은 무료 플랜의 인증 사용자 50명 제한 때문에 Supabase Auth 로그인 화면으로 옮겼다. Zero Trust는 향후 IP 허용목록 전용으로 격하할 예정(대시보드 작업, 아직 미실행) — 그 전까지는 두 인증이 겹칠 수 있다.
-- 로그인: `js/core/auth.js`가 `SUPABASE_ANON_KEY`(js/core/state.js)로 만든 클라이언트를 통해 이메일/비밀번호 로그인. 계정은 `scripts/etl/provision-auth-users.mjs`로 관리자가 미리 생성한 것만 존재(공개 회원가입 꺼짐).
-- 요청: `js/core/data-loader.js`의 `fetchDataSupabase()`/`pollLatestBatch()`가 `getAuthorizationHeader()`(auth.js)로 현재 세션의 JWT를 가져와 `Authorization: Bearer` 헤더로 `/api/*`에 실어 보낸다.
-- 검증: `shared/supabase-proxy.mjs`의 `requireAuth()` → `verifySupabaseJwt()`가 `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`(공개 엔드포인트, 비밀값 아님)에서 받은 공개키로 ES256 서명을 로컬 검증(만료·`role`/`aud` 클레임도 확인). 실패 시 401. 이 검증은 4개 핸들러(`handleSalesRequest`/`handleUpfrontContractsRequest`/`handleTargetsRequest`/`handleLatestBatchRequest`) 모두에서 캐시 조회보다 먼저 실행된다.
-  - **왜 ES256인가**: 이 Supabase 프로젝트는 대시보드 JWT Keys에서 이미 레거시 HS256 공유 비밀키 → 비대칭 ES256(ECC P-256) 서명키로 전환돼 있다(Settings → JWT Keys에서 확인 가능, 이전 HS256 키는 "Previous key"로만 남아 곧 만료될 옛 세션 검증용). 그래서 이 프록시는 공유 비밀키를 env에 두지 않고 공개 JWKS로만 검증한다 — 별도 Cloudflare 시크릿이 필요 없다.
-- `profiles` 테이블(`supabase/schema.sql`)은 `auth.users`에 `dept`를 매핑해두는 자리만 마련한 것 — 지금은 어디서도 필터링에 쓰이지 않는다(추후 부서별 데이터 차등이 필요해지면 이 테이블과 JWT의 `sub`을 기준으로 확장).
+### 인증 — 별도 문서
+Zero Trust(네트워크 경계) + Supabase Auth(개인별 인증) 이중 게이트의 설계·로그인 흐름·JWT 검증 방식·계정 프로비저닝은 `docs/auth.md` 참고.
 - **응답 헤더 `X-Edge-Cache`**(`HIT`/`MISS`/`OFF`)로 동작을 확인할 수 있다.
 
 **되돌리는 방법 세 겹** (안쪽부터):
