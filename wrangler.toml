@@ -7,15 +7,18 @@ compatibility_date = "2026-07-29"
 binding = "DASHBOARD_BUCKET"
 bucket_name = "adsales"
 
-# 인증은 Cloudflare Access(Zero Trust)가 담당합니다.
-# 배포 후 Zero Trust 대시보드에서 이 Worker의 도메인/라우트를 보호 대상 애플리케이션으로 등록하세요.
+# 개인별 인증은 Supabase Auth(로그인 화면 + JWT)가 담당합니다 — Cloudflare Access 무료 플랜의
+# 인증 사용자 50명 제한 때문에 옮겼습니다. Access(Zero Trust)를 IP 허용목록 정책으로 교체하는
+# 작업은 Cloudflare 대시보드에서 별도로 진행 예정(레포 작업과 무관, 아직 미실행).
 
 # Supabase 프록시(/api/*)용 secret — 절대 여기(wrangler.toml)에 평문으로 넣지 말 것.
 # 아래 명령으로 등록:
 #   wrangler secret put SUPABASE_URL
 #   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 # (anon key가 아니라 service_role key. supabase/schema.sql이 anon/authenticated 권한을 전부 회수하므로
-#  이 Worker만 service_role로 데이터를 읽을 수 있다.)
+#  이 Worker만 service_role로 데이터를 읽을 수 있다. 요청의 Authorization: Bearer JWT는
+#  SUPABASE_URL의 공개 JWKS 엔드포인트로 검증하므로 — shared/supabase-proxy.mjs 참고 — 별도
+#  시크릿이 필요 없다.)
 
 # --- Pages 배포용 설정 (선택) -----------------------------------------
 # Pages로 배포할 때 Functions 디렉터리(`functions/`)의 함수를 사용합니다.

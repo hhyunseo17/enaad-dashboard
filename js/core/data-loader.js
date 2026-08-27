@@ -362,7 +362,12 @@
 
     function fetchDataSupabase() {
       showLoading(true);
-      const fetchJson = (path) => fetch(path, { cache: 'no-store', credentials: 'include' }).then(res => {
+      // Authorization 헤더는 Supabase Auth 로그인 세션(js/core/auth.js)의 JWT다 — 프록시가
+      // 이걸로 신원을 검증한다(shared/supabase-proxy.mjs의 requireAuth). 세션이 없으면(로그인
+      // 화면을 아직 통과 못 했으면) init.js가 이 함수 자체를 호출하지 않는다.
+      const fetchJson = (path) => getAuthorizationHeader().then(authHeader =>
+        fetch(path, { cache: 'no-store', headers: authHeader ? { Authorization: authHeader } : {} })
+      ).then(res => {
         if (!res.ok) throw new Error(`HTTP Error ${res.status} (${path})`);
         return res.json();
       });
@@ -402,7 +407,8 @@
 
     // 배치 변경 여부만 가볍게 확인(v_latest_batch_info 1행 조회) — 바뀐 경우에만 /api/sales 전체 재조회.
     function pollLatestBatch() {
-      fetch('/api/latest-batch', { cache: 'no-store', credentials: 'include' })
+      getAuthorizationHeader()
+        .then(authHeader => fetch('/api/latest-batch', { cache: 'no-store', headers: authHeader ? { Authorization: authHeader } : {} }))
         .then(res => res.ok ? res.json() : null)
         .then(info => { if (info && info.batch_id !== lastSeenBatchId) fetchDataSupabase(); })
         .catch(() => {}); // 폴링 실패는 조용히 무시하고 다음 주기에 재시도 (사용자에게는 기존 데이터가 계속 보임)

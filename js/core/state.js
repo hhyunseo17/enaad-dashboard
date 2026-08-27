@@ -7,6 +7,11 @@
     // 'supabase': /api/* 프록시(Pages Functions, functions/api/*.js)를 거쳐 Supabase v_bonbu_sales/upfront_contracts 조회.
     // 문제 생기면 이 한 줄을 'xlsx'로 되돌리는 배포만으로 즉시 롤백 가능.
     const DATA_SOURCE_MODE = 'supabase';
+    // Supabase Auth 로그인(js/core/auth.js) 전용 — 데이터 쿼리에는 쓰지 않는다(그건 여전히
+    // /api/* 프록시 + service_role key 몫). publishable key라 노출돼도 무해하다:
+    // anon/authenticated 권한이 schema.sql에서 전부 회수돼 있어 이 키만으로는 아무것도 못 읽는다.
+    const SUPABASE_URL = 'https://fakclhdzoeeqgjancvlr.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_QY0c39avWfVCWa0q41iVCA_8yDT0JsM';
     // /api/sales에 `?batch=<배치ID>`를 붙일지 여부. 붙이면 Cloudflare 엣지가 배치 단위로 응답을
     // 캐시해 왕복 자체가 사라진다(shared/supabase-proxy.mjs 참고). false로 두면 파라미터가 빠지고
     // 서버도 캐시 경로를 건너뛰어 예전과 동일하게 동작한다 — 되돌리기 1단계.

@@ -422,3 +422,69 @@
       .hero-title  { font-size: 21px; }
       .hero-metric { font-size: 24px; }
     }
+
+/* ============================================================
+   Supabase Auth 로그인 오버레이 (js/core/auth.js가 렌더링)
+   ============================================================ */
+#authLoginOverlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-overlay);
+}
+/* 카드 뒤에만 옅게 깔리는 빛 — body::before의 앰비언트 워시와 같은 어휘(토큰 재사용)를
+   로그인 화면에도 이어서, 대시보드 진입 전부터 같은 제품이라는 인상을 준다. */
+#authLoginOverlay::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(480px 360px at 50% 38%, var(--ambient-1), transparent 70%),
+    radial-gradient(420px 320px at 70% 75%, var(--ambient-2), transparent 72%);
+}
+@keyframes authLoginCardIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.auth-login-card {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 14px;
+  width: 380px; max-width: calc(100vw - 40px);
+  background: var(--bg-elevated); border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: 40px 32px 32px;
+  animation: authLoginCardIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* 상단 액센트 바 — 카드 위쪽 모서리에 얹는 그라디언트 띠. 브랜드 블루 하나로 시작해서
+   같은 색의 옅은 톤으로 빠지게 해 튀지 않으면서 카드에 결을 하나 더 준다. */
+.auth-login-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-glow));
+}
+.auth-theme-toggle {
+  position: absolute; top: 14px; right: 14px; z-index: 1;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  padding: 5px 10px; font-size: 12.5px; font-weight: var(--fw-ui); font-family: inherit;
+  background: var(--control-bg); border: 1px solid var(--control-border); color: var(--text-secondary);
+  border-radius: var(--radius-full); cursor: pointer; transition: background 0.15s ease;
+}
+.auth-theme-toggle:hover { background: var(--bg-card-hover); }
+.auth-login-logo { height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.auth-login-logo img { height: 100%; width: auto; object-fit: contain; display: block; }
+.auth-login-logo .logo-on-light { display: none; }
+.auth-login-title { font-size: 16.5px; font-weight: 700; color: var(--text-primary); margin: 0; text-align: center; letter-spacing: -0.01em; }
+.auth-login-subtitle { font-size: 13px; color: var(--text-secondary); margin: -6px 0 6px; text-align: center; }
+.auth-login-input {
+  padding: 11px 13px; font-size: 14px; font-family: inherit;
+  background: var(--control-bg); border: 1px solid var(--control-border);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.auth-login-input:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--primary-blue-glow); }
+.auth-login-submit {
+  padding: 11px 14px; font-size: 14px; font-weight: 600; font-family: inherit;
+  background: var(--primary-blue); color: var(--text-on-primary); border: none;
+  border-radius: var(--radius-md); cursor: pointer; box-shadow: var(--shadow-blue-glow);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.auth-login-submit:hover { background: var(--primary-blue-hover); transform: translateY(-1px); }
+.auth-login-submit:active { transform: translateY(0); }
+.auth-login-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+.auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }

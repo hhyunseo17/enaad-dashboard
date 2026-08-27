@@ -409,3 +409,25 @@ grant select on raw_sales_rows, etl_load_batches, current_batch, upfront_contrac
   v_manager_split, v_sales_normalized, v_bonbu_sales, v_upfront_contracts_current, v_latest_batch_info
   to service_role;
 grant insert, update on raw_sales_rows, etl_load_batches, current_batch, upfront_contracts, sales_targets to service_role;
+
+-- ------------------------------------------------------------
+-- 7. profiles — Supabase Auth 사용자 프로필
+--
+-- Zero Trust(Cloudflare Access) 이메일 인증을 Supabase Auth 로그인 화면으로 옮기면서 추가.
+-- scripts/etl/provision-auth-users.mjs가 name.xlsx 명단 기준으로 auth.users 계정을 만들 때
+-- 이 테이블에도 (id, email, dept)를 같이 적재한다. dept는 지금은 어디서도 필터링에 쓰이지
+-- 않는다 — 나중에 부서별 데이터 차등이 필요해지면 이 테이블과 JWT의 sub(=auth.users.id)를
+-- 기준으로 확장할 자리만 마련해둔 것. 다른 base table과 동일하게 정책 없이 잠가둔다(지금은
+-- service_role만 접근 — 브라우저가 이 테이블을 직접 조회하는 경로는 없다).
+-- ------------------------------------------------------------
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  dept text,
+  created_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+revoke all on profiles from anon, authenticated;
+grant select, insert, update on profiles to service_role;

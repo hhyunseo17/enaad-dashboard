@@ -2,6 +2,21 @@
 
 프론트엔드(빌드 도구 없음)와 무관한 독립 Node 프로젝트. 담당자가 `addata.xlsx`를 갱신할 때마다 수동으로 실행한다.
 
+## 원본 파일 위치
+`addata.xlsx`/`target.xlsx` 원본은 로컬이 아니라 **Google Drive의 `ENAAD-data` 폴더**(개인 계정 hhyunseo17@gmail.com)에서 관리한다.
+
+**이유**: 사내 정책상 매주 목요일마다 외부저장소(Drive 등)를 제외한 로컬 PC의 모든 문서 파일에 보안(DRM)이
+걸린다. 로컬에 있던 사본은 그 시점에 잠겨서 Claude Code가 못 읽게 되므로, 원본을 애초에 정책 적용 범위 밖인
+Google Drive에 두고 그쪽에서 갱신한다.
+
+갱신 시 그 폴더의 파일을 교체해두면, Claude Code 세션에서 "ETL 돌려줘"라고 요청할 때 Claude가 Google Drive 커넥터로
+최신 파일을 받아 로컬에 임시 저장한 뒤 아래 `run.mjs`/`load-targets.mjs`를 그대로 실행한다(스크립트 자체는
+로컬 경로 인자를 받는 기존 방식 그대로이며 코드 변경 없음 — 파일을 누가/어디서 받아오는지만 바뀐 것).
+담당자가 직접 실행할 때는 Drive에서 파일을 로컬로 내려받은 뒤 기존과 동일하게 경로를 인자로 넘기면 된다.
+
+향후 지표·프로그램별 시청률 등 추가 데이터도 같은 폴더(또는 하위 폴더)에 올려두면 동일한 방식으로 가져올 수 있다
+(단, Supabase 스키마·ETL 로직은 그 데이터 구조에 맞게 별도로 설계해야 한다 — 소스 위치만 동일할 뿐).
+
 ## 최초 설정
 ```
 cd scripts/etl
@@ -50,6 +65,21 @@ node run.mjs "C:\경로\addata.xlsx"
 select industry, industry_mid, industry_sub, count(*)
 from v_bonbu_sales group by 1,2,3 order by 4 desc limit 10;
 ```
+
+## Auth 계정 프로비저닝 (`provision-auth-users.mjs`)
+Zero Trust(Cloudflare Access) 이메일 인증을 Supabase Auth 로그인 화면으로 이관하면서 추가된 1회성 스크립트.
+Google Drive `ENAAD-data` 폴더의 `name.xlsx`(부서 | 성명 | 직책 | ID/이메일)를 읽어 각 인원의 Supabase Auth
+계정과 `profiles`(id, email, dept) 행을 만든다. `dept`는 지금은 어디서도 필터링에 쓰이지 않고, 나중에
+부서별 데이터 차등이 필요해질 때 쓸 자리만 마련해둔 것이다.
+
+```
+node provision-auth-users.mjs "C:\경로\name.xlsx"
+```
+- `.env`에 `PROVISION_INITIAL_PASSWORD`(전원 공통 초기 비밀번호)를 먼저 채워야 한다.
+- 이미 존재하는 이메일은 Auth 계정을 새로 만들지 않고 `profiles`만 갱신한다 — 인원이 늘거나 부서가
+  바뀌면 그냥 재실행하면 된다(비밀번호가 바뀌지는 않음).
+- Supabase 프로젝트의 Authentication 설정에서 "Allow new users to sign up"을 꺼서 이 스크립트로
+  등록한 계정만 로그인 가능하게 해야 한다(대시보드 작업, 코드로 안 됨).
 
 ## 롤백
 배치는 삭제되지 않고 `superseded`로만 표시된다. 문제가 늦게 발견되면 `current_batch.batch_id`를 이전 `etl_load_batches.id`로 직접 UPDATE하면 즉시 이전 상태로 돌아간다.

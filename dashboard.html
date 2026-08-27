@@ -22,6 +22,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- Supabase Auth 로그인용(js/core/auth.js). 데이터 쿼리에는 쓰지 않는다 — 그건 /api/* 프록시 몫. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Styles (분리된 CSS 모듈) -->
   <link rel="stylesheet" href="css/theme.css" />
@@ -1218,6 +1220,7 @@
   </div>
   <!-- App modules — 로드 순서가 곧 의존성 (architecture.md 참조) -->
   <script src="js/core/state.js"></script>
+  <script src="js/core/auth.js"></script>
   <script src="js/core/theme-system.js"></script>
   <script src="js/core/data-loader.js"></script>
   <script src="js/core/filters.js"></script>

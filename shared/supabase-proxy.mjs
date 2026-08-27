@@ -5,8 +5,11 @@
 // 함께 쓴다 — 로직을 두 벌로 유지하지 않기 위해 여기 하나만 둔다.
 //
 // env에는 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY가 있어야 한다(Worker secret 또는
-// Pages 환경변수). service_role key만 사용하고 anon key는 발급하지 않는다 — 브라우저는
-// 이 프록시(Worker 또는 Pages Functions, 둘 다 Zero Trust로 보호되는 도메인)만 호출한다.
+// Pages 환경변수). Supabase 조회 자체는 service_role key로만 하고(anon key는 이 프록시에서
+// 쓰지 않는다 — 브라우저 쪽 로그인 SDK 전용), 브라우저 요청은 Supabase Auth 로그인 세션의
+// JWT(Authorization: Bearer)를 verifySupabaseJwt()로 검증한 뒤에만 통과시킨다(아래
+// "인증 게이트" 절 참고). JWT 검증은 SUPABASE_URL의 공개 JWKS 엔드포인트만 쓰므로 별도
+// 시크릿이 필요 없다.
 // ============================================================
 
 // PostgREST 기본 max-rows(1000)보다 크게 요청하려면 Supabase 프로젝트 설정(Settings → API → Max Rows)도
@@ -133,6 +136,104 @@ export async function proxyView(env, viewName, select = '*') {
 }
 
 // ------------------------------------------------------------
+// 인증 게이트 — Cloudflare Access(Zero Trust) 대신 Supabase Auth 로그인 세션(JWT)을 검증한다.
+//
+// 이 프로젝트는 Supabase 대시보드 JWT Keys에서 이미 레거시 HS256 공유 비밀키 → 비대칭
+// ES256(ECC P-256) 서명키로 전환돼 있다(확인: Settings → JWT Keys, 이전 HS256 키는 "Previous
+// key"로만 남아 곧 만료될 옛 세션 검증용). 그래서 여기서는 공유 비밀키(SUPABASE_JWT_SECRET)를
+// env에 두지 않고, **공개** JWKS 엔드포인트(`{SUPABASE_URL}/auth/v1/.well-known/jwks.json` —
+// 비밀값이 아니라 공개 검증키라 노출돼도 무해하다)에서 공개키를 받아 Web Crypto(ECDSA
+// verify)로 서명을 로컬 검증한다. Supabase에 매 요청 왕복하지 않는 것은 동일하다 — JWKS
+// 자체를 모듈 스코프에 캐시해두기 때문(엣지 캐시가 주는 속도 이점을 인증 때문에 까먹지
+// 않기 위해서다. 아래 withEdgeCache 주석 참고).
+// ------------------------------------------------------------
+function base64UrlToBytes(base64url) {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// Worker 모듈 스코프 — 요청 사이에 유지되는 인메모리 캐시(isolate가 재활용되는 동안만).
+// 키 로테이션은 드물게 일어나므로 1시간 TTL을 두고, kid가 안 맞으면(로테이션 직후 등)
+// 캐시를 무시하고 한 번 더 조회한다.
+let jwksCache = { keys: [], fetchedAt: 0 };
+const JWKS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+async function fetchJwks(env) {
+  const res = await fetch(`${env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`);
+  if (!res.ok) return null;
+  const { keys } = await res.json();
+  return keys;
+}
+
+async function findJwk(env, kid) {
+  const fresh = Date.now() - jwksCache.fetchedAt < JWKS_CACHE_TTL_MS;
+  if (fresh) {
+    const hit = jwksCache.keys.find((k) => k.kid === kid);
+    if (hit) return hit;
+  }
+  const keys = await fetchJwks(env);
+  if (!keys) return jwksCache.keys.find((k) => k.kid === kid) || null; // 조회 실패 시 옛 캐시라도 시도
+  jwksCache = { keys, fetchedAt: Date.now() };
+  return keys.find((k) => k.kid === kid) || null;
+}
+
+async function verifySupabaseJwt(env, request) {
+  const header = request && request.headers.get('authorization');
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [headerB64, payloadB64, signatureB64] = parts;
+
+  let jwtHeader, payload;
+  try {
+    jwtHeader = JSON.parse(new TextDecoder().decode(base64UrlToBytes(headerB64)));
+    payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payloadB64)));
+  } catch {
+    return null;
+  }
+  if (jwtHeader.alg !== 'ES256') return null; // 이 프로젝트가 발급하는 현재 서명 알고리즘(위 주석 참고).
+  if (!payload.exp || payload.exp * 1000 < Date.now()) return null;
+  if (payload.role !== 'authenticated' && payload.aud !== 'authenticated') return null;
+
+  const jwk = await findJwk(env, jwtHeader.kid);
+  if (!jwk) return null;
+
+  try {
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const valid = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      base64UrlToBytes(signatureB64),
+      new TextEncoder().encode(`${headerB64}.${payloadB64}`)
+    );
+    if (!valid) return null;
+  } catch {
+    return null;
+  }
+
+  return { sub: payload.sub, email: payload.email };
+}
+
+function unauthorizedResponse() {
+  return new Response(JSON.stringify({ error: '로그인이 필요합니다.' }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+  });
+}
+
+// 각 handle*Request 맨 앞에서 호출한다 — null이면 통과, Response면 그대로 반환하고 중단.
+async function requireAuth(env, request) {
+  const user = await verifySupabaseJwt(env, request);
+  if (!user) return unauthorizedResponse();
+  return null;
+}
+
+// ------------------------------------------------------------
 // 엣지 캐시 — /api/sales의 왕복을 없애기 위한 것.
 //
 // 페이로드를 별칭으로 절반(23MB→12MB)까지 깎아도 1.6초가 남았다. 남은 비용은 바이트가 아니라
@@ -151,9 +252,10 @@ export async function proxyView(env, viewName, select = '*') {
 //   2) Pages 환경변수 EDGE_CACHE_DISABLED=1 — 재배포 없이 즉시.
 //   3) 이 커밋 revert.
 //
-// 인증은 캐시보다 앞에 있다: Cloudflare Access가 Pages Function 앞단에서 검사하므로 인증된
-// 요청만 여기 도달하고, caches.default는 이 함수 안에서만 접근하는 서버 측 캐시다. 다만
-// 브라우저로 내려보내는 헤더는 public이 아니라 private으로 바꿔 공용 프록시에 남지 않게 한다
+// 인증은 캐시보다 앞에 있다: 각 handle*Request가 withEdgeCache를 부르기 전에 requireAuth()로
+// Supabase Auth JWT를 검증하므로(위 "인증 게이트" 절), 인증된 요청만 여기 도달한다.
+// caches.default는 이 함수 안에서만 접근하는 서버 측 캐시다. 다만 브라우저로 내려보내는
+// 헤더는 public이 아니라 private으로 바꿔 공용 프록시에 남지 않게 한다
 // (캐시에 넣을 때는 public이어야 한다 — Cache API가 private 응답을 저장하지 않는다).
 // ------------------------------------------------------------
 const SALES_CACHE_MAX_AGE = 31536000; // 1년. URL에 배치 ID가 있어 사실상 불변이다.
@@ -224,6 +326,8 @@ export function jsonResponse(payload) {
 
 export async function handleSalesRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireAuth(env, request);
+  if (authError) return authError;
   try {
     // 별칭 select — 응답 키는 SALES_COLUMN_ALIASES의 짧은 이름이다(위 주석 참고).
     const produce = () => proxyView(env, 'v_bonbu_sales', SALES_SELECT);
@@ -236,8 +340,10 @@ export async function handleSalesRequest(env, request, waitUntil) {
   }
 }
 
-export async function handleUpfrontContractsRequest(env) {
+export async function handleUpfrontContractsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireAuth(env, request);
+  if (authError) return authError;
   try {
     return await proxyView(env, 'v_upfront_contracts_current');
   } catch (err) {
@@ -245,8 +351,10 @@ export async function handleUpfrontContractsRequest(env) {
   }
 }
 
-export async function handleTargetsRequest(env) {
+export async function handleTargetsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireAuth(env, request);
+  if (authError) return authError;
   try {
     return await proxyView(env, 'sales_targets');
   } catch (err) {
@@ -256,6 +364,8 @@ export async function handleTargetsRequest(env) {
 
 export async function handleLatestBatchRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireAuth(env, request);
+  if (authError) return authError;
   try {
     // 이 조회가 /api/sales보다 앞에 서게 되었으므로(프론트가 배치 ID를 알아야 URL을 만든다)
     // 여기에도 짧은 TTL을 건다. 이게 없으면 캐시 히트에도 Supabase 왕복이 하나 남는다.

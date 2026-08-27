@@ -18,3 +18,7 @@ Thumbs.db
 # ETL (scripts/etl) — 자격증명·의존성
 scripts/etl/.env
 scripts/etl/node_modules/
+
+# 로컬 wrangler pages dev용 시크릿(SUPABASE_SERVICE_ROLE_KEY 등) — 커밋 금지
+.dev.vars
+.wrangler/
