@@ -34,6 +34,8 @@ node run.mjs "C:\경로\addata.xlsx"
 3. 직전 배치 대비 diff 검증(`validate.mjs`) — 카테고리·연도별 합계, 행 수 비교
 4. 검증 통과 시에만 `current_batch` 포인터를 새 배치로 원자적 갱신(컷오버). 실패 시 컷오버하지 않고 종료(exit code 1) — 이전 배치가 계속 서빙되므로 안전.
 
+`etl_load_batches.source_file_modified_at`(대시보드 헤더의 "원본 수정" 표시)는 엑셀 내부 메타데이터(`wb.Props.ModifiedDate`)를 우선 쓰고, 이 값이 없으면(Google Drive를 거쳐 내려받는 과정에서 유실되는 경우가 있다) 로컬 파일의 실제 수정 시각(fs mtime)으로 대체한다.
+
 ## 컬럼을 새로 추가할 때 (예: 업종 중·소분류)
 
 `raw_sales_rows`에 컬럼을 더할 때는 **테이블 → 뷰 두 개 → 재적재** 순서를 지킨다. 순서를 바꾸면

@@ -5,7 +5,7 @@
 // 사용법: node run.mjs <addata.xlsx 경로>
 // ============================================================
 import 'dotenv/config';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { readWorkbookRows } from './transform.mjs';
 import { mergeUpfrontContracts } from './upfront-merge.mjs';
@@ -60,13 +60,17 @@ async function main() {
   const buffer = readFileSync(filePath);
   const { sheetName, modifiedDate, rows } = readWorkbookRows(buffer);
   console.log(`  시트 '${sheetName}', ${rows.length}행 파싱 완료`);
+  // 엑셀 내부 메타데이터(wb.Props.ModifiedDate)가 없을 때가 있다 — Google Drive를 거쳐
+  // 내려받는 과정(DRM 우회 워크플로우, scripts/etl/README.md 참고)에서 유실되는 것으로 보인다.
+  // 그 경우 로컬 파일의 실제 수정 시각(fs mtime)으로 대체한다.
+  const fileModifiedAt = modifiedDate ? new Date(modifiedDate) : statSync(filePath).mtime;
 
   console.log('[2/6] 배치 등록');
   const { data: batch, error: batchErr } = await supabase
     .from('etl_load_batches')
     .insert({
       source_file_name: filePath.split(/[\\/]/).pop(),
-      source_file_modified_at: modifiedDate ? new Date(modifiedDate).toISOString() : null,
+      source_file_modified_at: fileModifiedAt.toISOString(),
       row_count: rows.length,
       loaded_by: process.env.USER || process.env.USERNAME || 'unknown',
       status: 'loading',
