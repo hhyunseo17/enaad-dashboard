@@ -15,6 +15,7 @@ Cloudflare Access 정책의 Include 규칙에 "IP ranges"만 넣어도, 정책 �
 ### 2. 로그인 (`js/core/auth.js`)
 - `createClient(SUPABASE_URL, SUPABASE_ANON_KEY)`로 로그인 전용 클라이언트 생성. `SUPABASE_ANON_KEY`는 `js/core/state.js`에 있는 publishable key — 노출돼도 무해하다(`supabase/schema.sql`이 `anon`/`authenticated`의 테이블·뷰 권한을 전부 회수해서, 이 키만으로는 로그인 말고 아무 데이터도 못 읽는다).
 - `ensureAuthenticated()`가 세션이 없으면 로그인 폼을 렌더링하고, `init.js`의 `DOMContentLoaded` 핸들러 맨 앞에서 이 함수를 기다린 뒤에만 `initDataConnection()`을 부른다.
+- **세션 만료(6시간)**: Supabase의 refresh token은 기본 무기한이라 로그아웃하지 않는 한 세션이 계속 유지된다. Supabase Auth의 네이티브 Time-box/Inactivity 세션 만료(대시보드 Authentication → Sessions)는 **Pro 플랜 이상 전용**이라 이 프로젝트(Free)에서는 못 쓴다. 대신 `js/core/auth.js`에서 로그인 성공 시각을 `localStorage`(`authSessionStartedAt`)에 저장해두고, `ensureAuthenticated()`와 5분 주기 `setInterval`에서 6시간 경과 여부를 확인해 초과 시 강제 `signOut()`한다. 탭을 계속 열어둔 경우도 리로드 없이 커버된다. 이 기록 이전에 로그인한 세션(값 없음)은 즉시 만료 처리하지 않고 그 시점부터 카운트를 시작한다.
 - 로그인 화면 배경은 반투명이 아니라 **불투명한 페이지 배경**(`--bg-base`)이다 — 로그인 전에 뒤 대시보드 데이터가 비쳐 보이면 안 되기 때문. 반투명 오버레이(`--bg-overlay`, 로딩 스피너 등과 공유하는 토큰)를 그대로 썼다가 라이트 모드에서 대시보드 색이 살짝 비쳐 보이는 문제가 있었다.
 - 계정은 `scripts/etl/provision-auth-users.mjs`로 관리자가 미리 만든 것만 존재하며, Supabase 대시보드 Authentication 설정에서 공개 회원가입은 꺼져 있다.
 

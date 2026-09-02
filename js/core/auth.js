@@ -7,6 +7,18 @@
 // ============================================================
 const supabaseAuthClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Supabase의 refresh token은 기본적으로 무기한이라(access token만 주기적으로 갱신) 로그인 후
+// 로그아웃하지 않는 한 세션이 계속 유지된다. Time-box/inactivity 세션 만료는 Supabase Auth의
+// 대시보드 설정(Pro 플랜 이상)으로 제공되는데, 이 프로젝트는 그 플랜이 아니라서 여기서 직접 구현한다.
+const SESSION_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6시간 (근무일 기준)
+const SESSION_STARTED_AT_KEY = 'authSessionStartedAt';
+
+function isSessionExpired() {
+  const startedAt = Number(localStorage.getItem(SESSION_STARTED_AT_KEY));
+  if (!startedAt) return false; // 이 변경 이전에 로그인한 세션 등 기록이 없으면 지금부터 카운트 시작
+  return Date.now() - startedAt > SESSION_MAX_AGE_MS;
+}
+
 // data-loader.js의 fetchDataSupabase()가 Authorization 헤더를 붙일 때 쓴다.
 async function getAuthorizationHeader() {
   const { data } = await supabaseAuthClient.auth.getSession();
@@ -61,6 +73,7 @@ function renderLoginForm() {
         submitBtn.innerText = '로그인';
         return;
       }
+      localStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
       overlay.remove();
       resolve();
     });
@@ -70,7 +83,13 @@ function renderLoginForm() {
 // init.js의 DOMContentLoaded 핸들러 맨 앞에서 호출한다 — 통과해야 initDataConnection()이 이어진다.
 async function ensureAuthenticated() {
   const { data } = await supabaseAuthClient.auth.getSession();
-  if (!data.session) {
+  if (data.session && isSessionExpired()) {
+    await supabaseAuthClient.auth.signOut();
+  } else if (data.session && !localStorage.getItem(SESSION_STARTED_AT_KEY)) {
+    localStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
+  }
+  const { data: freshData } = await supabaseAuthClient.auth.getSession();
+  if (!freshData.session) {
     await renderLoginForm();
   }
   const headerStatus = document.querySelector('.header-status');
@@ -80,9 +99,19 @@ async function ensureAuthenticated() {
     logoutBtn.className = 'btn btn-sm';
     logoutBtn.innerText = '로그아웃';
     logoutBtn.addEventListener('click', async () => {
+      localStorage.removeItem(SESSION_STARTED_AT_KEY);
       await supabaseAuthClient.auth.signOut();
       location.reload();
     });
     headerStatus.appendChild(logoutBtn);
   }
+  // 탭을 계속 열어둔 채 6시간을 넘기는 경우까지 커버 — 리로드 없이도 다음 API 호출부터 막히도록
+  // 주기적으로 만료 여부를 확인해 강제 로그아웃한다.
+  setInterval(async () => {
+    if (isSessionExpired()) {
+      localStorage.removeItem(SESSION_STARTED_AT_KEY);
+      await supabaseAuthClient.auth.signOut();
+      location.reload();
+    }
+  }, 5 * 60 * 1000);
 }
