@@ -13,10 +13,13 @@ README.md                  설치/실행/배포 안내
 docs/                      문서 (js/features와 1:1 매칭)
   data-rules.md  architecture.md
   features/  (mom, agency-comp, bucket, new-advertiser, upfront,
-              ranking, trend-portfolio-channel, detail-pivots, detail-data, kpi)
+              ranking, trend-portfolio-channel, detail-pivots, detail-data, kpi,
+              metrics-dashboard)
 css/                       theme / layout / pivot-table
-js/core/                   state, theme-system, data-loader, filters, view-router, init
+js/core/                   state, theme-system, data-loader, metrics-data-loader,
+                           filters, view-router, init
 js/features/               shared-helpers, detail-pivots, kpi,
+                           metrics-dashboard, metrics-ratings,
                            trend-portfolio-channel, mom, agency-comp,
                            new-advertiser, upfront, ranking, bucket, detail-data
 functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
@@ -37,12 +40,15 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 [JS]
   js/core/state.js                 전역변수·색상팔레트 (가장 먼저)
   js/core/theme-system.js          CH/mapPivotHtml/toggleTheme + Chart.register
-  js/core/data-loader.js           연결·파싱·정규화 + export/유틸
-  js/core/filters.js               체크박스/필터/applyFilters()
+  js/core/data-loader.js           연결·파싱·정규화 + export/유틸 (매출 데이터셋)
+  js/core/metrics-data-loader.js   지표 대시보드 전용 연결·파싱·ENA 치환 (File1/File2, 지연 로딩)
+  js/core/filters.js               체크박스/필터/applyFilters() (매출 데이터셋 전용)
   js/features/shared-helpers.js    신규광고주 판별, 차트 모드 토글
   js/features/pivot-builder.js     피벗 엔진 + PIVOT_PRESETS (detail-pivots보다 먼저)
   js/features/detail-pivots.js     항목/부서/담당자/채널/광고주/대행사 피벗
   js/features/kpi.js               KPI 카드 + 업프론트 목표(월할)
+  js/features/metrics-dashboard.js 지표 대시보드: 컨트롤바/KPI 1·2/M-S 트렌드/매출 트렌드·랭킹
+  js/features/metrics-ratings.js   지표 대시보드: KPI 3·4·5/CPRP·시청률·GRP 미니차트/상세표
   js/features/trend-portfolio-channel.js
   js/features/mom.js
   js/features/agency-comp.js
@@ -55,6 +61,13 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/core/init.js                  DOMContentLoaded 부트스트랩 (반드시 마지막)
 ```
 > reviewer는 이 순서를 어긴 로드(features가 core보다 먼저 등)를 오류로 잡는다.
+
+## 두 탭(family) 구조 — 매출 대시보드 / 지표 대시보드
+헤더의 `<nav class="dashboard-tabs">`가 `switchView('main')`/`switchView('metricsMain')`으로 전환하는 두 화면군. `VIEW_CONFIG`(view-router.js)의 모든 항목이 `family: 'sales' | 'metrics'`를 갖는다:
+- **`sales`**(기존 15개 뷰) — `main` 이하 매출 대시보드 전체. 상단 `.filter-bar`(연/월/부서/채널/방송디지털/대분류/매출기준)를 공유한다.
+- **`metrics`**(`metricsMain`/`metricsDetail`) — 지표 대시보드. `.filter-bar` 대신 자기만의 `.metrics-control-bar`를 쓰고, 데이터셋도(`metricsRevenueData`/`metricsRatingsData`) 상태도(`state.js`의 `metricsSelectedYear` 등) 전부 분리돼 있다.
+
+`switchView()`는 `cfg.family`를 보고 `#filterBarSection`(매출 필터바에 부여된 id)을 숨기고, `syncDashboardTabs(family)`로 헤더 탭 강조를 바꾼다. `returnToParentView()`(breadcrumb "⬅" 버튼)는 `VIEW_CONFIG[currentView].parentView`를 따라가며(미지정 시 `'main'`), `metricsDetail`은 `parentView: 'metricsMain'`이라 그쪽으로 돌아간다 — 기존 11개 매출 드릴다운은 `parentView` 미지정이라 동작이 그대로다.
 
 ## 테마 전환 — 세 갈래 경로 (정리 대상)
 라이트/다크 전환이 한 곳이 아니라 **세 경로**로 나뉘어 있다. 색을 건드릴 때 세 곳을 모두 봐야 한다.

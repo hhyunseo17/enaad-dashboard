@@ -613,6 +613,30 @@
         expandedCols: () => expandedDetailDataColPivot,
         render: () => renderDetailDataPivot(),
       },
+
+      // 지표 대시보드(경쟁채널 벤치마크) 상세표 — File1(경쟁채널 지표 현황, metricsRatingsData) 기준.
+      // custom: true — 엔진(renderPresetPivot)이 그리지 않는다. pvFormatCell이 모든 값을 금액(÷1,000,000)
+      // 으로 가정하는데 File1 지표는 단위가 제각각(%·원·GRP·건수)이라 그대로 통과시키면 숫자가 깨진다.
+      // 대신 js/features/metrics-ratings.js의 renderMetricsDetailPivot()이 pvBuildTree/pvBuildVisibleColumns/
+      // pvRenderColumnHeaderRows(전부 범용, 금액 가정 없음)는 그대로 재사용하고 행 렌더·셀 표기만
+      // 지표별 포맷으로 자체 작성한다. 그래도 여기 등록해 두는 이유는 togglePvRowNode/togglePvColNode/
+      // pvConfigFor 같은 공용 상호작용이 뷰 키만 보고 돌기 때문이다(등록만 하면 그 배선을 그대로 물려받는다).
+      metricsDetail: {
+        custom: true,
+        rows: ['metricLabel', 'channel'],
+        columns: ['year', 'month'],
+        values: [{ field: 'value', agg: 'sum' }],
+        sourceFilter: null,
+        dataSource: () => metricsRatingsData, // filteredData(매출)가 아니라 File1 파싱 결과
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        header: PV_HEADER_TREE,
+        expandedRows: () => expandedMetricsDetailPivot,
+        expandedCols: () => expandedMetricsDetailYearColumns,
+        render: () => renderMetricsDetailPivot(),
+        parentView: 'metricsMain',
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -988,7 +1012,11 @@
       preset.key = viewKey; // 인라인 onclick이 자기 프리셋을 되찾을 수 있게
       const cfg = pvConfigFor(viewKey);
 
-      let rows = preset.sourceFilter ? filteredData.filter(preset.sourceFilter) : filteredData;
+      // dataSource 접근자: 기본은 filteredData(매출 대시보드). 지표 대시보드의 metricsDetail처럼
+      // 다른 데이터셋(metricsRatingsData)을 읽어야 하는 프리셋만 이걸 준다 — 기존 6개는 미지정이라
+      // 그대로 filteredData를 쓴다(하위호환).
+      const sourceRows = preset.dataSource ? preset.dataSource() : filteredData;
+      let rows = preset.sourceFilter ? sourceRows.filter(preset.sourceFilter) : sourceRows;
       // 빌더 패널의 필터 well — 상단 전역 필터바가 이미 좁힌 결과 위에 더 얹는다.
       if (cfg.filters.length) {
         rows = rows.filter(r => cfg.filters.every(f => !f.selected || f.selected.length === 0 || f.selected.includes(String(r[f.field]))));

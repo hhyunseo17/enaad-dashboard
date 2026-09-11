@@ -65,11 +65,16 @@
         <div class="brand-title">
           <h1 id="headerMainTitle" class="title-pill">광고사업본부 매출 분석 대시보드</h1>
         </div>
+        <!-- "매출 대시보드"/"지표 대시보드" 상위 탭. family 기준 강조는 syncDashboardTabs()(view-router.js)가 처리. -->
+        <nav class="dashboard-tabs">
+          <button id="dashboardTabSales" class="dashboard-tab active" onclick="switchView('main')">매출 대시보드</button>
+          <button id="dashboardTabMetrics" class="dashboard-tab" onclick="switchView('metricsMain')">지표 대시보드 <span class="dashboard-tab-badge-new">신규</span></button>
+        </nav>
       </div>
-      
+
       <div class="header-status">
         <div id="breadcrumbBox" style="display: none; align-items: center; gap: 8px;">
-          <button class="btn btn-sm" onclick="returnToMainDashboard()">⬅ 메인으로</button>
+          <button class="btn btn-sm" onclick="returnToParentView()">⬅ 메인으로</button>
         </div>
         <div class="status-badge">
           <span id="statusDot" class="status-dot"></span>
@@ -107,7 +112,7 @@
     </div>
 
     <!-- Zone 1: Global Filters Bar -->
-    <section class="filter-bar">
+    <section class="filter-bar" id="filterBarSection">
       <!-- 1행: 매출기준 + 전역 동작. 항상 보인다.
            매출기준은 '어떤 행을 볼까'가 아니라 '이 숫자가 무엇을 뜻하는가'를 바꾸는 컨트롤이라
            (취급고=실적만 / 회계=실적+회계조정) 나머지 필터와 성격이 다르다. 그래서 필터 묶음에
@@ -1217,17 +1222,263 @@
         </aside>
       </section>
     </div>
+
+    <!-- ==========================================================================
+       VIEW: 지표 대시보드 (경쟁채널 벤치마크) — docs/features/metrics-dashboard.md 참고
+       ========================================================================== -->
+    <div id="metricsMainView" class="view-section">
+
+      <!-- 데이터 출처 범례: 자사(ENA) 대체값 / 매출·M-S / 시청률류가 서로 다른 파일에서 온다는 것을
+           화면 맨 위에서 한 번 밝힌다. -->
+      <section class="metrics-source-legend">
+        <span class="metrics-legend-chip"><span class="metrics-legend-dot ena"></span>자사(ENA) — 내부 매출 데이터로 대체</span>
+        <span class="metrics-legend-chip"><span class="metrics-legend-dot revenue"></span>매출·시장규모·M/S — 매체별 광고비 raw 파일</span>
+        <span class="metrics-legend-chip"><span class="metrics-legend-dot ratings"></span>시청률·GRP·CPRP 등 — 경쟁채널 지표 현황 파일</span>
+      </section>
+
+      <!-- 지표 대시보드 전용 컨트롤바. 메인 매출 대시보드의 filter-bar와 독립 — 자기만의
+           취급고/회계·연도·일평균/프라임타임·범위·비교단위·①사업자→②채널 토글을 갖는다. -->
+      <section class="metrics-control-bar">
+        <div class="metrics-control-row">
+          <div class="filter-group">
+            <span class="filter-label">매출 기준</span>
+            <div class="revenue-basis-toggle">
+              <button class="revenue-basis-btn active" id="btnMetricsBasisPerformance" onclick="setMetricsBasisMode('performance')">취급고</button>
+              <button class="revenue-basis-btn" id="btnMetricsBasisAccounting" onclick="setMetricsBasisMode('accounting')">회계</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">연도</span>
+            <div id="metricsYearPills" class="pills-group"></div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">기준</span>
+            <div class="pills-group">
+              <button class="pill-btn active" id="btnMetricsIndexAll" onclick="setMetricsIndexMode('전체')">일평균</button>
+              <button class="pill-btn" id="btnMetricsIndexPrime" onclick="setMetricsIndexMode('프라임타임')">프라임타임</button>
+            </div>
+            <span class="filter-hint">CPRP·채널시청률·eq-GRPs에만 반영</span>
+          </div>
+        </div>
+        <div class="metrics-control-row">
+          <div class="filter-group">
+            <span class="filter-label">범위</span>
+            <div class="pills-group">
+              <button class="pill-btn" id="btnMetricsScopeAll" onclick="setMetricsScopeMode('all')">지상파+유료방송</button>
+              <button class="pill-btn active" id="btnMetricsScopePayTv" onclick="setMetricsScopeMode('payTv')">유료방송</button>
+              <button class="pill-btn" id="btnMetricsScopeCable" onclick="setMetricsScopeMode('cable')">케이블</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">비교단위</span>
+            <div class="pills-group">
+              <button class="pill-btn active" id="btnMetricsCompareOperator" onclick="setMetricsCompareUnit('operator')">사업자 비교</button>
+              <button class="pill-btn" id="btnMetricsCompareChannel" onclick="setMetricsCompareUnit('channel')">대표채널 비교</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">① 사업자</span>
+            <div class="multi-dropdown" id="dropdownMetricsOperator">
+              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsOperator')">
+                <span id="labelMetricsOperator">전체 사업자</span> ▾
+              </button>
+              <div class="multi-dropdown-panel" id="panelMetricsOperator">
+                <label class="checkbox-item checkbox-item-all">
+                  <input type="checkbox" id="checkAllMetricsOperator" onchange="toggleAllMetricsCheckboxes('Operator', this)">전체선택
+                </label>
+                <div id="listMetricsOperatorCheckboxes" class="checkbox-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">② 채널</span>
+            <div class="multi-dropdown" id="dropdownMetricsChannel">
+              <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')" disabled>
+                <span id="labelMetricsChannel">전체(사업자 총합)</span> ▾
+              </button>
+              <div class="multi-dropdown-panel" id="panelMetricsChannel">
+                <label class="checkbox-item checkbox-item-all">
+                  <input type="checkbox" id="checkAllMetricsChannel" onchange="toggleAllMetricsCheckboxes('Channel', this)">전체선택
+                </label>
+                <div id="listMetricsChannelCheckboxes" class="checkbox-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="metricsLoadingMessage" style="display:none; padding: 60px 20px; text-align:center; color: var(--text-secondary); font-size: 14px;">경쟁채널 지표 데이터를 불러오는 중입니다…</div>
+      <div id="metricsErrorMessage" style="display:none; padding: 20px; text-align:center; color: var(--accent-red); font-size: 13px;"></div>
+
+      <div id="metricsContentBody" style="display:none; flex-direction: column; gap: 20px;">
+
+        <!-- KPI 5장 -->
+        <section class="metrics-kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title" id="metricsKpiMarketSizeTitle">유료방송 광고시장 규모</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiMarketSizeValue" class="kpi-value">- 억원</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiMarketSizeMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiMarketSizeYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiMarketSizeSub">매체별 광고비 raw 파일</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title" id="metricsKpiShareTitle">유료방송 광고시장 M/S</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiShareValue" class="kpi-value">- %</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiShareMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiShareYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiShareSub">KT ENA(치환값) ÷ 범위 내 시장 총매출</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">CPRP (ENA)</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiCprpValue" class="kpi-value">- 원</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiCprpMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiCprpYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiCprpSub">경쟁채널 지표 현황 파일 (원 단위 환산)</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">ENA 채널 시청률</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiRatingValue" class="kpi-value">- %</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiRatingMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiRatingYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiRatingSub">경쟁채널 지표 현황 파일</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">시청률 1%당 매출</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiRevPerRatingValue" class="kpi-value">- 억원</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiRevPerRatingMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiRevPerRatingYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiRevPerRatingSub">경쟁채널 지표 현황 파일 원본값 그대로</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- M/S 트렌드 (전체 폭, 누적 막대) -->
+        <section class="card-box">
+          <div class="card-box-header">
+            <div class="card-box-title"><h2 id="metricsMsChartTitle">M/S 트렌드 (유료방송)</h2></div>
+          </div>
+          <div class="chart-container" style="height: 320px;">
+            <canvas id="chartMetricsMarketShare"></canvas>
+          </div>
+        </section>
+
+        <!-- 매출 트렌드 + 매출 랭킹 -->
+        <section class="grid-2col grid-zone3">
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>매출 트렌드</h2></div>
+            </div>
+            <div class="chart-container">
+              <canvas id="chartMetricsRevenueTrend"></canvas>
+            </div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>매출 랭킹</h2></div>
+            </div>
+            <div class="chart-container">
+              <canvas id="chartMetricsRevenueRanking"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- CPRP / 채널시청률 / eq-GRPs 미니 트렌드 3종 -->
+        <section class="metrics-mini-grid">
+          <div class="card-box">
+            <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">CPRP 트렌드</h2></div></div>
+            <div class="chart-container"><canvas id="chartMetricsCprpTrend"></canvas></div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">채널시청률 트렌드</h2></div></div>
+            <div class="chart-container"><canvas id="chartMetricsRatingTrend"></canvas></div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">eq-GRPs 트렌드</h2></div></div>
+            <div class="chart-container"><canvas id="chartMetricsGrpTrend"></canvas></div>
+          </div>
+        </section>
+
+        <!-- 지표 상세 테이블 티저 -->
+        <section class="table-container">
+          <div class="table-controls">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <h2 style="font-size: 16px; font-weight: 600;">지표 상세 (일부)</h2>
+              <span class="tag-badge">경쟁채널 지표 현황 파일 · File1 16개 지표</span>
+            </div>
+          </div>
+          <div class="metrics-detail-teaser">
+            <div class="table-wrapper">
+              <table class="data-table" id="metricsDetailTeaserTable">
+                <thead><tr id="metricsDetailTeaserHead"></tr></thead>
+                <tbody id="metricsDetailTeaserBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="metrics-detail-more">
+            <button class="btn btn-primary btn-sm" onclick="openMetricsDetailView()">전체 지표 상세 보기 →</button>
+          </div>
+        </section>
+
+      </div><!-- /metricsContentBody -->
+    </div><!-- /metricsMainView -->
+
+    <div id="metricsDetailView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
+            <h2 class="hero-title">경쟁채널 지표 상세</h2>
+            <span style="font-size: 12px; color: var(--text-tertiary);">지표(16종) → 채널 · 연도별 월 열 · 단위는 지표마다 다르다(%, 원, GRP, 건 등)</span>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">지표별 / 채널별 월간 상세</h2>
+          </div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="metricsDetailTable">
+            <thead><tr id="metricsDetailHeaderRow1"></tr><tr id="metricsDetailHeaderRow2"></tr></thead>
+            <tbody id="metricsDetailTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </div>
   <!-- App modules — 로드 순서가 곧 의존성 (architecture.md 참조) -->
   <script src="js/core/state.js"></script>
   <script src="js/core/auth.js"></script>
   <script src="js/core/theme-system.js"></script>
   <script src="js/core/data-loader.js"></script>
+  <script src="js/core/metrics-data-loader.js"></script>
   <script src="js/core/filters.js"></script>
   <script src="js/features/shared-helpers.js"></script>
   <script src="js/features/pivot-builder.js"></script>
   <script src="js/features/detail-pivots.js"></script>
   <script src="js/features/kpi.js"></script>
+  <script src="js/features/metrics-dashboard.js"></script>
+  <script src="js/features/metrics-ratings.js"></script>
   <script src="js/features/trend-portfolio-channel.js"></script>
   <script src="js/features/mom.js"></script>
   <script src="js/features/agency-comp.js"></script>

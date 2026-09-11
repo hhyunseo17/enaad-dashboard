@@ -490,4 +490,55 @@
 .auth-login-submit:hover { background: var(--primary-blue-hover); transform: translateY(-1px); }
 .auth-login-submit:active { transform: translateY(0); }
 .auth-login-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+/* ============================================================
+   지표 대시보드(경쟁채널 벤치마크) — 헤더 탭 스트립 / 데이터 출처 범례 / 컨트롤바 / KPI 5장 / 미니차트 그리드
+   ============================================================ */
+/* 헤더 탭 스트립. 기존 pills-group/pill-btn과 같은 언어를 쓰되, 탭 전환은 필터가 아니라
+   화면 자체를 바꾸는 동작이라 별도 클래스로 둔다(하나가 필터바 색을 바꾸면 다른 하나까지 따라 움직이면 안 된다). */
+.dashboard-tabs { display: flex; align-items: center; gap: 4px; background: var(--control-bg); padding: 3px; border-radius: var(--radius-md); border: 1px solid var(--control-border); }
+.dashboard-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 14px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; white-space: nowrap; }
+.dashboard-tab:hover { color: var(--primary-blue-on-glow); background: var(--primary-blue-glow); }
+.dashboard-tab.active { background: var(--primary-blue-glow); color: var(--primary-blue-on-glow); font-weight: 600; }
+.dashboard-tab-badge-new { display: inline-flex; align-items: center; padding: 1px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0; border-radius: var(--radius-full); background: var(--accent-red-bg); color: var(--accent-red); }
+
+/* 데이터 출처 범례 한 줄. 자사매출 치환 · 매출/M-S · 시청률류를 각기 다른 파일에서 가져온다는 사실을
+   화면 맨 위에서 한 번 밝혀 둔다 — 숫자를 보다가 "이 값은 어디서 왔지"로 되돌아오지 않게 한다. */
+.metrics-source-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 8px 18px; background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); font-size: 12.5px; color: var(--text-secondary); }
+.metrics-legend-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.metrics-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.metrics-legend-dot.ena { background: var(--primary-blue); }
+.metrics-legend-dot.revenue { background: var(--accent-orange); }
+.metrics-legend-dot.ratings { background: var(--accent-green); }
+
+/* 컨트롤바 — 매출 대시보드의 filter-bar와 같은 표면·여백을 쓰되(같은 화면 언어),
+   sticky를 걸지 않는다(연도/토글 6종이 두 줄이라 필터바보다 훨씬 높고, 고정하면 차트 영역을 크게 잠식한다). */
+.metrics-control-bar { background: var(--surface-filterbar); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
+.metrics-control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; row-gap: 10px; column-gap: 22px; }
+.metrics-control-row + .metrics-control-row { padding-top: 10px; border-top: 1px solid var(--border-default); }
+
+/* KPI 5장 — 기존 .kpi-grid(6장 고정폭)와 별개 클래스. auto-fit으로 두어 5장이 한 줄에 안 들어가면
+   3열 → 2열로 자연스럽게 접힌다(모조건 1줄 고정을 강제하지 않는다 — 6장 그리드와 달리 5는 짝이
+   맞지 않아 억지로 한 줄에 끼우면 카드가 너무 좁아진다). */
+.metrics-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+@media (max-width: 1400px) { .metrics-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .metrics-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+.kpi-source-note { font-size: 11px; color: var(--text-disabled); }
+
+/* CPRP/채널시청률/eq-GRPs 미니 트렌드 3종 — 위 매출 트렌드/랭킹보다 절반 무게로 3열(좁으면 1열). */
+.metrics-mini-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1100px) { .metrics-mini-grid { grid-template-columns: repeat(3, 1fr); } }
+.metrics-mini-grid .card-box { min-height: 220px; }
+.metrics-mini-grid .chart-container { min-height: 180px; }
+
+/* ① 사업자 → ② 채널 캐스케이딩 멀티셀렉트. 기존 .multi-dropdown 패턴을 그대로 쓰되,
+   두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
+.metrics-cascade-btn { min-width: 160px; }
+.metrics-cascade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 상세표 티저 — metricsDetail로 들어가기 전 몇 줄만 보여주는 얕은 표. 흐림 그라데이션으로
+   "더 있다"는 인상을 주고, 실제 이동은 "더 보기" 링크가 맡는다. */
+.metrics-detail-teaser { position: relative; max-height: 260px; overflow: hidden; }
+.metrics-detail-teaser::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--bg-elevated)); pointer-events: none; }
+.metrics-detail-more { display: flex; justify-content: center; padding-top: 12px; }
 .auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }

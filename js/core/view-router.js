@@ -34,22 +34,28 @@
     // VIEW OPENERS & TOGGLERS
     // ==========================================================================
     function hideAllViews() { document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active')); }
+    // family: 'sales'(기존 매출 대시보드 15개 뷰) | 'metrics'(지표 대시보드 2개 뷰).
+    // switchView()가 이 값으로 상단 탭 강조와 filter-bar 표시 여부를 정한다(지표 탭은 자기 컨트롤바를 쓴다).
     const VIEW_CONFIG = {
-      main: { containerId: 'mainDashboardView', title: '광고사업본부 매출 분석 대시보드', showBreadcrumb: false, render: () => { applyFilters(); } },
-      category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 분석', showBreadcrumb: true, render: () => renderCategoryPivotTable() },
-      dept: { containerId: 'deptPivotView', title: '부서별 / 항목별 (대·중분류) 월별 분석', showBreadcrumb: true, render: () => renderDeptPivotTable() },
-      manager: { containerId: 'managerPivotView', title: '부서별 / 담당자별 / 대분류 / 광고주 분석', showBreadcrumb: true, render: () => renderManagerPivotTable() },
-      goalTrendPivot: { containerId: 'goalTrendPivotView', title: '월별 목표 대비 실적 (대분류별)', showBreadcrumb: true, render: () => renderGoalTrendPivotTable() },
-      goalDeptPivot: { containerId: 'goalDeptPivotView', title: '부서별 / 담당자별 목표 대비 실적', showBreadcrumb: true, render: () => renderGoalDeptPivotTable() },
-      channel: { containerId: 'channelPivotView', title: '연도별 / 채널별 통합 분석', showBreadcrumb: true, render: () => { renderChannelPivotTable(); document.getElementById('pivotHeaderTitle').innerText = document.getElementById('headerMainTitle').innerText; } },
-      bucket: { containerId: 'bucketPivotView', title: '월단위 광고주 금액 구간별 분포', showBreadcrumb: true, render: () => renderBucketPivotTable() },
-      advertiser: { containerId: 'advertiserPivotView', title: '광고주별 ➔ 대분류 월별 실적', showBreadcrumb: true, render: () => renderAdvertiserPivotTable() },
-      agency: { containerId: 'agencyPivotView', title: '대행사그룹 ➔ 대행사 ➔ 광고주 월별 실적', showBreadcrumb: true, render: () => renderAgencyPivotTable() },
-      momPivot: { containerId: 'momPivotView', title: '전월대비 광고주 증감 상세', showBreadcrumb: true, render: () => renderMoMPivotTable() },
-      agencyCompPivot: { containerId: 'agencyCompPivotView', title: '주요 대행사 전년·전월 비교 상세', showBreadcrumb: true, render: () => renderAgencyCompPivotTable() },
-      newAdvPivot: { containerId: 'newAdvPivotView', title: '신규 광고주 상세', showBreadcrumb: true, render: () => renderNewAdvPivotTable() },
-      upfrontPivot: { containerId: 'upfrontPivotView', title: '업프론트 실적 현황', showBreadcrumb: true, render: () => renderUpfrontPivotTable() },
-      detailData: { containerId: 'detailDataView', title: '세부데이터 탐색', showBreadcrumb: true, render: () => renderDetailDataPivot() }
+      main: { containerId: 'mainDashboardView', title: '광고사업본부 매출 분석 대시보드', showBreadcrumb: false, family: 'sales', render: () => { applyFilters(); } },
+      category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 분석', showBreadcrumb: true, family: 'sales', render: () => renderCategoryPivotTable() },
+      dept: { containerId: 'deptPivotView', title: '부서별 / 항목별 (대·중분류) 월별 분석', showBreadcrumb: true, family: 'sales', render: () => renderDeptPivotTable() },
+      manager: { containerId: 'managerPivotView', title: '부서별 / 담당자별 / 대분류 / 광고주 분석', showBreadcrumb: true, family: 'sales', render: () => renderManagerPivotTable() },
+      goalTrendPivot: { containerId: 'goalTrendPivotView', title: '월별 목표 대비 실적 (대분류별)', showBreadcrumb: true, family: 'sales', render: () => renderGoalTrendPivotTable() },
+      goalDeptPivot: { containerId: 'goalDeptPivotView', title: '부서별 / 담당자별 목표 대비 실적', showBreadcrumb: true, family: 'sales', render: () => renderGoalDeptPivotTable() },
+      channel: { containerId: 'channelPivotView', title: '연도별 / 채널별 통합 분석', showBreadcrumb: true, family: 'sales', render: () => { renderChannelPivotTable(); document.getElementById('pivotHeaderTitle').innerText = document.getElementById('headerMainTitle').innerText; } },
+      bucket: { containerId: 'bucketPivotView', title: '월단위 광고주 금액 구간별 분포', showBreadcrumb: true, family: 'sales', render: () => renderBucketPivotTable() },
+      advertiser: { containerId: 'advertiserPivotView', title: '광고주별 ➔ 대분류 월별 실적', showBreadcrumb: true, family: 'sales', render: () => renderAdvertiserPivotTable() },
+      agency: { containerId: 'agencyPivotView', title: '대행사그룹 ➔ 대행사 ➔ 광고주 월별 실적', showBreadcrumb: true, family: 'sales', render: () => renderAgencyPivotTable() },
+      momPivot: { containerId: 'momPivotView', title: '전월대비 광고주 증감 상세', showBreadcrumb: true, family: 'sales', render: () => renderMoMPivotTable() },
+      agencyCompPivot: { containerId: 'agencyCompPivotView', title: '주요 대행사 전년·전월 비교 상세', showBreadcrumb: true, family: 'sales', render: () => renderAgencyCompPivotTable() },
+      newAdvPivot: { containerId: 'newAdvPivotView', title: '신규 광고주 상세', showBreadcrumb: true, family: 'sales', render: () => renderNewAdvPivotTable() },
+      upfrontPivot: { containerId: 'upfrontPivotView', title: '업프론트 실적 현황', showBreadcrumb: true, family: 'sales', render: () => renderUpfrontPivotTable() },
+      detailData: { containerId: 'detailDataView', title: '세부데이터 탐색', showBreadcrumb: true, family: 'sales', render: () => renderDetailDataPivot() },
+      // --- 지표 대시보드(경쟁채널 벤치마크) ---------------------------------------
+      // parentView를 명시하지 않는 위 15개는 returnToParentView()가 'main'으로 기본 처리한다(동작 그대로 유지).
+      metricsMain: { containerId: 'metricsMainView', title: '지표 대시보드 (경쟁채널 벤치마크)', showBreadcrumb: false, family: 'metrics', render: () => renderMetricsDashboard() },
+      metricsDetail: { containerId: 'metricsDetailView', title: '경쟁채널 지표 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsDetailPivot() }
     };
 
     function switchView(viewKey, pushHistory) {
@@ -59,6 +65,10 @@
       document.getElementById(cfg.containerId).classList.add('active');
       document.getElementById('breadcrumbBox').style.display = cfg.showBreadcrumb ? 'flex' : 'none';
       document.getElementById('headerMainTitle').innerText = cfg.title;
+      // 지표 탭은 자기 컨트롤바(.metrics-control-bar)를 쓰므로 매출 탭의 filter-bar를 숨긴다.
+      const filterBarSection = document.getElementById('filterBarSection');
+      if (filterBarSection) filterBarSection.style.display = cfg.family === 'metrics' ? 'none' : '';
+      syncDashboardTabs(cfg.family);
       // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
       // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.
       setChartAnimForViewEntry(true);
@@ -71,6 +81,24 @@
     }
 
     function returnToMainDashboard() { switchView('main'); }
+    // breadcrumb의 "⬅" 버튼은 이제 이 함수를 부른다(하드코딩된 returnToMainDashboard() 대신).
+    // parentView 미지정 뷰(기존 11개 매출 드릴다운)는 'main'으로 기본 처리되어 동작이 예전과 같다.
+    // returnToMainDashboard() 자신은 .brand-logo가 여전히 직접 호출하므로 그대로 남겨 둔다.
+    function returnToParentView() {
+      const cfg = VIEW_CONFIG[currentView];
+      switchView((cfg && cfg.parentView) || 'main');
+    }
+    // 헤더 탭 스트립("매출 대시보드"/"지표 대시보드") 활성 표시. family 기준으로 켠다 —
+    // 매출 쪽 15개 뷰 중 어디에 있든 "매출 대시보드" 탭이, metricsMain/metricsDetail 어디든
+    // "지표 대시보드" 탭이 켜진다.
+    function syncDashboardTabs(family) {
+      const salesTab = document.getElementById('dashboardTabSales');
+      const metricsTab = document.getElementById('dashboardTabMetrics');
+      if (salesTab) salesTab.classList.toggle('active', family !== 'metrics');
+      if (metricsTab) metricsTab.classList.toggle('active', family === 'metrics');
+    }
+    function openMetricsMainView() { switchView('metricsMain'); }
+    function openMetricsDetailView() { switchView('metricsDetail'); }
     function openCategoryPivotView() { switchView('category'); }
     function openDeptPivotView() { switchView('dept'); }
     function openManagerPivotView() { switchView('manager'); }

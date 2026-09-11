@@ -247,6 +247,22 @@
     // 목록에 있든 없든 이 부서들은 항상 맨 뒤(이 순서대로)
     const customDeptTailOrder = ['광고전략팀', '광고사업본부'];
 
+    // ============================================================
+    // 지표 대시보드(경쟁채널 벤치마크) 전용 UI 상태 — js/features/metrics-dashboard*.js가 사용.
+    // metricsBasisMode/metricsRevenueData 등 데이터 계약 관련 상태는 js/core/metrics-data-loader.js에
+    // 있다(그 파일의 몫 — 렌더는 하지 않는 경계). 여기 있는 것은 순수 UI 선택 상태다.
+    // 메인 매출 대시보드의 selectedYears/selectedMonths/revenueBasisMode와 절대 공유하지 않는다
+    // (plan 확정사항 2 — 매출 탭과 상태가 꼬이면 안 된다).
+    // ============================================================
+    let metricsSelectedYear = null;        // 단일 연도 선택. null이면 첫 렌더에서 데이터의 최신 연도로 채운다.
+    let metricsIndexMode = '전체';          // File1 INDEX 컬럼: '전체'(일평균) | '프라임타임'
+    let metricsScopeMode = 'payTv';        // '전체'(지상파+유료방송) | 'payTv'(유료방송, 기본) | 'cable'(케이블)
+    let metricsCompareUnit = 'operator';   // 'operator'(① 사업자 비교, 기본) | 'channel'(② 대표채널 비교)
+    let metricsSelectedOperators = [];     // ① 선택된 채널그룹(사업자) 목록 — 렌더 시 비어 있으면 기본값(KT ENA+매출상위)으로 채운다.
+    let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(대표채널 비교 모드, ①에서 캐스케이딩).
+    let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태
+    let expandedMetricsDetailYearColumns = {}; // metricsDetail 상세표: 연도 열 펼침 상태
+
     // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라
     // 나머지 팔레트(Apple HIG 계보)와 회색·초록의 색조가 미세하게 어긋났고 — 예를 들어
     // 초록이 #34C759(135도)와 #22C55E(142도)로 공존했다 — 정성 구분이라는 같은 역할에
