@@ -59,10 +59,15 @@
     function fetchMetricsDataHttp() {
       if (metricsDataFetchPromise) return metricsDataFetchPromise;
 
+      // 이 두 파일은 /api/* 프록시와 마찬가지로 Supabase Auth JWT를 요구한다(현재는 이메일
+      // 허용목록까지 검사 — shared/supabase-proxy.mjs의 requireMetricsAccess() 참고, 롤아웃 초기라
+      // 소수에게만 공개). getAuthorizationHeader()는 js/core/auth.js가 정의한다(로드 순서상 이 파일보다 앞).
       const fetchWorkbook = (url) => {
         const cacheBustUrl = url + '?t=' + Date.now();
-        return fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include' })
-          .then(res => {
+        return getAuthorizationHeader().then(authHeader =>
+          fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include', headers: authHeader ? { Authorization: authHeader } : {} })
+        ).then(res => {
+            if (res.status === 403) throw new Error('경쟁채널 지표 열람 권한이 없습니다.');
             if (!res.ok) throw new Error(`HTTP Error ${res.status} (${url})`);
             if (res.url && res.url.includes('cloudflareaccess.com')) throw new Error('Cloudflare Access authentication required');
             return res.arrayBuffer();

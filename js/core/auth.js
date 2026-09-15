@@ -25,6 +25,19 @@ async function getAuthorizationHeader() {
   return data.session ? `Bearer ${data.session.access_token}` : null;
 }
 
+// 지표 대시보드(경쟁채널 벤치마크) 탭 노출 제한 — 롤아웃 초기라 소수에게만 공개.
+// 여기는 UI만 숨긴다(콘솔로 우회 가능) — 실제 차단은 shared/supabase-proxy.mjs의
+// requireMetricsAccess()(서버 쪽 403)다. 이 목록이 그 함수의 기본값/환경변수(METRICS_ALLOWED_EMAILS)와
+// 어긋나면 "탭은 보이는데 데이터는 403" 또는 "탭은 없는데 실제로는 허용" 같은 불일치가 생기니
+// 사람을 추가/제거할 때 두 곳을 같이 고친다.
+const METRICS_ALLOWED_EMAILS = ['hyunseo@ktena.co.kr'];
+
+function applyMetricsAccessGate(email) {
+  const allowed = !!email && METRICS_ALLOWED_EMAILS.includes(email.toLowerCase());
+  const tabBtn = document.getElementById('dashboardTabMetrics');
+  if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
+}
+
 function renderLoginForm() {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -92,6 +105,8 @@ async function ensureAuthenticated() {
   if (!freshData.session) {
     await renderLoginForm();
   }
+  const { data: finalData } = await supabaseAuthClient.auth.getSession();
+  applyMetricsAccessGate(finalData.session && finalData.session.user && finalData.session.user.email);
   const headerStatus = document.querySelector('.header-status');
   if (headerStatus && !document.getElementById('authLogoutBtn')) {
     const logoutBtn = document.createElement('button');

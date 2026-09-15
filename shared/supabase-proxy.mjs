@@ -233,6 +233,28 @@ async function requireAuth(env, request) {
   return null;
 }
 
+function forbiddenResponse() {
+  return new Response(JSON.stringify({ error: '접근 권한이 없습니다.' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+  });
+}
+
+// 지표 대시보드(경쟁채널 벤치마크) 전용 게이트 — 로그인 여부뿐 아니라 이메일 허용목록까지 검사한다.
+// 롤아웃 초기라 소수(현재 1인)에게만 공개하기 위함(다른 /api/* 엔드포인트는 로그인만 하면 전원 접근 가능,
+// 이 기능만 예외). Cloudflare Pages 환경변수 METRICS_ALLOWED_EMAILS(콤마 구분)로 재배포 없이 갱신 가능 —
+// 미설정 시 기본값 하나만 허용. 대시보드 쪽 탭 숨김(js/core/auth.js의 METRICS_ALLOWED_EMAILS)과
+// 같은 목록을 유지해야 한다 — 여기는 실제 차단(403), 거기는 UI만 숨김(우회 가능, 진짜 방어선은 여기).
+const METRICS_ALLOWED_EMAILS_DEFAULT = 'hyunseo@ktena.co.kr';
+export async function requireMetricsAccess(env, request) {
+  const user = await verifySupabaseJwt(env, request);
+  if (!user) return unauthorizedResponse();
+  const allowlist = (env.METRICS_ALLOWED_EMAILS || METRICS_ALLOWED_EMAILS_DEFAULT)
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (!user.email || !allowlist.includes(user.email.toLowerCase())) return forbiddenResponse();
+  return null;
+}
+
 // ------------------------------------------------------------
 // 엣지 캐시 — /api/sales의 왕복을 없애기 위한 것.
 //

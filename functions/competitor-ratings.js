@@ -1,5 +1,11 @@
+import { requireMetricsAccess } from '../shared/supabase-proxy.mjs';
+
+// 지표 대시보드는 롤아웃 초기라 이메일 허용목록으로 제한한다(requireMetricsAccess 참고,
+// 다른 addata.js/functions/api/*.js는 로그인만 하면 전원 접근 가능 — 이 두 파일만 예외).
 export async function onRequest(context) {
-  const { env } = context;
+  const { env, request } = context;
+  const authError = await requireMetricsAccess(env, request);
+  if (authError) return authError;
   try {
     if (!env.DASHBOARD_BUCKET) {
       return new Response('R2 바인딩이 없습니다: DASHBOARD_BUCKET', { status: 500 });
