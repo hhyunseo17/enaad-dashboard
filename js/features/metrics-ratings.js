@@ -93,15 +93,24 @@
         return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: ch === ENA_REPRESENTATIVE_CHANNEL ? 3 : 2, pointRadius: 2.5, spanGaps: true };
       });
 
+      // ddValueAxis()의 기본 grace('15%')를 maxTicksLimit이 낮은 축(4)에 그대로 쓰면 Chart.js가
+      // "예쁜 눈금 간격"을 고르는 과정에서 실제 데이터 최댓값보다 훨씬 위(예: CPRP 실제 최고 420만원인데
+      // 축은 600만원까지)로 튀는 경우가 있었다(사용자 지적, 2026-09-15). grace를 끄고 실제로 그려지는
+      // 값들의 최댓값에서 10%만 여유를 둔 suggestedMax를 직접 계산해 넘긴다.
+      const allValues = datasets.flatMap(ds => ds.data).filter(v => v !== null && v !== undefined && isFinite(v));
+      const maxVal = allValues.length ? Math.max(...allValues) : 0;
+
       const ctx = canvas.getContext('2d');
       chartInstances[chartKey] = new Chart(ctx, {
         type: 'line', data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 10, weight: FW() }, boxWidth: 10 } },
+          // 범례·축 폰트 크기는 "매출 트렌드"(renderMetricsRevenueTrendChart)와 같은 수준으로 맞춘다
+          // (2026-09-15, 사용자 요청 — 카드 크기를 이미 매출 트렌드와 맞췄으니 글자 크기도 맞아야 함).
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
-          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 10, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 4, padding: 4, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ grace: 0, suggestedMax: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
         }
       });
     }
