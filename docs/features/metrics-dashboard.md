@@ -102,6 +102,12 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 - **사람 추가/제거 절차**: ① Cloudflare Pages 대시보드 → 환경변수 `METRICS_ALLOWED_EMAILS`에 이메일 추가(콤마 구분, Production/Preview 둘 다) → ② `js/core/auth.js`의 `METRICS_ALLOWED_EMAILS` 배열도 같은 목록으로 수정 후 재배포. 팀 전체 공개로 전환할 때는 이 절 전체(서버 체크 호출 + 클라이언트 숨김 로직)를 제거하면 된다 — 다른 `/api/*`와 동일하게 "로그인만 하면 접근 가능"으로 돌아간다.
 - 클라이언트 fetch(`js/core/metrics-data-loader.js`의 `fetchMetricsDataHttp()`)는 `getAuthorizationHeader()`(auth.js)로 JWT를 `Authorization: Bearer` 헤더에 실어 보낸다 — 이게 없으면 서버 쪽 `requireMetricsAccess()`가 401로 막는다.
 
+## 롤백 스위치
+`js/core/state.js`의 `METRICS_DASHBOARD_ENABLED`(기본 `true`) — `DATA_SOURCE_MODE`와 같은 패턴. 신규 기능 특성상 배포 후 문제(렌더 오류, 잘못된 수치 등)가 생기면 **이 한 줄을 `false`로 바꾸는 배포만으로 즉시 롤백**할 수 있다(코드/커밋을 되돌릴 필요 없음):
+- `js/core/auth.js`의 `applyMetricsAccessGate()`가 이메일 허용목록과 별개로 이 값을 확인 — `false`면 허용목록에 있는 사람에게도 헤더 탭을 숨긴다.
+- `js/core/view-router.js`의 `switchView()`가 `family === 'metrics'`인 뷰(= `metricsMain`/`metricsDetail`) 진입 자체를 막고 `main`으로 돌려보낸다 — 탭이 숨겨진 상태에서도 해시(`#metricsMain`)로 직접 들어오는 경우까지 막는 용도.
+- 어느 쪽도 실제 데이터 접근(File1/File2)을 막지는 않는다 — 그건 여전히 서버 쪽 `requireMetricsAccess()`(위 절) 몫이다. 이 스위치는 어디까지나 **화면(UI) 롤백**용이고, 데이터 자체를 잠그려면 이메일 허용목록을 비우거나 `METRICS_ALLOWED_EMAILS` 환경변수를 빈 값으로 바꿔야 한다.
+
 ## 실 샘플로 검증 완료 (2026-09-15)
 `(IMC 실적기준) ENA 경쟁채널 지표 현황 (260910 기준).xlsx` / `(IMC 실적기준) 매체별 광고비 raw (8월 마감, 9월 스타트).xlsx` 두 실 파일로 프로덕션 코드를 직접 돌려 검증(Node에 `xlsx` 패키지로 실행, `scripts/etl`의 기존 관례와 동일한 방식) — 아래 항목은 전부 **버그로 확인되어 수정 완료**됐다. 재발 방지용으로 남겨둔다.
 

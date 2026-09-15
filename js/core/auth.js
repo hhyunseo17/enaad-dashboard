@@ -31,11 +31,16 @@ async function getAuthorizationHeader() {
 // 어긋나면 "탭은 보이는데 데이터는 403" 또는 "탭은 없는데 실제로는 허용" 같은 불일치가 생기니
 // 사람을 추가/제거할 때 두 곳을 같이 고친다.
 const METRICS_ALLOWED_EMAILS = ['hyunseo@ktena.co.kr'];
+// switchView()(view-router.js)가 metricsMain/metricsDetail 진입을 막을지 동기적으로 확인할 때 쓴다 —
+// Supabase 세션 조회는 비동기라 그때마다 다시 물을 수 없어 ensureAuthenticated() 시점에 한 번 캐싱.
+let metricsAccessAllowed = false;
 
 function applyMetricsAccessGate(email) {
-  const allowed = !!email && METRICS_ALLOWED_EMAILS.includes(email.toLowerCase());
+  // METRICS_DASHBOARD_ENABLED(state.js)는 롤백 스위치 — 이메일 허용목록과 별개로, false면
+  // 누구에게도(허용목록에 있어도) 탭을 보여주지 않는다.
+  metricsAccessAllowed = METRICS_DASHBOARD_ENABLED && !!email && METRICS_ALLOWED_EMAILS.includes(email.toLowerCase());
   const tabBtn = document.getElementById('dashboardTabMetrics');
-  if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
+  if (tabBtn) tabBtn.style.display = metricsAccessAllowed ? '' : 'none';
 }
 
 function renderLoginForm() {

@@ -247,6 +247,12 @@
     // 목록에 있든 없든 이 부서들은 항상 맨 뒤(이 순서대로)
     const customDeptTailOrder = ['광고전략팀', '광고사업본부'];
 
+    // 지표 대시보드 롤백 스위치 — DATA_SOURCE_MODE(위 9번째 줄)와 같은 패턴. 신규 기능이라
+    // 문제 생기면(렌더 오류, 잘못된 수치 등) 이 한 줄을 false로 바꾸는 배포만으로 즉시 롤백 —
+    // 코드/커밋을 되돌릴 필요 없다. false면 헤더 탭이 숨겨지고(js/core/auth.js, 이메일 허용목록과
+    // 별개 조건), metricsMain/metricsDetail 진입 자체가 막힌다(js/core/view-router.js의 switchView()).
+    const METRICS_DASHBOARD_ENABLED = true;
+
     // ============================================================
     // 지표 대시보드(경쟁채널 벤치마크) 전용 UI 상태 — js/features/metrics-dashboard*.js가 사용.
     // metricsBasisMode/metricsRevenueData 등 데이터 계약 관련 상태는 js/core/metrics-data-loader.js에

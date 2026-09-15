@@ -61,6 +61,10 @@
     function switchView(viewKey, pushHistory) {
       if (pushHistory === undefined) pushHistory = true;
       const cfg = VIEW_CONFIG[viewKey]; if (!cfg) return;
+      // 롤백 스위치(METRICS_DASHBOARD_ENABLED, state.js) 꺼짐 또는 이메일 허용목록 밖이면 해시로
+      // 직접 진입해도 못 들어오게 막는다 — 헤더 탭 숨김(js/core/auth.js)은 콘솔로 우회 가능해서
+      // 여기가 실제 방어선이다(단, 진짜 방어선은 파일 자체를 막는 서버 쪽 403 — requireMetricsAccess).
+      if (cfg.family === 'metrics' && !metricsAccessAllowed) { switchView('main', pushHistory); return; }
       currentView = viewKey; hideAllViews();
       document.getElementById(cfg.containerId).classList.add('active');
       document.getElementById('breadcrumbBox').style.display = cfg.showBreadcrumb ? 'flex' : 'none';
