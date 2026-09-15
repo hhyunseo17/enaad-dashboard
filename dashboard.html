@@ -1237,17 +1237,12 @@
       </section>
 
       <!-- 지표 대시보드 전용 컨트롤바. 메인 매출 대시보드의 filter-bar와 독립 — 자기만의
-           취급고/회계·연도·일평균/프라임타임·범위·비교단위·①사업자→②채널 토글을 갖는다. -->
+           연도·일평균/프라임타임·범위·비교단위·①사업자→②채널 토글을 갖는다. 취급고/회계(매출기준)는
+           이 탭에 별도 토글을 두지 않는다 — KT ENA/ENA 채널 매출은 "매출 대시보드에 있는 숫자를
+           그대로 가져와 타사와 더하는" 개념이라, 메인 대시보드의 revenueBasisMode(state.js)를 그대로
+           따른다(2026-09-15, 사용자 요청 — 예전엔 이 탭 전용 토글을 따로 뒀었으나, 두 화면의 매출기준이
+           서로 어긋날 수 있어 혼란을 줄 수 있었다). 바꾸려면 매출 대시보드 탭에서 바꾸면 된다. -->
       <section class="metrics-control-bar">
-        <div class="metrics-control-row">
-          <div class="filter-group">
-            <span class="filter-label">매출 기준</span>
-            <div class="revenue-basis-toggle">
-              <button class="revenue-basis-btn active" id="btnMetricsBasisPerformance" onclick="setMetricsBasisMode('performance')">취급고</button>
-              <button class="revenue-basis-btn" id="btnMetricsBasisAccounting" onclick="setMetricsBasisMode('accounting')">회계</button>
-            </div>
-          </div>
-        </div>
         <div class="metrics-control-row">
           <div class="filter-group">
             <span class="filter-label">연도</span>

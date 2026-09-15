@@ -45,9 +45,10 @@
     let metricsRatingsData = [];         // File1 파싱 결과(long-format), 01/02.광고매출 행은 제외
     let metricsDataLoaded = false;       // fetchMetricsDataHttp() 성공 여부
     let metricsDataFetchPromise = null;  // 진행 중이거나 완료된 fetch를 캐시 — 지연 로딩을 호출부가 여러 번 트리거해도 1회만 fetch
-    // 이 탭 전용 취급고/회계 토글 기본값. 메인 대시보드의 revenueBasisMode(state.js)와 절대 공유하지 않는다
-    // (plan 확정사항 2) — UI가 토글을 바꿀 때마다 이 값을 갱신하고 rebuildMetricsSubstitution(newMode)를 부른다.
-    let metricsBasisMode = 'performance';
+    // 취급고/회계(매출기준)는 이 탭 전용 토글을 두지 않는다 — "KT ENA/ENA 채널 매출은 매출
+    // 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는 개념"(2026-09-15, 사용자 요청)이라, 항상
+    // 메인 대시보드의 전역 revenueBasisMode(state.js)를 그대로 따른다. (예전엔 이 탭 전용
+    // metricsBasisMode를 따로 뒀었으나 두 화면의 매출기준이 서로 어긋날 수 있어 없앴다.)
 
     const METRICS_RATINGS_URL = '/api/competitor-ratings';
     const METRICS_REVENUE_URL = '/api/competitor-revenue';
@@ -90,7 +91,7 @@
           channelGroup: r.channel_group, year: r.year, month: r.month, revenue: Number(r.revenue)
         }));
         injectOperatorRevenueFromRatings();
-        rebuildMetricsSubstitution(metricsBasisMode);
+        rebuildMetricsSubstitution();
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
       }).catch(err => {
@@ -106,21 +107,22 @@
     // ------------------------------------------------------------
     // computeEnaMonthlyRevenue() — 메인 매출 데이터셋(rawData)에서 ENA 자체 월매출 재계산
     // ------------------------------------------------------------
-    // js/features/kpi.js의 matchesCurrentBasis(kpi.js:114-116)와 같은 원칙을 이 탭 전용 basisMode
-    // 인자로 로컬 복제한 것. 전역 matchesCurrentBasis는 건드리지 않는다(그 함수는 전역
-    // revenueBasisMode를 읽는데, 이 탭은 자기만의 토글을 쓰므로 인자로 받아야 한다).
-    function matchesMetricsBasis(r, basisMode) {
-      return basisMode === 'accounting' || r.revenueBasis === '실적';
+    // js/features/kpi.js의 matchesCurrentBasis(kpi.js:114-116)와 같은 규칙(취급고=실적만/회계=
+    // 실적+회계조정)을 이 파일 자체 함수로 복제한 것 — 전역 revenueBasisMode를 그대로 읽는 건
+    // 똑같지만, core(metrics-data-loader.js)가 features(kpi.js)의 함수를 直접 호출하면 레이어가
+    // 거꾸로 의존하게 돼(스크립트 로드 순서 관례 위반) 직접 호출하지 않고 복제해 둔다.
+    function matchesMetricsBasis(r) {
+      return revenueBasisMode === 'accounting' || r.revenueBasis === '실적';
     }
 
     // channelFilter 생략 시 KT_ENA_FAMILY_CHANNELS 전체 합(= File2 "채널그룹=KT ENA" 치환용),
     // channelFilter 지정 시(예: 'ENA') 그 단일 rawData.channel 값만 합산(= File2 대표채널 'ENA' 치환용).
-    function computeEnaMonthlyRevenue(year, month, basisMode, channelFilter) {
+    function computeEnaMonthlyRevenue(year, month, channelFilter) {
       if (!rawData || rawData.length === 0) return 0;
       const channels = channelFilter ? [channelFilter] : KT_ENA_FAMILY_CHANNELS;
       return rawData
         .filter(r => r.bonbuRevenueStatus === '본부매출'
-          && matchesMetricsBasis(r, basisMode)
+          && matchesMetricsBasis(r)
           && r.year === year && r.month === month
           && channels.includes(r.channel))
         .reduce((sum, r) => sum + r.amount, 0);
@@ -189,17 +191,19 @@
     //    확인하지 못했다. 만약 원본에 그런 행이 없다면(개별 세부채널 행만 있다면) 아래에서
     //    월별로 부족분을 합성해 추가한다 — 어느 쪽이든 사업자 비교 모드가 항상 채널그룹 합계
     //    행 하나를 찾을 수 있게 하기 위함.
-    // ② 개별 "채널='ENA'" 행 — 대표채널 비교용. computeEnaMonthlyRevenue(y, m, basisMode, 'ENA')로 교체.
+    // ② 개별 "채널='ENA'" 행 — 대표채널 비교용. computeEnaMonthlyRevenue(y, m, 'ENA')로 교체.
     // KT ENA 그룹의 나머지 세부채널 행(ONCE/OLIFE/CHING/ONT/헬스메디TV/ENA SPORTS/기타광고매출 등)은
     // 원본 그대로 둔다 — plan에 따르면 세부 채널별 대응은 불필요하고 그룹 단위 치환만 하면 된다.
-    function rebuildMetricsSubstitution(basisMode) {
+    // basisMode 인자 없음 — computeEnaMonthlyRevenue()가 전역 revenueBasisMode를 직접 읽으므로
+    // (위 "취급고/회계는 메인 대시보드를 그대로 따른다" 참고) 호출부가 값을 넘길 필요가 없다.
+    function rebuildMetricsSubstitution() {
       if (!Array.isArray(metricsRevenueDataOriginal) || metricsRevenueDataOriginal.length === 0) {
         metricsRevenueData = [];
         return;
       }
 
       const ymKey = (y, m) => y + '-' + m;
-      const totalCache = {};   // ① 그룹 합계 캐시 (연-월 단위, basisMode 고정된 이번 호출 범위 내에서만 유효)
+      const totalCache = {};   // ① 그룹 합계 캐시 (연-월 단위, 이번 호출 범위 내에서만 유효)
       const channelCache = {}; // ② 대표채널 ENA 캐시
 
       metricsRevenueData = metricsRevenueDataOriginal.map(row => {
@@ -208,12 +212,12 @@
         const key = ymKey(row.year, row.month);
 
         if (row.channel === row.channelGroup) { // ① 그룹 자기참조 합계 행
-          if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(row.year, row.month, basisMode);
+          if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(row.year, row.month);
           return Object.assign({}, row, { revenue: totalCache[key] });
         }
 
         if (row.channel === ENA_REPRESENTATIVE_CHANNEL) { // ② 대표채널 ENA 개별 행
-          if (!(key in channelCache)) channelCache[key] = computeEnaMonthlyRevenue(row.year, row.month, basisMode, ENA_REPRESENTATIVE_CHANNEL);
+          if (!(key in channelCache)) channelCache[key] = computeEnaMonthlyRevenue(row.year, row.month, ENA_REPRESENTATIVE_CHANNEL);
           return Object.assign({}, row, { revenue: channelCache[key] });
         }
 
@@ -237,7 +241,7 @@
       allKtEnaKeys.forEach(key => {
         if (presentTotalKeys.has(key)) return;
         const sample = sampleByKey[key];
-        if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(sample.year, sample.month, basisMode);
+        if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(sample.year, sample.month);
         metricsRevenueData.push({
           channel: ENA_CHANNEL_GROUP, operatorMajor: sample.operatorMajor, operatorMid: sample.operatorMid,
           channelGroup: ENA_CHANNEL_GROUP, year: sample.year, month: sample.month, revenue: totalCache[key]

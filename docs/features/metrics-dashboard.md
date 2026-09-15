@@ -22,20 +22,23 @@
 **지연 로딩**: 부팅 시(`init.js`)가 아니라 "지표 대시보드" 탭을 처음 열 때 `fetchMetricsDataHttp()`가 1회 호출된다(`renderMetricsDashboard()`가 매번 부르지만 진행 중/완료된 fetch가 있으면 그 프라미스를 그대로 돌려주므로 idempotent). `rawData`(메인 매출)가 아직 없는 극단적인 경우엔 "매출 데이터 로딩 중" 메시지를 띄우고 1.5초 후 재시도한다.
 
 ## ENA 자사매출 치환 — "왜 파싱 시점에 하는가"
-File2·File1 어느 쪽도 ENA 자신의 수치는 외부 조사기관 추정치라 내부 매출보다 정확도가 떨어진다. 그래서 **파싱 직후, 렌더 이전에** `rebuildMetricsSubstitution(basisMode)`가 File2의 KT ENA 관련 행만 `computeEnaMonthlyRevenue()` 결과로 덮어쓴다:
+File2·File1 어느 쪽도 ENA 자신의 수치는 외부 조사기관 추정치라 내부 매출보다 정확도가 떨어진다. 그래서 **파싱 직후, 렌더 이전에** `rebuildMetricsSubstitution()`가 File2의 KT ENA 관련 행만 `computeEnaMonthlyRevenue()` 결과로 덮어쓴다:
 - `metricsRevenueDataOriginal` — 파싱 원본. 절대 손대지 않는다(캐시).
 - `metricsRevenueData` — 파생본. KPI·차트·피벗이 전부 **이 배열 하나만** 읽는다(소스가 하나로 통일).
 
 치환 대상은 두 종류:
-1. **채널그룹 `KT ENA` 자기참조 총합 행**(`channel === channelGroup`) — 사업자 비교용. `computeEnaMonthlyRevenue(y, m, basisMode)`(채널필터 없음, `KT_ENA_FAMILY_CHANNELS` 10개 전체 합).
-2. **개별 채널 `ENA` 행** — 대표채널 비교용. `computeEnaMonthlyRevenue(y, m, basisMode, 'ENA')`.
+1. **채널그룹 `KT ENA` 자기참조 총합 행**(`channel === channelGroup`) — 사업자 비교용. `computeEnaMonthlyRevenue(y, m)`(채널필터 없음, `KT_ENA_FAMILY_CHANNELS` 10개 전체 합).
+2. **개별 채널 `ENA` 행** — 대표채널 비교용. `computeEnaMonthlyRevenue(y, m, 'ENA')`.
 
 렌더 시점에 치환하지 않는 이유: 취급고/회계 토글마다, 또는 KPI·5개 차트·상세표마다 매번 다시 계산하면 (a) 토글 타이밍에 따라 화면 조각마다 다른 값을 잠깐 보여줄 수 있고 (b) 계산 로직이 여러 곳에 흩어져 한쪽만 고치는 버그가 나기 쉽다. 토글이 바뀔 때 한 번만 `metricsRevenueData`를 다시 만들면 그 뒤로는 전부 단순 읽기다.
 
 **⚠ 검증 불가 지점**: File2 `변환용` 시트가 실제로 채널그룹 자기참조 총합 행을 포함하는지 샘플 파일이 없어 확인하지 못했다. `rebuildMetricsSubstitution()`은 그런 행이 없으면 월별로 합성해서 추가하므로 KT ENA는 항상 안전하지만, **경쟁사 채널그룹은 이 보장이 없다** — `metricsGroupRevenueMap()`(metrics-dashboard.js)이 자기참조 행이 있으면 그것을, 없으면 그 그룹의 세부 채널 합을 쓰는 폴백을 갖고 있다(더블카운트 방지). 실 파일로 반드시 교차검증할 것.
 
-## 자사 매출기준 토글 — 메인과 독립
-`metricsBasisMode`(`metrics-data-loader.js`, 기본 `'performance'`)는 메인 대시보드의 전역 `revenueBasisMode`와 **완전히 분리**돼 있다. `setMetricsBasisMode(mode)`(metrics-dashboard.js)가 바뀔 때마다 `rebuildMetricsSubstitution(mode)`를 불러 KT ENA 부분만 다시 계산한다. `matchesMetricsBasis(r, basisMode)`(metrics-data-loader.js)는 `kpi.js`의 `matchesCurrentBasis()`와 같은 규칙(취급고=실적만/회계=실적+회계조정)을 이 탭 전용 인자로 복제한 것 — 전역 함수를 건드리지 않아 기존 4개 호출부에 영향이 없다.
+## 자사 매출기준 — 메인 대시보드를 그대로 따름 (2026-09-15 변경)
+원래 plan은 이 탭 전용 `metricsBasisMode` 토글(메인의 전역 `revenueBasisMode`와 완전 분리)이었으나, **사용자 요청으로 없앴다** — "KT ENA/ENA 채널 매출은 매출 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는 개념"이라, 별도 토글을 두면 두 화면의 매출기준이 서로 어긋나 혼란을 줄 수 있었다. 지금은:
+- 이 탭 컨트롤바에 취급고/회계 토글 자체가 없다(row 삭제) — 바꾸려면 매출 대시보드 탭에서 바꾸면 이 탭도 그대로 따라간다.
+- `computeEnaMonthlyRevenue(year, month, channelFilter?)`(`metrics-data-loader.js`)와 그 안의 `matchesMetricsBasis(r)`가 전역 `revenueBasisMode`(state.js)를 직접 읽는다. `matchesMetricsBasis()`는 그래도 `kpi.js`의 `matchesCurrentBasis()`와 같은 규칙(취급고=실적만/회계=실적+회계조정)을 복제한 별도 함수로 유지한다 — core(`metrics-data-loader.js`)가 features(`kpi.js`)의 함수를 직접 호출하면 레이어가 거꾸로 의존하게 되기 때문(스크립트 로드 순서 관례 위반).
+- `rebuildMetricsSubstitution()`(인자 없음)이 `renderMetricsDashboard()`의 매 렌더마다 다시 호출된다 — 사용자가 매출 대시보드 탭에서 `revenueBasisMode`를 바꾸고 이 탭으로 돌아와도(또는 이 탭에서 다른 컨트롤을 조작해 재렌더가 돌 때마다) 항상 최신 값 기준으로 KT ENA 부분이 재계산된다.
 
 ## M/S(시장점유율) 공식
 ```
@@ -86,8 +89,8 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 |---|---|---|
 | `fetchMetricsDataHttp()` | metrics-data-loader.js | `/api/competitor-ratings`·`/api/competitor-revenue` 병렬 fetch(idempotent 캐시) + snake_case→camelCase 매핑 |
 | `parseCompetitorRatingsWorkbook()` / `parseCompetitorRevenueWorkbook()` | scripts/etl/load-competitor-data.mjs | SheetJS 세부사항이 갇힌 단일 지점, wide→long 변환(ETL 쪽으로 이전, 클라이언트엔 더 이상 없음) |
-| `computeEnaMonthlyRevenue(y, m, basisMode, channelFilter?)` | metrics-data-loader.js | rawData에서 ENA 계열 월매출 재계산 |
-| `rebuildMetricsSubstitution(basisMode)` | metrics-data-loader.js | `metricsRevenueDataOriginal` → `metricsRevenueData` 파생(KT ENA만 치환) |
+| `computeEnaMonthlyRevenue(y, m, channelFilter?)` | metrics-data-loader.js | rawData에서 ENA 계열 월매출 재계산(전역 revenueBasisMode 직접 읽음) |
+| `rebuildMetricsSubstitution()` | metrics-data-loader.js | `metricsRevenueDataOriginal` → `metricsRevenueData` 파생(KT ENA만 치환), 매 렌더마다 재호출 |
 | `metricsGroupRevenueMap(period, scopeMode)` | metrics-dashboard.js | 채널그룹별 월 매출 총합(자기참조 행 우선, 없으면 세부채널 합) |
 | `computeEnaPayTvMarketShare(y, m, scopeMode)` | metrics-dashboard.js | M/S 공식 그대로(plan에 명시된 함수명) |
 | `metricsEnsureDefaultSelections()` | metrics-dashboard.js | 최초 렌더 시 연도/①사업자 기본값 채움(사용자가 고른 뒤로는 건드리지 않음) |
@@ -144,8 +147,9 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
     - **조사 중 발견(데이터 자체의 특성, 버그 아님)**: 이 조사 과정에서 File2(`매체별 광고비 raw`)가 "8월 마감"이라 **9월 행이 채널 단위로 단 하나도 없다**는 걸 Supabase 쿼리로 확인했다 — 9월 수치는 전부 File2가 아니라 File1의 "01.방송사업자 광고매출"(사업자 매출의 진짜 출처, 위 절 참고) 추정치에서 온 것이다. File1 자체도 "260910 기준"(9월 10일자) 리포트이므로 9월 값은 완결된 월 실적이 아니라 **월중 추정치**일 가능성이 높다 — 설계상 의도된 동작(File2가 못 따라간 최신월을 File1 사업자 총계로 메운다)이지만, 월초·월중에 조회하면 그 달 수치가 나중에 리포트가 갱신되며 바뀔 수 있다는 점은 사용자가 알아둘 필요가 있다.
 17. **CPRP/채널시청률/eq-GRPs 미니 트렌드 3종을 4종으로 확장 — 12."광고주 수(일반+인포 전체)" 추가** — Supabase에서 `competitor_ratings`의 `metric_code`/`metric_label` 목록을 직접 조회해 확인: 12번 라벨은 "광고주 수 (일반+인포 전체)"이고 **INDEX가 '전체' 하나뿐**이다(11.시청률1%당매출과 같은 성격 — 일평균/프라임타임 구분 자체가 없음). 그래서 `renderMetricsMiniTrendChart()`가 전역 `metricsIndexMode`를 함수 안에서 직접 읽던 것을 **인자로 받도록 변경**했다 — 안 그러면 위쪽 토글이 "프라임타임"일 때 광고주수 차트가 조용히 빈 화면이 된다(File1에 그 INDEX 자체가 없어서). CPRP·채널시청률·eq-GRPs는 그대로 `metricsIndexMode`를 넘겨 기존과 동일하게 토글에 반응한다. 라벨 검색은 부분일치("광고주수")를 쓰면 16."사업자별 광고주수(120초 미만)"와 공백 제거 후 겹쳐서(둘 다 "광고주수" 포함) `exact: true` + 라벨 전체 문자열로 찾는다.
 18. **미니 트렌드 4종을 3열→2열(화면 절반 크기)로 재배치** — 3종일 때 3열 그리드(`.metrics-mini-grid`)를 쓰고 있었는데, 4번째(광고주수) 추가에 맞춰 다른 섹션(`grid-zone5`, 50/50)과 같은 폭 원칙으로 통일해 달라는 요청(2026-09-15) — 2열×2행으로 변경(`css/layout.css`), 세로 높이도 `.card-box`/`.chart-container` 기본값(380px/280px, "매출 트렌드" 카드와 동일)을 물려받도록 자체 min-height 재정의를 없앴다.
-19. **[치명적, 수정됨] 미니 트렌드 y축이 실제 데이터보다 훨씬 위까지 올라갔다** — CPRP 실제 최댓값이 2026년 기준 420만원대(tvN 9월)인데 축 눈금이 600만원까지 나왔다(사용자 지적, 2026-09-15). 원인: `ddValueAxis()` 기본값 `grace:'15%'`가 `maxTicksLimit:4`처럼 눈금 개수가 적은 축과 만나면, Chart.js가 "예쁜 간격"을 고르는 과정에서 15% 여유를 씌운 값을 다음 라운드 넘버로 올림하다 실제 최댓값보다 크게 튀는 경우가 있다. `renderMetricsMiniTrendChart()`에서 `grace: 0`으로 끄고, 실제로 그려지는 값들(placeholder 제외, `datasets.flatMap(...).filter(v => v !== null)`)의 최댓값에 10%만 더한 `suggestedMax`를 직접 계산해 넘기도록 수정 — 데이터가 실제로 어디까지 있는지에 축이 정직하게 반응한다. 같은 김에 범례·축 폰트 크기(10→12)·y축 `maxTicksLimit`(4→5)도 "매출 트렌드" 차트와 맞췄다(카드 크기를 이미 맞췄으니 글자 크기도 맞아야 한다는 요청).
+19. **[치명적, 1차 시도 미완/2차에서 수정됨] 미니 트렌드 y축이 실제 데이터보다 훨씬 위까지 올라갔다** — CPRP 실제 최댓값이 2026년 기준 420만원대(tvN 9월)인데 축 눈금이 600만원까지 나왔다(사용자 지적, 2026-09-15). 1차 시도: `grace: 0` + 실제 최댓값의 1.1배를 `suggestedMax`로 계산해 넘김 — **그런데도 여전히 600만원까지 나왔다**(사용자 재지적). 원인 재확인: `suggestedMax`는 "적어도 이만큼은 커야 한다"는 하한 힌트일 뿐 상한을 막지 않는다 — `maxTicksLimit:4~5`에 맞춰 Chart.js가 "예쁜 간격"(니스넘버, 1/2/5×10^n)을 고르는 과정에서 그 힌트값을 한 단계 더 올림해버렸다. `suggestedMax`를 진짜 상한을 강제하는 **`max`**로 교체해 해결(축이 그 값을 절대 못 넘음). 같은 김에 범례·축 폰트 크기(10→12)·y축 `maxTicksLimit`(4→5)도 "매출 트렌드" 차트와 맞췄다(카드 크기를 이미 맞췄으니 글자 크기도 맞아야 한다는 요청).
 20. **eq-GRPs 트렌드를 07(1일 eq-GRPs)에서 06(누적 eq-GRPs)으로 전환 — "월누적" 요청(2026-09-15)** — `METRICS_LABEL.grp`를 `'1일eq-GRPs'`에서 `'누적eq-GRPs'`로 바꿔 `metricsFindMetricCode()`가 06번을 찾도록 했다. **"누적"의 실제 의미를 Supabase 실측으로 재확인**: 연간 누적(계속 커지는 값)이 아니라 **월 누적**이다 — 06번 값이 매달 오르내리고, "260910 기준"(9월 10일자) 리포트의 9월 값만 유독 확 낮다(예: ENA 8월 2155→9월 835) — 9월이 아직 10일치만 쌓인 진행중 월이라 월 누적이 그만큼 작게 나온 것이고, 연간 누적이었다면 이렇게 떨어질 수 없다. 06/07 둘 다 INDEX(전체/프라임타임) 두 값을 다 갖고 있어 일평균/프라임타임 토글은 그대로 유지된다. 카드 제목에 "(월누적)"을 붙여 07(1일 평균)과 혼동하지 않게 표기.
+21. **자사 매출기준(취급고/회계) 전용 토글을 폐지 — 메인 대시보드를 그대로 따르게 함(2026-09-15, 사용자 요청)** — 상세 배경은 위 "자사 매출기준 — 메인 대시보드를 그대로 따름" 절 참고. 컨트롤바 Row1("매출 기준" 토글) 통째로 삭제, `metricsBasisMode`/`setMetricsBasisMode()` 제거, `computeEnaMonthlyRevenue()`/`matchesMetricsBasis()`/`rebuildMetricsSubstitution()`이 인자 대신 전역 `revenueBasisMode`를 직접 읽도록 변경, `renderMetricsDashboard()`가 매 렌더마다 `rebuildMetricsSubstitution()`을 재호출해 메인 대시보드에서 바뀐 값과 항상 동기화되게 함.
 
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.

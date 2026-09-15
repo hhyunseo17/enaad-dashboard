@@ -178,13 +178,8 @@
     // ------------------------------------------------------------
     // 컨트롤 핸들러
     // ------------------------------------------------------------
-    function setMetricsBasisMode(mode) {
-      metricsBasisMode = mode;
-      document.getElementById('btnMetricsBasisPerformance').classList.toggle('active', mode === 'performance');
-      document.getElementById('btnMetricsBasisAccounting').classList.toggle('active', mode === 'accounting');
-      rebuildMetricsSubstitution(mode); // metrics-data-loader.js — KT ENA 부분만 다시 계산
-      renderMetricsDashboard();
-    }
+    // 취급고/회계(매출기준) 전용 핸들러는 없다 — 메인 대시보드의 revenueBasisMode를 그대로 따르므로
+    // renderMetricsDashboard()가 매번 rebuildMetricsSubstitution()을 다시 불러 동기화한다.
     function setMetricsIndexMode(mode) {
       metricsIndexMode = mode;
       document.getElementById('btnMetricsIndexAll').classList.toggle('active', mode === '전체');
@@ -562,6 +557,12 @@
       }
 
       loadingEl.style.display = 'none'; errorEl.style.display = 'none'; bodyEl.style.display = 'flex';
+
+      // 취급고/회계는 이 탭 전용 토글이 없다(메인 대시보드의 revenueBasisMode를 그대로 따름, 위
+      // "컨트롤 핸들러" 절 참고) — 그래서 메인 대시보드에서 그 값이 바뀐 채로 이 탭을 다시 열거나
+      // 렌더가 다시 도는 경우를 대비해, 렌더할 때마다 최신 revenueBasisMode 기준으로 KT ENA 부분을
+      // 다시 계산한다(metrics-data-loader.js).
+      rebuildMetricsSubstitution();
 
       metricsEnsureDefaultSelections();
       setupMetricsYearPills();

@@ -93,10 +93,11 @@
         return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: ch === ENA_REPRESENTATIVE_CHANNEL ? 3 : 2, pointRadius: 2.5, spanGaps: true };
       });
 
-      // ddValueAxis()의 기본 grace('15%')를 maxTicksLimit이 낮은 축(4)에 그대로 쓰면 Chart.js가
-      // "예쁜 눈금 간격"을 고르는 과정에서 실제 데이터 최댓값보다 훨씬 위(예: CPRP 실제 최고 420만원인데
-      // 축은 600만원까지)로 튀는 경우가 있었다(사용자 지적, 2026-09-15). grace를 끄고 실제로 그려지는
-      // 값들의 최댓값에서 10%만 여유를 둔 suggestedMax를 직접 계산해 넘긴다.
+      // suggestedMax는 "적어도 이만큼은 돼야 한다"는 하한 힌트일 뿐 상한을 막지 못한다 — grace를
+      // 꺼도 Chart.js가 maxTicksLimit에 맞춰 "예쁜 간격"(니스넘버, 보통 1/2/5×10^n)을 고르는 과정에서
+      // suggestedMax를 그대로 한 단계 더 올림해버려(예: 실제 최댓값 420만원 근처인데도 축은 여전히
+      // 600만원까지) 데이터가 없는 빈 구간이 크게 남았다(사용자 재지적, 2026-09-15) — suggestedMax가
+      // 아니라 진짜 상한을 강제하는 `max`를 써서 축이 그 값을 절대 넘지 못하게 한다.
       const allValues = datasets.flatMap(ds => ds.data).filter(v => v !== null && v !== undefined && isFinite(v));
       const maxVal = allValues.length ? Math.max(...allValues) : 0;
 
@@ -110,7 +111,7 @@
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
           scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ grace: 0, suggestedMax: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
+            y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
         }
       });
     }

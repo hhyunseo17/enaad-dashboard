@@ -255,10 +255,12 @@
 
     // ============================================================
     // 지표 대시보드(경쟁채널 벤치마크) 전용 UI 상태 — js/features/metrics-dashboard*.js가 사용.
-    // metricsBasisMode/metricsRevenueData 등 데이터 계약 관련 상태는 js/core/metrics-data-loader.js에
-    // 있다(그 파일의 몫 — 렌더는 하지 않는 경계). 여기 있는 것은 순수 UI 선택 상태다.
-    // 메인 매출 대시보드의 selectedYears/selectedMonths/revenueBasisMode와 절대 공유하지 않는다
-    // (plan 확정사항 2 — 매출 탭과 상태가 꼬이면 안 된다).
+    // metricsRevenueData 등 데이터 계약 관련 상태는 js/core/metrics-data-loader.js에 있다(그 파일의
+    // 몫 — 렌더는 하지 않는 경계). 여기 있는 것은 순수 UI 선택 상태다.
+    // 메인 매출 대시보드의 selectedYears/selectedMonths와는 절대 공유하지 않는다(매출 탭과 상태가
+    // 꼬이면 안 된다) — 다만 **취급고/회계(revenueBasisMode)만은 예외로 공유한다**: KT ENA/ENA 채널
+    // 매출은 "매출 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는" 개념이라, 이 탭엔 별도
+    // basisMode 토글이 없고 전역 revenueBasisMode를 그대로 따른다(2026-09-15, 사용자 요청).
     // ============================================================
     let metricsSelectedYear = null;        // 단일 연도 선택. null이면 첫 렌더에서 데이터의 최신 연도로 채운다.
     let metricsSelectedMonths = [];        // 월 선택(복수, 비어있으면 전체) — 매출 대시보드 selectedMonths와 같은 원칙, 별개 상태.
