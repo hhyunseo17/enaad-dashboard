@@ -475,24 +475,39 @@
       });
     }
 
+    // "조회조건"(위 연도/월 선택)이 여러 달을 가리키면(예: "전체" = 1~9월) 랭킹도 그 기간 누적
+    // 합계로 집계한다 — 예전엔 항상 "최신 1개월"만 봤는데, 월 선택이 "전체"인데 랭킹은 9월 한 달만
+    // 나오는 게 조회조건과 안 맞아 보인다는 지적(2026-09-15)을 받아 수정. 단일 월만 선택했을 땐
+    // 이전과 동일하게 그 한 달만 보여준다(합계=그 달 값과 같음).
+    function metricsPeriodRangeLabel(year, months) {
+      if (months.length === 0) return '';
+      if (months.length === 1) return `${year}년 ${months[0]}월`;
+      const isContiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
+      return isContiguous ? `${year}년 ${months[0]}~${months[months.length - 1]}월 누적` : `${year}년 ${months.join(',')}월 누적`;
+    }
     function renderMetricsRevenueRankingChart() {
       const canvas = document.getElementById('chartMetricsRevenueRanking'); if (!canvas) return;
       if (chartInstances.metricsRevRank) { chartInstances.metricsRevRank.destroy(); chartInstances.metricsRevRank = null; }
-      const period = metricsLatestPeriod(metricsRevenueData, metricsSelectedYear);
-      // 어느 달을 보고 있는지 화면에 안 보이면(범례도 꺼져 있다) 조회조건(위쪽 연도/월 선택)과
-      // 맞는지 확인할 방법이 없다 — 제목에 실제 기준월을 박아 넣는다(사용자 지적, 2026-09-15).
+      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      // 어느 기간을 보고 있는지 화면에 안 보이면(범례도 꺼져 있다) 조회조건(위쪽 연도/월 선택)과
+      // 맞는지 확인할 방법이 없다 — 제목에 실제 기준 기간을 박아 넣는다(사용자 지적, 2026-09-15).
       const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
-      if (titleEl) titleEl.innerText = period ? `매출 랭킹 (${period.year}년 ${period.month}월)` : '매출 랭킹';
-      if (!period) return;
+      if (titleEl) titleEl.innerText = months.length ? `매출 랭킹 (${metricsPeriodRangeLabel(metricsSelectedYear, months)})` : '매출 랭킹';
+      if (!months.length) return;
       const isOperator = metricsCompareUnit === 'operator';
       const selected = new Set(isOperator ? metricsSelectedOperators : metricsSelectedChannels);
 
       let entries;
       if (isOperator) {
-        entries = Object.entries(metricsGroupRevenueMap(period, metricsScopeMode));
+        const sums = {};
+        months.forEach(m => {
+          const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode);
+          Object.keys(groups).forEach(g => { sums[g] = (sums[g] || 0) + groups[g]; });
+        });
+        entries = Object.entries(sums);
       } else {
         const map = {};
-        metricsRevenueData.filter(r => r.year === period.year && r.month === period.month && metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => { map[r.channel] = (map[r.channel] || 0) + r.revenue; });
+        metricsRevenueData.filter(r => r.year === metricsSelectedYear && months.includes(r.month) && metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => { map[r.channel] = (map[r.channel] || 0) + r.revenue; });
         entries = Object.entries(map);
       }
       entries = entries.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -503,7 +518,7 @@
       const ctx = canvas.getContext('2d');
       chartInstances.metricsRevRank = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: `${period.year}-${String(period.month).padStart(2, '0')} 매출`, data: values,
+        data: { labels, datasets: [{ label: metricsPeriodRangeLabel(metricsSelectedYear, months) + ' 매출', data: values,
           backgroundColor: (c) => ddBarFill(colors[c.dataIndex], true)(c), borderRadius: 4,
           datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? metricsFmtNum(v, 1) + '억' : '' } }] },
         options: {
