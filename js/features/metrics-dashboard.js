@@ -195,6 +195,12 @@
       document.getElementById('btnMetricsScopeCable').classList.toggle('active', mode === 'cable');
       renderMetricsDashboard();
     }
+    function setMetricsMarketByScopeMode(mode) {
+      metricsMarketByScopeMode = mode;
+      document.getElementById('btnMetricsScopeChartAmount').classList.toggle('active', mode === 'amount');
+      document.getElementById('btnMetricsScopeChartShare').classList.toggle('active', mode === 'share');
+      renderMetricsMarketByScopeChart();
+    }
     function setMetricsCompareUnit(unit) {
       metricsCompareUnit = unit;
       document.getElementById('btnMetricsCompareOperator').classList.toggle('active', unit === 'operator');
@@ -283,46 +289,67 @@
     }
 
     // ------------------------------------------------------------
-    // KPI 1·2 — [범위]광고시장 규모 / [범위]광고시장 M/S
+    // KPI 1·2·3 — 전체방송광고 시장규모(범위 'all' 고정) / 유료방송광고 시장규모(범위 'payTv' 고정) /
+    // 유료방송광고시장 M/S(범위 'payTv' 고정). 세 카드 모두 "범위" 토글과 무관하게 항상 같은 두 스코프를
+    // 보여주기로 함(2026-09-15, 사용자 요청) — 그 아래 매출 트렌드/랭킹·M/S 트렌드 차트는 기존처럼
+    // "범위" 토글(metricsScopeMode)을 그대로 따른다. 스코프가 코드에서 고정되므로 제목도 정적(HTML)이다.
     // ------------------------------------------------------------
     function renderMetricsRevenueKpis() {
-      const scopeLabel = metricsScopeLabel();
-      document.getElementById('metricsKpiMarketSizeTitle').innerText = `${scopeLabel} 광고시장 규모`;
-      document.getElementById('metricsKpiShareTitle').innerText = `${scopeLabel} 광고시장 M/S`;
-
       const period = metricsLatestPeriod(metricsRevenueData, metricsSelectedYear);
       if (!period) {
-        document.getElementById('metricsKpiMarketSizeValue').innerText = '- 억원';
-        document.getElementById('metricsKpiShareValue').innerText = '- %';
-        ['MarketSize', 'Share'].forEach(k => { metricsRenderBadge(`metricsKpi${k}MomBadge`, '', null); metricsRenderBadge(`metricsKpi${k}YoyBadge`, '', null); });
+        ['MarketSizeAll', 'MarketSize', 'Share'].forEach(k => {
+          document.getElementById(`metricsKpi${k}Value`).innerText = k === 'Share' ? '- %' : '- 억원';
+          metricsRenderBadge(`metricsKpi${k}MomBadge`, '', null); metricsRenderBadge(`metricsKpi${k}YoyBadge`, '', null);
+        });
         return;
       }
-      const curr = metricsMarketAndShareAt(period);
-      const momV = metricsMarketAndShareAt(metricsPrevMonthPeriod(period));
-      const yoyV = metricsMarketAndShareAt(metricsPrevYearPeriod(period));
+      const currAll = metricsMarketAndShareAt(period, 'all');
+      const momAll = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'all');
+      const yoyAll = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'all');
+      document.getElementById('metricsKpiMarketSizeAllValue').innerText = (currAll.market / 1e8).toFixed(2) + ' 억원';
+      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 지상파+유료방송`;
+      metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', metricsGrowthPct(currAll.market, momAll && momAll.market), '%');
+      metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
 
-      document.getElementById('metricsKpiMarketSizeValue').innerText = (curr.market / 1e8).toFixed(2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일`;
-      metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(curr.market, momV && momV.market), '%');
-      metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(curr.market, yoyV && yoyV.market), '%');
+      const currPay = metricsMarketAndShareAt(period, 'payTv');
+      const momPay = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'payTv');
+      const yoyPay = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'payTv');
+      document.getElementById('metricsKpiMarketSizeValue').innerText = (currPay.market / 1e8).toFixed(2) + ' 억원';
+      document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 종편+케이블`;
+      metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(currPay.market, momPay && momPay.market), '%');
+      metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
-      document.getElementById('metricsKpiShareValue').innerText = curr.share.toFixed(1) + ' %';
-      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${(curr.ena / 1e8).toFixed(2)}억원 ÷ 시장 ${(curr.market / 1e8).toFixed(2)}억원`;
-      metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(curr.share, momV && momV.share), '%p');
-      metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(curr.share, yoyV && yoyV.share), '%p');
+      document.getElementById('metricsKpiShareValue').innerText = currPay.share.toFixed(1) + ' %';
+      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${(currPay.ena / 1e8).toFixed(2)}억원 ÷ 유료방송 시장 ${(currPay.market / 1e8).toFixed(2)}억원`;
+      metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(currPay.share, momPay && momPay.share), '%p');
+      metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currPay.share, yoyPay && yoyPay.share), '%p');
     }
 
     // ------------------------------------------------------------
-    // 방송광고시장 규모 추이 — 지상파/종편/케이블 3개 고정 구분(범위 토글과 무관, 항상 셋 다 표시).
+    // 방송광고시장 규모 추이 — "범위" 토글(metricsScopeMode)이 가리키는 구분만 쌓는다(2026-09-15,
+    // 사용자 요청 — 예전엔 범위와 무관하게 지상파/종편/케이블 셋을 항상 다 보여줬으나, 위쪽 조회조건과
+    // 안 맞다는 지적으로 범위에 맞춰 좁힌다). 색은 카테고리별로 고정 인덱스를 써서 범위가 바뀌어도
+    // (예: 유료방송→케이블) 같은 카테고리가 항상 같은 색을 유지한다.
     // 그룹별로 자기참조 행 우선/세부채널 합산 폴백을 쓰는 metricsGroupRevenueMap()을 그대로 재사용해
     // 중복 합산을 피한다(같은 그룹을 자기참조 총합 + 세부채널로 두 번 더하지 않음).
+    // "비중" 모드(metricsMarketByScopeMode==='share')는 같은 카테고리 구성을 월별 100% 누적으로 바꿔
+    // "범위 안에서 각 구분이 차지하는 비중이 달에 따라 어떻게 바뀌는지"를 보여준다.
     // ------------------------------------------------------------
     const METRICS_SCOPE_CATEGORIES = ['지상파', '종편', '케이블'];
+    const METRICS_SCOPE_CATEGORY_COLOR_INDEX = { '지상파': 0, '종편': 1, '케이블': 2 };
+    function metricsScopeCategoriesForMode(scopeMode) {
+      if (scopeMode === 'cable') return ['케이블'];
+      if (scopeMode === 'all') return METRICS_SCOPE_CATEGORIES;
+      return ['종편', '케이블']; // 'payTv' 기본값
+    }
     function renderMetricsMarketByScopeChart() {
       const canvas = document.getElementById('chartMetricsMarketByScope'); if (!canvas) return;
       if (chartInstances.metricsMarketByScope) { chartInstances.metricsMarketByScope.destroy(); chartInstances.metricsMarketByScope = null; }
 
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      const categories = metricsScopeCategoriesForMode(metricsScopeMode);
+      const isShare = metricsMarketByScopeMode === 'share';
+      document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${categories.join('/')})`;
       if (!months.length) return;
       const labels = months.map(m => `${m}월`);
 
@@ -330,32 +357,41 @@
       const midByGroup = {};
       metricsRevenueData.forEach(r => { if (!midByGroup[r.channelGroup]) midByGroup[r.channelGroup] = r.operatorMid; });
 
-      const dataByCat = METRICS_SCOPE_CATEGORIES.map(() => []);
+      const dataByCat = categories.map(() => []);
       months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, 'all'); // 'all' = 범위 필터 없음, 전 그룹
-        const catTotal = { '지상파': 0, '종편': 0, '케이블': 0 };
+        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode); // 위 컨트롤바의 "범위" 토글 그대로 반영
+        const catTotal = {}; categories.forEach(c => { catTotal[c] = 0; });
         Object.keys(groups).forEach(g => {
           const cat = midByGroup[g];
           if (cat && catTotal.hasOwnProperty(cat)) catTotal[cat] += groups[g];
         });
-        METRICS_SCOPE_CATEGORIES.forEach((cat, i) => dataByCat[i].push(catTotal[cat] / 1e8));
+        const monthTotal = categories.reduce((s, c) => s + catTotal[c], 0);
+        categories.forEach((cat, i) => {
+          dataByCat[i].push(isShare ? (monthTotal > 0 ? (catTotal[cat] / monthTotal * 100) : 0) : (catTotal[cat] / 1e8));
+        });
       });
 
-      const colors = [seriesColor(0), seriesColor(1), seriesColor(2)];
+      const colors = categories.map(cat => seriesColor(METRICS_SCOPE_CATEGORY_COLOR_INDEX[cat]));
       const ctx = canvas.getContext('2d');
       chartInstances.metricsMarketByScope = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels, datasets: METRICS_SCOPE_CATEGORIES.map((cat, i) => ({
-            label: cat, data: dataByCat[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator()
+          labels, datasets: categories.map((cat, i) => ({
+            label: cat, data: dataByCat[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator(),
+            datalabels: isShare ? { display: false } : {
+              // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
+              display: (ctx) => cat === categories[categories.length - 1],
+              anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
+              formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
+            }
           }))
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } },
-            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(2)} 억원` } } },
+            tooltip: { callbacks: { label: (c) => isShare ? `${c.dataset.label}: ${c.raw.toFixed(1)}%` : `${c.dataset.label}: ${c.raw.toFixed(2)} 억원` } } },
           scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+            y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => isShare ? v + '%' : v + '억' } }) }
         }
       });
     }

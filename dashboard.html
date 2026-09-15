@@ -1333,32 +1333,43 @@
 
       <div id="metricsContentBody" style="display:none; flex-direction: column; gap: 20px;">
 
-        <!-- KPI 5장 -->
+        <!-- KPI 6장 -->
         <section class="metrics-kpi-grid">
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title" id="metricsKpiMarketSizeTitle">유료방송 광고시장 규모</span></div>
+            <div class="kpi-header"><span class="kpi-title">전체방송광고 시장규모</span></div>
+            <div class="kpi-value-box">
+              <div id="metricsKpiMarketSizeAllValue" class="kpi-value">- 억원</div>
+              <div class="kpi-sub" style="flex-wrap: wrap;">
+                <span id="metricsKpiMarketSizeAllMomBadge" class="badge-growth up" style="display:none;">-</span>
+                <span id="metricsKpiMarketSizeAllYoyBadge" class="badge-growth up" style="display:none;">-</span>
+              </div>
+              <div class="kpi-source-note" id="metricsKpiMarketSizeAllSub">매체별 광고비 raw 파일 · 지상파+유료방송</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">유료방송광고 시장규모</span></div>
             <div class="kpi-value-box">
               <div id="metricsKpiMarketSizeValue" class="kpi-value">- 억원</div>
               <div class="kpi-sub" style="flex-wrap: wrap;">
                 <span id="metricsKpiMarketSizeMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiMarketSizeYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiMarketSizeSub">매체별 광고비 raw 파일</div>
+              <div class="kpi-source-note" id="metricsKpiMarketSizeSub">매체별 광고비 raw 파일 · 종편+케이블</div>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title" id="metricsKpiShareTitle">유료방송 광고시장 M/S</span></div>
+            <div class="kpi-header"><span class="kpi-title">유료방송광고시장 M/S</span></div>
             <div class="kpi-value-box">
               <div id="metricsKpiShareValue" class="kpi-value">- %</div>
               <div class="kpi-sub" style="flex-wrap: wrap;">
                 <span id="metricsKpiShareMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiShareYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiShareSub">KT ENA(치환값) ÷ 범위 내 시장 총매출</div>
+              <div class="kpi-source-note" id="metricsKpiShareSub">KT ENA(치환값) ÷ 유료방송 시장 총매출</div>
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title">CPRP (ENA)</span></div>
+            <div class="kpi-header"><span class="kpi-title">ENA 채널 CPRP</span></div>
             <div class="kpi-value-box">
               <div id="metricsKpiCprpValue" class="kpi-value">- 원</div>
               <div class="kpi-sub" style="flex-wrap: wrap;">
@@ -1392,11 +1403,15 @@
           </div>
         </section>
 
-        <!-- 시장 규모(지상파/종편/케이블 막대) + KT ENA M/S 트렌드(꺾은선), 절반씩 -->
-        <section class="grid-2col grid-zone3">
+        <!-- 시장 규모(범위별 막대) + KT ENA M/S 트렌드(꺾은선), 절반씩 -->
+        <section class="grid-2col grid-zone5">
           <div class="card-box">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>방송광고시장 규모 추이 (지상파/종편/케이블)</h2></div>
+              <div class="card-box-title"><h2 id="metricsMarketByScopeChartTitle">방송광고시장 규모 추이</h2></div>
+              <div class="pills-group">
+                <button id="btnMetricsScopeChartAmount" class="pill-btn active" onclick="setMetricsMarketByScopeMode('amount')">금액</button>
+                <button id="btnMetricsScopeChartShare" class="pill-btn" onclick="setMetricsMarketByScopeMode('share')">비중</button>
+              </div>
             </div>
             <div class="chart-container" style="height: 320px;">
               <canvas id="chartMetricsMarketByScope"></canvas>
@@ -1413,7 +1428,7 @@
         </section>
 
         <!-- 매출 트렌드 + 매출 랭킹 -->
-        <section class="grid-2col grid-zone3">
+        <section class="grid-2col grid-zone5">
           <div class="card-box">
             <div class="card-box-header">
               <div class="card-box-title"><h2>매출 트렌드</h2></div>

@@ -154,7 +154,12 @@
       });
 
       const injected = [];
-      metricsRatingsData.filter(r => r.metricCode === '01').forEach(r => {
+      // File1은 미보고 미래월도 0으로 채워 내보낸다(다른 지표들과 동일한 placeholder — 이미
+      // metricsRatingsLatestPeriod()/renderMetricsMiniTrendChart()에서 value!==0으로 걸러낸 문제와 같은
+      // 원인). 여기서 걸러내지 않으면 그 0행이 채널그룹 자기참조 매출로 주입되어 metricsRevenueData에
+      // 실제 데이터 없는 미래월(예: 10~12월)이 "존재하는 월"처럼 섞여 들어간다(월별 매출/M-S 차트에
+      // 없는 달이 0으로 나타나는 원인이었다, 2026-09-15).
+      metricsRatingsData.filter(r => r.metricCode === '01' && r.value !== 0).forEach(r => {
         const group = RATINGS_OPERATOR_TO_REVENUE_GROUP[r.channel] || r.channel;
         const scope = scopeByGroup[group];
         if (!scope) return; // File2에 대응 채널그룹 없음 — 기존 합산 폴백 유지
