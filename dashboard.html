@@ -1432,6 +1432,10 @@
           <div class="card-box">
             <div class="card-box-header">
               <div class="card-box-title"><h2>매출 트렌드</h2></div>
+              <div class="pills-group">
+                <button id="btnMetricsRevenueTrendLinear" class="pill-btn active" onclick="setMetricsRevenueTrendScale('linear')">선형</button>
+                <button id="btnMetricsRevenueTrendLog" class="pill-btn" onclick="setMetricsRevenueTrendScale('log')">로그</button>
+              </div>
             </div>
             <div class="chart-container">
               <canvas id="chartMetricsRevenueTrend"></canvas>
@@ -1439,7 +1443,7 @@
           </div>
           <div class="card-box">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>매출 랭킹</h2></div>
+              <div class="card-box-title"><h2 id="metricsRevenueRankingChartTitle">매출 랭킹</h2></div>
             </div>
             <div class="chart-container">
               <canvas id="chartMetricsRevenueRanking"></canvas>

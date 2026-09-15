@@ -128,8 +128,9 @@
 
     // File1 "01.방송사업자 광고매출" 채널명(사업자 단위) → File2 채널그룹명. 표기가 갈리는 5개만
     // 적어둔다(실 샘플로 확인, 2026-09-15) — 나머지 9개(KBS/KT ENA/JTBC/TV조선/채널A/MBN/KBS N/
-    // 티캐스트/iHQ)는 두 파일에서 이름이 같다. metrics-dashboard.js의 OPERATOR_TO_RATINGS_CHANNEL_ALIAS와
-    // 방향이 반대다(그건 File2 그룹명→File1 채널명, 이건 File1 채널명→File2 그룹명) — 헷갈리지 말 것.
+    // 티캐스트/iHQ)는 두 파일에서 이름이 같다. 이건 File1 채널명→File2 그룹명 방향(매출 주입용)이고,
+    // metrics-dashboard.js의 CPRP/채널시청률/eq-GRPs용 대표채널 목록(METRICS_RATINGS_FIXED_CHANNELS)과는
+    // 용도가 다르다 — 그쪽은 사업자→채널 매핑이 아니라 고정된 대표채널 목록이다(2026-09-15 변경).
     const RATINGS_OPERATOR_TO_REVENUE_GROUP = {
       'CJ ENM': 'CJENM', 'MBC Plus': 'MBC PLUS', 'MBC(전국)': 'MBC', 'SBS 계열': 'SBS미디어넷', 'SBS(민방포함)': 'SBS'
     };

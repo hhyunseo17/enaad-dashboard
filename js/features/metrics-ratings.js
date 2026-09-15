@@ -59,7 +59,7 @@
       const rprNow = metricsRatingsValueAt(rprCode, channel, '전체', rprPeriod);
       const rprMom = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevMonthPeriod(rprPeriod));
       const rprYoy = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevYearPeriod(rprPeriod));
-      document.getElementById('metricsKpiRevPerRatingValue').innerText = rprNow !== null ? rprNow.toFixed(2) + ' 억원' : '- 억원';
+      document.getElementById('metricsKpiRevPerRatingValue').innerText = rprNow !== null ? metricsFmtNum(rprNow, 2) + ' 억원' : '- 억원';
       document.getElementById('metricsKpiRevPerRatingSub').innerText = rprPeriod ? `${rprPeriod.year}년 ${rprPeriod.month}월 · 파일 원본값(일평균 기준, 토글 무관)` : '경쟁채널 지표 현황 파일';
       metricsRenderBadge('metricsKpiRevPerRatingMomBadge', '전월', metricsGrowthPct(rprNow, rprMom), '%');
       metricsRenderBadge('metricsKpiRevPerRatingYoyBadge', '전년', metricsGrowthPct(rprNow, rprYoy), '%');
@@ -95,9 +95,9 @@
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 10, weight: FW() }, boxWidth: 10 } },
-            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? c.raw.toFixed(decimals) : '-'}${valueSuffix}` } } },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 10, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 4, padding: 4, callback: v => v.toFixed(decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 10, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 4, padding: 4, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
         }
       });
     }
@@ -115,8 +115,8 @@
     function metricsFormatRatingValue(metricLabel, value) {
       if (value === null || value === undefined) return '-';
       if (metricLabel.includes('CPRP')) return Math.round(value * 1000).toLocaleString() + '원';
-      if (metricLabel.includes('시청률') && metricLabel.includes('매출')) return value.toFixed(2) + '억원';
-      if (metricLabel.includes('GRP')) return value.toFixed(1);
+      if (metricLabel.includes('시청률') && metricLabel.includes('매출')) return metricsFmtNum(value, 2) + '억원';
+      if (metricLabel.includes('GRP')) return metricsFmtNum(value, 1);
       if (metricLabel.includes('시청률')) return value.toFixed(3) + '%';
       return value.toLocaleString(undefined, { maximumFractionDigits: 2 }); // 광고주수/브랜드수 등 — 전부 건수
     }

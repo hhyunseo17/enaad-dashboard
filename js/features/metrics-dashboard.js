@@ -53,6 +53,12 @@
       if (curr === null || curr === undefined || prev === null || prev === undefined) return null;
       return curr - prev;
     }
+    // 1000단위 콤마 포함 숫자 포맷 — 이 탭의 금액(억원/억) 표기는 toFixed()만 쓰면 1,000단위 콤마가
+    // 안 붙는다(예: "1441.23"). CPRP(metrics-ratings.js)는 이미 toLocaleString()을 쓰고 있었으니
+    // 나머지도 맞춘다(2026-09-15, 사용자 요청).
+    function metricsFmtNum(value, decimals) {
+      return Number(value).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
     // KPI 카드 배지 렌더. unit '%'는 상대성장률(전월/전년 대비 증감률), '%p'는 이미 %인 값(M/S·시청률)의
     // 절대 차이 — 퍼센트의 퍼센트 성장률은 읽기 어려워서 이 둘을 구분한다(plan 확정사항 3).
     function metricsRenderBadge(elId, label, value, unit) {
@@ -129,30 +135,22 @@
       ops.forEach(op => { if (!metricsRevenueData.some(r => r.channelGroup === op && r.channel !== r.channelGroup)) set.add(op); });
       return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
     }
-    // File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다(개별 채널명만 있다) — 그래서 CPRP/채널시청률/
-    // eq-GRPs 차트·상세표는 비교단위가 '사업자'여도 채널명 직접 선택으로 좁힌다: ENA는 항상 대표채널
-    // ENA로 고정하고, 나머지는 '대표채널 비교' 선택을 그대로 쓰거나(② 선택 시) '사업자 비교'에서는
-    // 사업자명(File2 채널그룹)이 File1의 채널명과 완전히 일치하는 것만 자동으로 잡는다.
-    // 실 샘플로 확인됨(2026-09-15) — 표기가 달라 완전일치가 안 되는 주요 사업자 5개는 별도 매핑:
-    // MBC/SBS는 File1이 "MBC(전국)"/"SBS(민방포함)"로 적고, MBC PLUS·CJENM은 대소문자·공백만 다르다.
-    // SBS미디어넷은 File1에 사업자 단위 행 자체가 없어 대표 채널 하나(SBS Plus)로 근사한다 — 이건
-    // 진짜 매핑이 아니라 근사치이므로 실제로 SBS미디어넷 전체를 대표하는지 사람이 확인 필요.
-    const OPERATOR_TO_RATINGS_CHANNEL_ALIAS = {
-      'MBC': 'MBC(전국)', 'SBS': 'SBS(민방포함)', 'MBC PLUS': 'MBC Plus', 'CJENM': 'CJ ENM', 'SBS미디어넷': 'SBS Plus'
-    };
+    // File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다(개별 채널명만 있다). 원래는 위 "① 사업자"
+    // 선택을 File1 채널명으로 매핑해 따라가려 했으나(사업자명↔채널명 별칭 매핑), CJENM처럼 사업자
+    // 단위 근사가 실제 방송 채널이 아닌 값(예: "CJ ENM"이라는 집계성 라벨)으로 잡혀 사용자가 보기에
+    // 낯선 값이 나왔다(2026-09-15, 사용자 지적) — 그래서 CPRP/채널시청률/eq-GRPs는 위쪽 사업자/채널
+    // 선택과 무관하게, 실제로 눈에 익은 대표채널 고정 목록만 보여주기로 한다(요청 시 목록 조정).
+    // ENA는 항상 대표채널 ENA로 고정.
+    const METRICS_RATINGS_FIXED_CHANNELS = [ENA_REPRESENTATIVE_CHANNEL, 'tvN', 'JTBC', 'SBS Plus', 'MBC every1', 'KBS Joy'];
+    // 위 고정 목록의 표기가 File1 원본과 대소문자만 다를 수 있어(예: "SBS PLUS"), 대소문자 무시하고
+    // 실제 존재하는 표기를 찾아 그걸 쓴다 — 안 그러면 완전일치 실패로 그 채널만 조용히 빠진다.
+    function metricsResolveRatingsChannelName(name) {
+      if (metricsRatingsData.some(r => r.channel === name)) return name;
+      const found = metricsRatingsData.find(r => r.channel && r.channel.toLowerCase() === name.toLowerCase());
+      return found ? found.channel : name;
+    }
     function metricsRatingsChannelSelection() {
-      const set = new Set([ENA_REPRESENTATIVE_CHANNEL]);
-      if (metricsCompareUnit === 'channel') {
-        metricsSelectedChannels.forEach(c => set.add(c));
-      } else {
-        const ratingChannels = new Set(metricsRatingsData.map(r => r.channel));
-        metricsSelectedOperators.forEach(op => {
-          if (op === ENA_CHANNEL_GROUP) return;
-          const mapped = OPERATOR_TO_RATINGS_CHANNEL_ALIAS[op] || op;
-          if (ratingChannels.has(mapped)) set.add(mapped);
-        });
-      }
-      return [...set];
+      return METRICS_RATINGS_FIXED_CHANNELS.map(metricsResolveRatingsChannelName);
     }
 
     // 첫 렌더에서만 기본값을 채운다(사용자가 이미 고른 선택은 건드리지 않는다).
@@ -306,7 +304,7 @@
       const currAll = metricsMarketAndShareAt(period, 'all');
       const momAll = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'all');
       const yoyAll = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'all');
-      document.getElementById('metricsKpiMarketSizeAllValue').innerText = (currAll.market / 1e8).toFixed(2) + ' 억원';
+      document.getElementById('metricsKpiMarketSizeAllValue').innerText = metricsFmtNum(currAll.market / 1e8, 2) + ' 억원';
       document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 지상파+유료방송`;
       metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', metricsGrowthPct(currAll.market, momAll && momAll.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
@@ -314,13 +312,13 @@
       const currPay = metricsMarketAndShareAt(period, 'payTv');
       const momPay = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'payTv');
       const yoyPay = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'payTv');
-      document.getElementById('metricsKpiMarketSizeValue').innerText = (currPay.market / 1e8).toFixed(2) + ' 억원';
+      document.getElementById('metricsKpiMarketSizeValue').innerText = metricsFmtNum(currPay.market / 1e8, 2) + ' 억원';
       document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 종편+케이블`;
       metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(currPay.market, momPay && momPay.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
       document.getElementById('metricsKpiShareValue').innerText = currPay.share.toFixed(1) + ' %';
-      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${(currPay.ena / 1e8).toFixed(2)}억원 ÷ 유료방송 시장 ${(currPay.market / 1e8).toFixed(2)}억원`;
+      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currPay.ena / 1e8, 2)}억원 ÷ 유료방송 시장 ${metricsFmtNum(currPay.market / 1e8, 2)}억원`;
       metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(currPay.share, momPay && momPay.share), '%p');
       metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currPay.share, yoyPay && yoyPay.share), '%p');
     }
@@ -382,16 +380,16 @@
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
               display: (ctx) => cat === categories[categories.length - 1],
               anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
-              formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? total.toFixed(1) + '억' : ''; }
+              formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? metricsFmtNum(total, 1) + '억' : ''; }
             }
           }))
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } },
-            tooltip: { callbacks: { label: (c) => isShare ? `${c.dataset.label}: ${c.raw.toFixed(1)}%` : `${c.dataset.label}: ${c.raw.toFixed(2)} 억원` } } },
-          scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => isShare ? v + '%' : v + '억' } }) }
+            tooltip: { callbacks: { label: (c) => isShare ? `${c.dataset.label}: ${c.raw.toFixed(1)}%` : `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
+          scales: { x: { stacked: true, offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => isShare ? v + '%' : metricsFmtNum(v, 0) + '억' } }) }
         }
       });
     }
@@ -421,7 +419,9 @@
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: { legend: { display: false },
             tooltip: { callbacks: { label: (c) => `M/S: ${c.raw.toFixed(2)}%` } } },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+          // offset:true — 선 그래프는 기본이 false라 첫/끝 점이 y축·플롯 경계에 딱 붙어 보인다(사용자
+          // 지적, 2026-09-15). 막대 그래프의 기본 여백처럼 양쪽에 카테고리 반 칸만큼 띄운다.
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
             y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '%' } }) }
         }
       });
@@ -432,6 +432,17 @@
     // ------------------------------------------------------------
     function metricsIsEnaName(name) { return name === ENA_CHANNEL_GROUP || name === ENA_REPRESENTATIVE_CHANNEL; }
 
+    // 선형/로그 축 토글 — CJ ENM처럼 압도적으로 큰 사업자가 하나 섞이면 선형축에서 나머지가 전부
+    // 바닥에 뭉개져 보인다(사용자 지적, 2026-09-15). "로그"는 값 자체(억원)는 그대로 두고 축 간격만
+    // 로그로 압축해 큰/작은 계열을 한 차트에서 같이 비교할 수 있게 한다 — 로그축은 0 이하 값을 그릴 수
+    // 없으므로(Chart.js 제약) 그 달에 매출이 0인 계열의 점은 로그 모드에서 안 그려질 수 있다(선형
+    // 모드로 돌리면 정상적으로 0으로 보인다 — 데이터 손실이 아니라 표시 방식의 한계).
+    function setMetricsRevenueTrendScale(mode) {
+      metricsRevenueTrendScale = mode;
+      document.getElementById('btnMetricsRevenueTrendLinear').classList.toggle('active', mode === 'linear');
+      document.getElementById('btnMetricsRevenueTrendLog').classList.toggle('active', mode === 'log');
+      renderMetricsRevenueTrendChart();
+    }
     function renderMetricsRevenueTrendChart() {
       const canvas = document.getElementById('chartMetricsRevenueTrend'); if (!canvas) return;
       if (chartInstances.metricsRevTrend) { chartInstances.metricsRevTrend.destroy(); chartInstances.metricsRevTrend = null; }
@@ -439,14 +450,16 @@
       const labels = months.map(m => `${m}월`);
       const isOperator = metricsCompareUnit === 'operator';
       const names = isOperator ? metricsSelectedOperators : metricsSelectedChannels;
+      const isLog = metricsRevenueTrendScale === 'log';
 
       const datasets = names.map((name, idx) => {
         const data = months.map(m => {
-          if (isOperator) return (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8;
-          return metricsRevenueData.filter(r => r.year === metricsSelectedYear && r.month === m && r.channel === name).reduce((s, r) => s + r.revenue, 0) / 1e8;
+          const v = isOperator ? (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8
+            : metricsRevenueData.filter(r => r.year === metricsSelectedYear && r.month === m && r.channel === name).reduce((s, r) => s + r.revenue, 0) / 1e8;
+          return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
         const color = metricsIsEnaName(name) ? RC('curr') : seriesColor(idx);
-        return { label: name, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color };
+        return { label: name, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
       });
 
       const ctx = canvas.getContext('2d');
@@ -455,9 +468,9 @@
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
-            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(2)} 억원` } } },
-          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ type: isLog ? 'logarithmic' : 'linear', ticks: { color: CH('#8B95A1'), maxTicksLimit: isLog ? 8 : 5, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }) }
         }
       });
     }
@@ -466,6 +479,10 @@
       const canvas = document.getElementById('chartMetricsRevenueRanking'); if (!canvas) return;
       if (chartInstances.metricsRevRank) { chartInstances.metricsRevRank.destroy(); chartInstances.metricsRevRank = null; }
       const period = metricsLatestPeriod(metricsRevenueData, metricsSelectedYear);
+      // 어느 달을 보고 있는지 화면에 안 보이면(범례도 꺼져 있다) 조회조건(위쪽 연도/월 선택)과
+      // 맞는지 확인할 방법이 없다 — 제목에 실제 기준월을 박아 넣는다(사용자 지적, 2026-09-15).
+      const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
+      if (titleEl) titleEl.innerText = period ? `매출 랭킹 (${period.year}년 ${period.month}월)` : '매출 랭킹';
       if (!period) return;
       const isOperator = metricsCompareUnit === 'operator';
       const selected = new Set(isOperator ? metricsSelectedOperators : metricsSelectedChannels);
@@ -488,11 +505,11 @@
         type: 'bar',
         data: { labels, datasets: [{ label: `${period.year}-${String(period.month).padStart(2, '0')} 매출`, data: values,
           backgroundColor: (c) => ddBarFill(colors[c.dataIndex], true)(c), borderRadius: 4,
-          datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' } }] },
+          datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? metricsFmtNum(v, 1) + '억' : '' } }] },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24, right: 44 } },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${c.raw.toFixed(2)} 억원` } } },
-          scales: { x: ddValueAxis({ grace: 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: 7, padding: 6, callback: v => v + '억' } }), y: { ticks: { color: CH('#F2F4F6'), font: { weight: FW() } }, grid: { display: false } } }
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
+          scales: { x: ddValueAxis({ grace: 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: 7, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }), y: { ticks: { color: CH('#F2F4F6'), font: { weight: FW() } }, grid: { display: false } } }
         }
       });
     }

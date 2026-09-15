@@ -265,6 +265,8 @@
     let metricsIndexMode = '전체';          // File1 INDEX 컬럼: '전체'(일평균) | '프라임타임'
     let metricsScopeMode = 'payTv';        // '전체'(지상파+유료방송) | 'payTv'(유료방송, 기본) | 'cable'(케이블)
     let metricsMarketByScopeMode = 'amount'; // 시장규모 추이 차트 전용: 'amount'(금액, 기본) | 'share'(비중 100% 누적)
+    let metricsRevenueTrendScale = 'linear'; // 매출 트렌드 차트 전용: 'linear'(기본) | 'log' — CJ ENM처럼 한 계열이 압도적으로 커서
+                                              // 나머지가 바닥에 뭉치는 문제를 로그축으로 완화(2026-09-15, 사용자 요청)
     let metricsCompareUnit = 'operator';   // 'operator'(① 사업자 비교, 기본) | 'channel'(② 대표채널 비교)
     let metricsSelectedOperators = [];     // ① 선택된 채널그룹(사업자) 목록 — 렌더 시 비어 있으면 기본값(KT ENA+매출상위)으로 채운다.
     let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(대표채널 비교 모드, ①에서 캐스케이딩).
