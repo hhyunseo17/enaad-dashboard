@@ -45,10 +45,11 @@
     let metricsRatingsData = [];         // File1 파싱 결과(long-format), 01/02.광고매출 행은 제외
     let metricsDataLoaded = false;       // fetchMetricsDataHttp() 성공 여부
     let metricsDataFetchPromise = null;  // 진행 중이거나 완료된 fetch를 캐시 — 지연 로딩을 호출부가 여러 번 트리거해도 1회만 fetch
-    // 취급고/회계(매출기준)는 이 탭 전용 토글을 두지 않는다 — "KT ENA/ENA 채널 매출은 매출
-    // 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는 개념"(2026-09-15, 사용자 요청)이라, 항상
-    // 메인 대시보드의 전역 revenueBasisMode(state.js)를 그대로 따른다. (예전엔 이 탭 전용
-    // metricsBasisMode를 따로 뒀었으나 두 화면의 매출기준이 서로 어긋날 수 있어 없앴다.)
+    // 취급고/회계(매출기준)는 이 탭 전용 상태(metricsBasisMode)를 따로 두지 않는다 — "취급고를
+    // 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와 KT ENA/ENA 채널 매출로
+    // 쓴다"는 개념(2026-09-15, 사용자 요청)이라, 이 탭에도 버튼은 있지만(dashboard.html) 항상 메인
+    // 대시보드와 공유하는 전역 revenueBasisMode(state.js)를 직접 바꾼다 — 두 화면이 항상 같은 값을
+    // 보게 하기 위해서다(setMetricsRevenueBasis(), metrics-dashboard.js).
 
     const METRICS_RATINGS_URL = '/api/competitor-ratings';
     const METRICS_REVENUE_URL = '/api/competitor-revenue';

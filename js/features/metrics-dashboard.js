@@ -178,8 +178,18 @@
     // ------------------------------------------------------------
     // 컨트롤 핸들러
     // ------------------------------------------------------------
-    // 취급고/회계(매출기준) 전용 핸들러는 없다 — 메인 대시보드의 revenueBasisMode를 그대로 따르므로
-    // renderMetricsDashboard()가 매번 rebuildMetricsSubstitution()을 다시 불러 동기화한다.
+    // 취급고/회계(매출기준) 버튼은 이 탭에도 있지만 이 탭 전용 상태를 따로 두지 않는다 — 전역
+    // revenueBasisMode(state.js, 메인 대시보드와 공유)를 그대로 바꾼다. data-loader.js의
+    // setRevenueBasis()를 그대로 재사용해 메인 대시보드 쪽 버튼 active 상태·필터(applyFilters())도
+    // 함께 갱신되게 하고, 이 탭 자신의 버튼 active 상태와 렌더는 별도로 마저 처리한다(그쪽 함수는
+    // 이 탭의 DOM/렌더를 모른다). renderMetricsDashboard()가 매번 rebuildMetricsSubstitution()을
+    // 다시 불러 KT ENA 부분을 새 기준으로 재계산한다.
+    function setMetricsRevenueBasis(mode) {
+      setRevenueBasis(mode); // data-loader.js — 전역 revenueBasisMode + 메인 대시보드 버튼/필터
+      document.getElementById('btnMetricsBasisPerformance').classList.toggle('active', mode === 'performance');
+      document.getElementById('btnMetricsBasisAccounting').classList.toggle('active', mode === 'accounting');
+      renderMetricsDashboard();
+    }
     function setMetricsIndexMode(mode) {
       metricsIndexMode = mode;
       document.getElementById('btnMetricsIndexAll').classList.toggle('active', mode === '전체');
@@ -558,11 +568,13 @@
 
       loadingEl.style.display = 'none'; errorEl.style.display = 'none'; bodyEl.style.display = 'flex';
 
-      // 취급고/회계는 이 탭 전용 토글이 없다(메인 대시보드의 revenueBasisMode를 그대로 따름, 위
-      // "컨트롤 핸들러" 절 참고) — 그래서 메인 대시보드에서 그 값이 바뀐 채로 이 탭을 다시 열거나
-      // 렌더가 다시 도는 경우를 대비해, 렌더할 때마다 최신 revenueBasisMode 기준으로 KT ENA 부분을
-      // 다시 계산한다(metrics-data-loader.js).
+      // 취급고/회계는 이 탭 전용 상태가 없이 전역 revenueBasisMode를 그대로 공유한다(위 "컨트롤
+      // 핸들러" 절 참고) — 메인 대시보드 쪽 버튼으로 바뀐 채 이 탭을 다시 열거나 렌더가 다시 도는
+      // 경우를 대비해, 렌더할 때마다 최신 값 기준으로 KT ENA 부분을 다시 계산하고(metrics-data-loader.js)
+      // 이 탭 버튼의 active 표시도 그 값에 맞춰 다시 동기화한다.
       rebuildMetricsSubstitution();
+      document.getElementById('btnMetricsBasisPerformance').classList.toggle('active', revenueBasisMode === 'performance');
+      document.getElementById('btnMetricsBasisAccounting').classList.toggle('active', revenueBasisMode === 'accounting');
 
       metricsEnsureDefaultSelections();
       setupMetricsYearPills();

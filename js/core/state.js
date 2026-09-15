@@ -259,8 +259,9 @@
     // 몫 — 렌더는 하지 않는 경계). 여기 있는 것은 순수 UI 선택 상태다.
     // 메인 매출 대시보드의 selectedYears/selectedMonths와는 절대 공유하지 않는다(매출 탭과 상태가
     // 꼬이면 안 된다) — 다만 **취급고/회계(revenueBasisMode)만은 예외로 공유한다**: KT ENA/ENA 채널
-    // 매출은 "매출 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는" 개념이라, 이 탭엔 별도
-    // basisMode 토글이 없고 전역 revenueBasisMode를 그대로 따른다(2026-09-15, 사용자 요청).
+    // 매출은 "취급고를 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와 타사와
+    // 더하는" 개념이라(2026-09-15, 사용자 요청), 이 탭에도 취급고/회계 버튼이 있지만 별도 basisMode를
+    // 두지 않고 전역 revenueBasisMode를 직접 바꾼다(setMetricsRevenueBasis(), metrics-dashboard.js).
     // ============================================================
     let metricsSelectedYear = null;        // 단일 연도 선택. null이면 첫 렌더에서 데이터의 최신 연도로 채운다.
     let metricsSelectedMonths = [];        // 월 선택(복수, 비어있으면 전체) — 매출 대시보드 selectedMonths와 같은 원칙, 별개 상태.
