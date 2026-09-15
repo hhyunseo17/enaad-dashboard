@@ -1,7 +1,10 @@
 name = "kt-ena-dashboard"
-# main은 Workers 전용 키라 Pages Functions에는 적용되지 않는다(공식 문서 확인, 2026-09-15) —
-# worker.js(현재 미배포, 향후 standalone Worker 전환 대비용)를 가리키는 것으로 그대로 둔다.
-main = "worker.js"
+# main(Workers 전용 키)을 pages_build_output_dir(아래)과 같이 두면 Cloudflare Pages가 이 파일
+# 전체를 "invalid"로 보고 통째로 무시한다 — 빌드 로그로 실제 확인(2026-09-15): "A Wrangler
+# configuration file was found but it does not appear to be valid. ... Skipping file and
+# continuing." 그래서 대시보드에서 DASHBOARD_BUCKET을 정확히 넣어도 이 파일이 무효 처리되며
+# 계속 씹혔다. worker.js는 현재 미배포라 여기서 안 가리켜도 지장 없다 — 나중에 standalone
+# Worker로 전환할 때 별도 wrangler 설정(또는 `wrangler deploy --config`)으로 다시 지정할 것.
 compatibility_date = "2026-07-29"
 
 # R2 버킷 바인딩 - bucket_name은 실제 사용 중인 R2 버킷 이름으로 변경하세요.
