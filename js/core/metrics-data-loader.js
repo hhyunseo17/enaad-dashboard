@@ -89,6 +89,7 @@
           channel: r.channel, operatorMajor: r.operator_major, operatorMid: r.operator_mid,
           channelGroup: r.channel_group, year: r.year, month: r.month, revenue: Number(r.revenue)
         }));
+        injectOperatorRevenueFromRatings();
         rebuildMetricsSubstitution(metricsBasisMode);
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
@@ -123,6 +124,51 @@
           && r.year === year && r.month === month
           && channels.includes(r.channel))
         .reduce((sum, r) => sum + r.amount, 0);
+    }
+
+    // File1 "01.방송사업자 광고매출" 채널명(사업자 단위) → File2 채널그룹명. 표기가 갈리는 5개만
+    // 적어둔다(실 샘플로 확인, 2026-09-15) — 나머지 9개(KBS/KT ENA/JTBC/TV조선/채널A/MBN/KBS N/
+    // 티캐스트/iHQ)는 두 파일에서 이름이 같다. metrics-dashboard.js의 OPERATOR_TO_RATINGS_CHANNEL_ALIAS와
+    // 방향이 반대다(그건 File2 그룹명→File1 채널명, 이건 File1 채널명→File2 그룹명) — 헷갈리지 말 것.
+    const RATINGS_OPERATOR_TO_REVENUE_GROUP = {
+      'CJ ENM': 'CJENM', 'MBC Plus': 'MBC PLUS', 'MBC(전국)': 'MBC', 'SBS 계열': 'SBS미디어넷', 'SBS(민방포함)': 'SBS'
+    };
+
+    // ------------------------------------------------------------
+    // injectOperatorRevenueFromRatings() — "사업자 비교" 매출의 소스를 File2 채널그룹 합산에서
+    // File1 "01.방송사업자 광고매출"로 바꾼다(2026-09-15, 사용자 요청 — 세부 채널별 매출은 계속
+    // File2를 쓰고, 사업자 단위 총액만 File1이 직접 보고하는 값을 쓴다).
+    // ------------------------------------------------------------
+    // metricsGroupRevenueMap()(metrics-dashboard.js)은 이미 "채널그룹 자기참조 행(channel===
+    // channelGroup)이 있으면 그 값을 그룹 합계로 우선한다"는 로직을 갖고 있다 — 그래서 그 자기참조
+    // 행 자체를 File1 값으로 만들어 두면, M/S·랭킹·트렌드·KPI 등 나머지 코드는 전혀 안 건드려도
+    // 자동으로 File1 기반 사업자 매출을 쓰게 된다. File1엔 사업자대분류/중분류(범위 토글용)가 없어
+    // File2 쪽 같은 채널그룹의 값을 이름으로 조인해서 그대로 가져온다 — 대응하는 File2 채널그룹이
+    // 없는 사업자(예: 이번 리포트에 새로 추가된 곳)는 조용히 건너뛰고 기존 File2 합산 폴백을 쓴다.
+    // KT ENA 자기참조 행도 여기서 File1 값으로 먼저 채워지지만, rebuildMetricsSubstitution()이
+    // 뒤이어 무조건 내부 실측치로 덮어쓰므로(어느 쪽이 원본이었든) 결과에 영향 없다.
+    function injectOperatorRevenueFromRatings() {
+      const scopeByGroup = {};
+      metricsRevenueDataOriginal.forEach(r => {
+        if (!scopeByGroup[r.channelGroup]) scopeByGroup[r.channelGroup] = { operatorMajor: r.operatorMajor, operatorMid: r.operatorMid };
+      });
+
+      const injected = [];
+      metricsRatingsData.filter(r => r.metricCode === '01').forEach(r => {
+        const group = RATINGS_OPERATOR_TO_REVENUE_GROUP[r.channel] || r.channel;
+        const scope = scopeByGroup[group];
+        if (!scope) return; // File2에 대응 채널그룹 없음 — 기존 합산 폴백 유지
+        injected.push({
+          channel: group, channelGroup: group, operatorMajor: scope.operatorMajor, operatorMid: scope.operatorMid,
+          year: r.year, month: r.month, revenue: Math.round(r.value * 1000000) // File1도 백만원 단위(File2와 동일)
+        });
+      });
+      if (injected.length === 0) return;
+
+      const injectedKeys = new Set(injected.map(r => r.channelGroup + '|' + r.year + '|' + r.month));
+      metricsRevenueDataOriginal = metricsRevenueDataOriginal
+        .filter(r => !(r.channel === r.channelGroup && injectedKeys.has(r.channelGroup + '|' + r.year + '|' + r.month)))
+        .concat(injected);
     }
 
     // ------------------------------------------------------------

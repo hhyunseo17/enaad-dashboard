@@ -45,6 +45,15 @@ M/S(%) = KT ENA 사업자 총합(치환값) ÷ "범위" 토글이 가리키는 �
 - 분모도 그 범위 안 KT ENA 항목은 치환값으로 넣은 뒤 합산한다(`computeEnaPayTvMarketShare()`가 `metricsGroupRevenueMap()` 결과를 그대로 합산).
 - M/S 트렌드차트는 %선이 아니라 **누적(stacked) 막대**다 — 월별 막대 하나 = 범위 시장 총매출, "KT ENA"(강조색)+"기타"(중립색) 두 구간, % 라벨은 ENA 구간 위에 직접 표기.
 
+## 사업자 매출의 진짜 출처 — File2 합산이 아니라 File1 "01.방송사업자 광고매출" (2026-09-15)
+"사업자 비교" 모드(M/S·시장규모·매출 트렌드/랭킹)의 매출은 **File2 채널그룹 합산이 아니라 File1의 "01.방송사업자 광고매출" 값을 직접 쓴다** — File1이 사업자 단위로 이미 집계해 보고하는 수치가 있는데 File2 세부 채널을 다시 합산하는 건 이중작업이고 값도 미세하게 어긋날 수 있어서(사용자 요청으로 전환). **"대표채널 비교" 모드(개별 채널 단위)는 계속 File2를 쓴다** — File1엔 채널 단위 세부 매출이 없다(02.채널별 광고매출은 여전히 안 쓴다).
+
+- **적재**: ETL(`load-competitor-data.mjs`)이 이제 metric_code `01`도 `competitor_ratings`에 적재한다(`02`만 계속 제외). 단위는 다른 지표와 동일하게 변환 없이 원본(백만원) 그대로 저장 — CPRP의 ×1,000 관례와 같은 이유.
+- **주입 지점**: `js/core/metrics-data-loader.js`의 `injectOperatorRevenueFromRatings()` — fetch 직후, `rebuildMetricsSubstitution()` 이전에 1회 호출. File1의 사업자별 매출 행을, File2 쪽 **채널그룹 자기참조 행(channel===channelGroup)**으로 만들어 `metricsRevenueDataOriginal`에 주입(있으면 교체, 없으면 추가)한다. `metricsGroupRevenueMap()`(metrics-dashboard.js)이 원래 "자기참조 행 우선" 로직을 갖고 있어서, 이 주입 하나만으로 M/S·랭킹·트렌드·KPI 전부가 자동으로 File1 기반 값을 쓰게 된다(다른 코드 변경 없음).
+- **이름 조인**: File1 사업자명이 File2 채널그룹명과 5곳 갈린다(`RATINGS_OPERATOR_TO_REVENUE_GROUP`, metrics-data-loader.js) — CJ ENM→CJENM, MBC Plus→MBC PLUS, MBC(전국)→MBC, SBS 계열→SBS미디어넷, SBS(민방포함)→SBS. File1엔 사업자대분류/중분류(범위 토글용)가 없어서 이 조인으로 File2 쪽 분류를 그대로 가져온다 — 대응하는 File2 그룹이 없는 사업자는 조용히 건너뛰고 기존 File2 합산 폴백을 쓴다.
+- **KT ENA는 영향 없음**: 여기서 주입된 KT ENA 행도 `rebuildMetricsSubstitution()`이 곧바로 내부 실측치로 덮어쓴다 — 원본이 File1이든 File2든 결과는 항상 `computeEnaMonthlyRevenue()` 값.
+- **CPRP·채널시청률·eq-GRPs는 이 변경과 무관** — 대표채널 1개(별칭 매핑, `OPERATOR_TO_RATINGS_CHANNEL_ALIAS`)만 쓰는 기존 동작 그대로다(아래 절 참고). 사업자 매출 소스 변경은 오직 **매출/M-S 계산**에만 영향을 준다.
+
 ## CPRP·시청률·eq-GRPs — File1 원본을 그대로 쓰는 이유
 `11.시청률 1%당 매출(억원)`은 File1이 자체 계산해 둔 값을 그대로 쓴다(내부 매출로 재계산하지 않는다). 분자(매출 추정치)만 내부값으로 바꾸면 분모(채널시청률, ENA 단일 채널 기준)와 스코프가 안 맞아 오히려 왜곡된다. CPRP·GRP·시청률도 동일하게 "File1 원본" 취급.
 
@@ -61,7 +70,7 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 - **사업자 비교(기본)**: File2 `채널그룹` 기준 총합. ENA는 위 ① 치환값.
 - **대표채널 비교**: File2 `채널` 기준 개별 브랜드. ENA는 위 ② 치환값.
 - 선택 UI는 "① 사업자" → "② 채널" 2단 캐스케이딩 체크박스 팝오버(`.multi-dropdown` 패턴 재사용, `toggleMultiDropdown()`은 `data-loader.js`의 기존 범용 함수를 그대로 쓴다). ②는 ①에서 캐스케이딩되며, 사업자 비교 모드에서는 비활성화되고 "전체(사업자 총합)"로 표시된다.
-- **File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다** — 그래서 CPRP/채널시청률/eq-GRPs 미니차트·상세표·상세표 티저는 비교단위가 '사업자'여도 채널명 직접 선택으로 좁힌다(`metricsRatingsChannelSelection()`, metrics-dashboard.js): ENA는 항상 대표채널로 고정하고, 나머지는 사업자명이 File1의 실제 채널명과 정확히 일치하는 것만 자동으로 잡는다(예: 사업자명이 곧 대표채널명인 경우). **이 매핑은 실 샘플 파일로 검증되지 않았다** — 사람이 File1/File2 실제 채널명을 대조해 확인 필요.
+- **File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다** — 그래서 CPRP/채널시청률/eq-GRPs 미니차트·상세표 티저는 비교단위가 '사업자'여도 **사업자당 대표채널 1개씩만** 선택한다(`metricsRatingsChannelSelection()`, metrics-dashboard.js — 사용자 확정 요구사항, 2026-09-15): ENA는 항상 대표채널 "ENA" 하나로 고정, 나머지 사업자는 `OPERATOR_TO_RATINGS_CHANNEL_ALIAS`(실 샘플로 검증 완료, 아래 확인 완료 목록 6번) 매핑을 거친 대표채널 하나만 잡는다 — 같은 사업자의 서브채널(예: CJ ENM의 tvN DRAMA/SHOW/STORY)을 여러 줄로 겹쳐 그리지 않는다. (참고: `metricsDetail` 전체 상세표는 이 제한과 무관하게 File1의 모든 채널을 그대로 보여준다 — "상세" 드릴다운의 의도된 동작.)
 
 ## 상세표(`metricsDetail`) — 왜 `renderPresetPivot()`을 그대로 안 쓰는가
 `js/features/pivot-builder.js`의 `PIVOT_PRESETS.metricsDetail`에 등록은 돼 있지만(`togglePvRowNode`/`togglePvColNode`/`pvConfigFor` 같은 공용 상호작용을 물려받기 위해), 실제 렌더는 `renderMetricsDetailPivot()`(metrics-ratings.js)이라는 자체 함수가 맡는다.

@@ -100,7 +100,11 @@ export function parseCompetitorRatingsWorkbook(buffer) {
     if (!rawGubun) return;
     const codeMatch = rawGubun.match(/^(\d+)\./);
     const metricCode = codeMatch ? codeMatch[1] : '';
-    if (metricCode === '01' || metricCode === '02') return; // File2로 대체
+    // 02(채널별 광고매출)는 File2로 대체하지만, 01(방송사업자 광고매출)은 이제 그대로 적재한다 —
+    // "사업자 비교" 모드의 매출은 File2 채널그룹 합산이 아니라 File1이 직접 보고하는 사업자 단위
+    // 수치를 쓰기로 함(2026-09-15, 사용자 요청). 단위는 다른 지표와 동일하게 변환 없이 그대로 저장
+    // (백만원, File1 원본) — 쓰는 쪽(js/core/metrics-data-loader.js)에서 ×1,000,000 해서 원 단위로 맞춘다.
+    if (metricCode === '02') return;
     const metricLabel = codeMatch ? rawGubun.slice(codeMatch[0].length).trim() : rawGubun;
     const channel = canonicalizeRatingsChannelName(r['채널']);
     if (!channel) return;
