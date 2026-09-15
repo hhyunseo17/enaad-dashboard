@@ -78,7 +78,9 @@
     // "채널 시청률"엔 공백이 있고 "채널시청률 1%당 eq-GRPs"엔 없다, "1% 당"처럼 %뒤에도 공백이 있다) —
     // 그래서 비교 전에 공백을 전부 제거한다. 그래도 "채널 시청률"(03)은 공백만 지우면 "채널시청률
     // 1%당 eq-GRPs"(08)의 접두어와 겹치므로, rating만 부분일치가 아니라 완전일치로 찾는다.
-    const METRICS_LABEL = { rating: '채널시청률', cprp: 'CPRP', revPerRating: '시청률1%당매출', grp: '1일eq-GRPs' };
+    // advCount(12.광고주 수)는 완전일치로 찾는다 — 부분일치("광고주수")로 찾으면 16."사업자별
+    // 광고주수(120초 미만)"도 공백 제거 후 이 문자열을 포함해 같이 걸린다(실 샘플로 확인, 2026-09-15).
+    const METRICS_LABEL = { rating: '채널시청률', cprp: 'CPRP', revPerRating: '시청률1%당매출', grp: '1일eq-GRPs', advCount: '광고주수(일반+인포전체)' };
     function metricsStripWs(s) { return (s || '').replace(/\s+/g, ''); }
     function metricsFindMetricCode(labelSubstring, indexMode, exact) {
       const target = metricsStripWs(labelSubstring);
@@ -576,5 +578,6 @@
       renderMetricsCprpTrendChart();        // metrics-ratings.js
       renderMetricsRatingTrendChart();      // metrics-ratings.js
       renderMetricsGrpTrendChart();         // metrics-ratings.js
+      renderMetricsAdvCountTrendChart();    // metrics-ratings.js
       renderMetricsDetailTeaser();          // metrics-ratings.js
     }

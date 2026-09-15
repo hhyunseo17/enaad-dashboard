@@ -66,16 +66,20 @@
     }
 
     // ------------------------------------------------------------
-    // CPRP / 채널시청률 / eq-GRPs 미니 트렌드 3종 — 매출 비교와 같은 채널 선택을 공유(plan 확정사항).
+    // CPRP / 채널시청률 / eq-GRPs / 광고주수 미니 트렌드 4종 — 매출 비교와 같은 채널 선택을 공유(plan 확정사항).
     // ------------------------------------------------------------
-    function renderMetricsMiniTrendChart(canvasId, chartKey, metricCode, valueMultiplier, valueSuffix, decimals) {
+    // indexMode를 인자로 받는다(과거엔 전역 metricsIndexMode를 함수 안에서 직접 읽었다) — 광고주수(12번)는
+    // File1에 애초에 '전체' 하나뿐이라(일평균/프라임타임 구분 자체가 없음, 실 샘플로 확인 2026-09-15)
+    // 위쪽 토글이 '프라임타임'이어도 항상 '전체'로 고정 조회해야 한다. CPRP·채널시청률·eq-GRPs는
+    // 그대로 metricsIndexMode를 넘겨 기존 동작을 유지한다.
+    function renderMetricsMiniTrendChart(canvasId, chartKey, metricCode, valueMultiplier, valueSuffix, decimals, indexMode) {
       const canvas = document.getElementById(canvasId); if (!canvas) return;
       if (chartInstances[chartKey]) { chartInstances[chartKey].destroy(); chartInstances[chartKey] = null; }
       if (!metricCode) return; // 해당 라벨의 지표를 File1에서 찾지 못함 — 빈 캔버스로 둔다.
 
       // value===0인 달은 제외한다 — File1의 미보고 미래 달 placeholder(위 metricsRatingsLatestPeriod
       // 주석 참고). 안 걸러내면 트렌드 끝부분이 0으로 뚝 떨어져 보인다.
-      let months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === metricsIndexMode && r.year === metricsSelectedYear && r.value !== 0).map(r => r.month))].sort((a, b) => a - b);
+      let months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.value !== 0).map(r => r.month))].sort((a, b) => a - b);
       if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
       const labels = months.map(m => `${m}월`);
       const channels = metricsRatingsChannelSelection();
@@ -83,7 +87,7 @@
       const datasets = channels.map((ch, idx) => {
         const color = ch === ENA_REPRESENTATIVE_CHANNEL ? RC('curr') : seriesColor(idx);
         const data = months.map(m => {
-          const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === metricsIndexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
+          const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
           return row ? row.value * valueMultiplier : null;
         });
         return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: ch === ENA_REPRESENTATIVE_CHANNEL ? 3 : 2, pointRadius: 2.5, spanGaps: true };
@@ -101,9 +105,11 @@
         }
       });
     }
-    function renderMetricsCprpTrendChart() { renderMetricsMiniTrendChart('chartMetricsCprpTrend', 'metricsCprpTrend', metricsFindMetricCode(METRICS_LABEL.cprp, metricsIndexMode), 1000, '원', 0); }
-    function renderMetricsRatingTrendChart() { renderMetricsMiniTrendChart('chartMetricsRatingTrend', 'metricsRatingTrend', metricsFindMetricCode(METRICS_LABEL.rating, metricsIndexMode, true), 1, '%', 3); }
-    function renderMetricsGrpTrendChart() { renderMetricsMiniTrendChart('chartMetricsGrpTrend', 'metricsGrpTrend', metricsFindMetricCode(METRICS_LABEL.grp, metricsIndexMode), 1, '', 1); }
+    function renderMetricsCprpTrendChart() { renderMetricsMiniTrendChart('chartMetricsCprpTrend', 'metricsCprpTrend', metricsFindMetricCode(METRICS_LABEL.cprp, metricsIndexMode), 1000, '원', 0, metricsIndexMode); }
+    function renderMetricsRatingTrendChart() { renderMetricsMiniTrendChart('chartMetricsRatingTrend', 'metricsRatingTrend', metricsFindMetricCode(METRICS_LABEL.rating, metricsIndexMode, true), 1, '%', 3, metricsIndexMode); }
+    function renderMetricsGrpTrendChart() { renderMetricsMiniTrendChart('chartMetricsGrpTrend', 'metricsGrpTrend', metricsFindMetricCode(METRICS_LABEL.grp, metricsIndexMode), 1, '', 1, metricsIndexMode); }
+    // 광고주수(12번)는 File1에 '전체' 인덱스만 있다 — 항상 '전체'로 고정 조회(위 함수 주석 참고).
+    function renderMetricsAdvCountTrendChart() { renderMetricsMiniTrendChart('chartMetricsAdvCountTrend', 'metricsAdvCountTrend', metricsFindMetricCode(METRICS_LABEL.advCount, '전체', true), 1, '개사', 0, '전체'); }
 
     // ------------------------------------------------------------
     // 지표별 값 표기 — 지표마다 단위가 다르므로(%, 원, GRP, 억원, 건수…) pvFormatCell(금액 전용,
