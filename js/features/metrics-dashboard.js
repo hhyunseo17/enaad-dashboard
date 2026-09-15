@@ -313,38 +313,80 @@
     }
 
     // ------------------------------------------------------------
-    // M/S 트렌드 — 누적(stacked) 막대. KT ENA(강조) + 기타(범위 내 나머지 합), % 라벨은 ENA 구간 위에.
+    // 방송광고시장 규모 추이 — 지상파/종편/케이블 3개 고정 구분(범위 토글과 무관, 항상 셋 다 표시).
+    // 그룹별로 자기참조 행 우선/세부채널 합산 폴백을 쓰는 metricsGroupRevenueMap()을 그대로 재사용해
+    // 중복 합산을 피한다(같은 그룹을 자기참조 총합 + 세부채널로 두 번 더하지 않음).
     // ------------------------------------------------------------
-    function renderMetricsMarketShareChart() {
-      const canvas = document.getElementById('chartMetricsMarketShare'); if (!canvas) return;
-      if (chartInstances.metricsMs) { chartInstances.metricsMs.destroy(); chartInstances.metricsMs = null; }
-      document.getElementById('metricsMsChartTitle').innerText = `M/S 트렌드 (${metricsScopeLabel()})`;
+    const METRICS_SCOPE_CATEGORIES = ['지상파', '종편', '케이블'];
+    function renderMetricsMarketByScopeChart() {
+      const canvas = document.getElementById('chartMetricsMarketByScope'); if (!canvas) return;
+      if (chartInstances.metricsMarketByScope) { chartInstances.metricsMarketByScope.destroy(); chartInstances.metricsMarketByScope = null; }
 
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
       if (!months.length) return;
       const labels = months.map(m => `${m}월`);
-      const enaVals = [], otherVals = [], shareVals = [];
+
+      // 채널그룹 → operatorMid(지상파/종편/케이블) 조회용 — 그룹당 행 하나만 있으면 되므로 캐시.
+      const midByGroup = {};
+      metricsRevenueData.forEach(r => { if (!midByGroup[r.channelGroup]) midByGroup[r.channelGroup] = r.operatorMid; });
+
+      const dataByCat = METRICS_SCOPE_CATEGORIES.map(() => []);
       months.forEach(m => {
-        const r = computeEnaPayTvMarketShare(metricsSelectedYear, m, metricsScopeMode);
-        enaVals.push(r.ena / 1e8); otherVals.push((r.market - r.ena) / 1e8); shareVals.push(r.share);
+        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, 'all'); // 'all' = 범위 필터 없음, 전 그룹
+        const catTotal = { '지상파': 0, '종편': 0, '케이블': 0 };
+        Object.keys(groups).forEach(g => {
+          const cat = midByGroup[g];
+          if (cat && catTotal.hasOwnProperty(cat)) catTotal[cat] += groups[g];
+        });
+        METRICS_SCOPE_CATEGORIES.forEach((cat, i) => dataByCat[i].push(catTotal[cat] / 1e8));
       });
 
+      const colors = [seriesColor(0), seriesColor(1), seriesColor(2)];
       const ctx = canvas.getContext('2d');
-      chartInstances.metricsMs = new Chart(ctx, {
+      chartInstances.metricsMarketByScope = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels, datasets: [
-            { label: 'KT ENA', data: enaVals, backgroundColor: ddBarFill(RC('curr')), borderRadius: 0, ...ddStackSeparator(),
-              datalabels: { display: 'auto', color: '#FFFFFF', font: { size: 11, weight: FW() }, anchor: 'center', align: 'center', formatter: (v, c) => v > 0 ? shareVals[c.dataIndex].toFixed(1) + '%' : '' } },
-            { label: '기타', data: otherVals, backgroundColor: ddBarFill(RC('ref')), borderRadius: 0, ...ddStackSeparator() }
-          ]
+          labels, datasets: METRICS_SCOPE_CATEGORIES.map((cat, i) => ({
+            label: cat, data: dataByCat[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator()
+          }))
         },
         options: {
-          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(2)} 억원` } } },
           scales: { x: { stacked: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
             y: ddValueAxis({ stacked: true, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '억' } }) }
+        }
+      });
+    }
+
+    // ------------------------------------------------------------
+    // KT ENA M/S 트렌드 — 꺾은선. "범위" 토글이 가리키는 시장 기준 M/S(%)만 보여준다
+    // (왼쪽 시장규모 차트는 지상파/종편/케이블 고정 3분류, 이쪽은 범위 토글에 따라 달라짐).
+    // ------------------------------------------------------------
+    function renderMetricsMarketShareChart() {
+      const canvas = document.getElementById('chartMetricsMarketShare'); if (!canvas) return;
+      if (chartInstances.metricsMs) { chartInstances.metricsMs.destroy(); chartInstances.metricsMs = null; }
+      document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S 트렌드 (${metricsScopeLabel()})`;
+
+      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      if (!months.length) return;
+      const labels = months.map(m => `${m}월`);
+      const shareVals = months.map(m => computeEnaPayTvMarketShare(metricsSelectedYear, m, metricsScopeMode).share);
+
+      const ctx = canvas.getContext('2d');
+      chartInstances.metricsMs = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [
+          { label: 'M/S', data: shareVals, borderColor: RC('curr'), backgroundColor: RC('curr'), fill: false, tension: 0.3, borderWidth: 3, pointRadius: 3,
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v.toFixed(1) + '%' } }
+        ] },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: (c) => `M/S: ${c.raw.toFixed(2)}%` } } },
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '%' } }) }
         }
       });
     }
@@ -459,6 +501,7 @@
 
       renderMetricsRevenueKpis();
       renderMetricsRatingsKpis();          // metrics-ratings.js
+      renderMetricsMarketByScopeChart();
       renderMetricsMarketShareChart();
       renderMetricsRevenueTrendChart();
       renderMetricsRevenueRankingChart();

@@ -1392,13 +1392,23 @@
           </div>
         </section>
 
-        <!-- M/S 트렌드 (전체 폭, 누적 막대) -->
-        <section class="card-box">
-          <div class="card-box-header">
-            <div class="card-box-title"><h2 id="metricsMsChartTitle">M/S 트렌드 (유료방송)</h2></div>
+        <!-- 시장 규모(지상파/종편/케이블 막대) + KT ENA M/S 트렌드(꺾은선), 절반씩 -->
+        <section class="grid-2col grid-zone3">
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>방송광고시장 규모 추이 (지상파/종편/케이블)</h2></div>
+            </div>
+            <div class="chart-container" style="height: 320px;">
+              <canvas id="chartMetricsMarketByScope"></canvas>
+            </div>
           </div>
-          <div class="chart-container" style="height: 320px;">
-            <canvas id="chartMetricsMarketShare"></canvas>
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2 id="metricsMsChartTitle">KT ENA M/S 트렌드 (유료방송)</h2></div>
+            </div>
+            <div class="chart-container" style="height: 320px;">
+              <canvas id="chartMetricsMarketShare"></canvas>
+            </div>
           </div>
         </section>
 
