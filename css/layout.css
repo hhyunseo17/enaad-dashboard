@@ -525,13 +525,13 @@
 @media (max-width: 720px) { .metrics-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
 .kpi-source-note { font-size: 11px; color: var(--text-disabled); }
 
-/* CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종 — 화면 절반 크기로 2열×2행(좁으면 1열),
-   위 매출 트렌드/랭킹(grid-zone5, 50/50)과 같은 폭 원칙(2026-09-15, 사용자 요청 — 원래 3열은
-   카드 하나하나가 이 화면의 다른 섹션보다 좁아 보였다). */
+/* CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종 — 폭은 화면 절반(2열×2행, 좁으면 1열)이지만
+   높이는 더 이상 줄이지 않는다(2026-09-15, 사용자 요청 — 타사 비교용 선 여러 개가 겹치는
+   차트라 낮으면 알아보기 어렵다, 적어도 "매출 트렌드" 카드 크기만큼은 필요) — 그래서 세로 크기는
+   `.card-box`/`.chart-container` 기본값(380px/280px)을 그대로 물려받도록 자체 min-height 재정의를
+   없앴다(과거엔 260px/220px로 더 낮게 잡아 "화면 절반 무게"를 표현했었다). */
 .metrics-mini-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 900px) { .metrics-mini-grid { grid-template-columns: repeat(2, 1fr); } }
-.metrics-mini-grid .card-box { min-height: 260px; }
-.metrics-mini-grid .chart-container { min-height: 220px; }
 
 /* ① 사업자 → ② 채널 캐스케이딩 멀티셀렉트. 기존 .multi-dropdown 패턴을 그대로 쓰되,
    두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
