@@ -383,6 +383,32 @@ export async function handleUpfrontContractsRequest(env, request) {
   }
 }
 
+// 지표 대시보드(경쟁채널 벤치마크) — R2 바인딩이 이 Pages 프로젝트에서 원인 불명으로 전혀 붙지
+// 않아(2026-09-15, 이름을 바꿔도 재현) Supabase 경유로 전환. requireAuth가 아니라
+// requireMetricsAccess를 쓴다 — 로그인만으로는 부족하고 이메일 허용목록 통과까지 필요(롤아웃 초기).
+// 테이블이 작아(2만/8천행대) v_bonbu_sales처럼 컬럼 별칭으로 줄일 필요는 없다 — select=*.
+export async function handleCompetitorRatingsRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireMetricsAccess(env, request);
+  if (authError) return authError;
+  try {
+    return await proxyView(env, 'competitor_ratings');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
+export async function handleCompetitorRevenueRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireMetricsAccess(env, request);
+  if (authError) return authError;
+  try {
+    return await proxyView(env, 'competitor_revenue');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
 export async function handleTargetsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   const authError = await requireAuth(env, request);

@@ -89,6 +89,16 @@ node provision-auth-users.mjs "C:\경로\name.xlsx"
 ## R2 업로드와의 관계
 R2(`addata.xlsx`)에도 계속 업로드하는 것을 권장(백업/xlsx 모드 안전망 목적). 이 스크립트는 R2 업로드를 대체하지 않고 별도로 실행한다.
 
+## 경쟁채널 지표 적재 (`load-competitor-data.mjs`)
+지표 대시보드(경쟁채널 벤치마크, `docs/features/metrics-dashboard.md`)용. File1(경쟁채널 지표 현황)·File2(매체별 광고비 raw) 두 엑셀을 `competitor_ratings`/`competitor_revenue` 테이블에 upsert한다. `run.mjs`/`load-targets.mjs`와 마찬가지로 독립 스크립트이며, `load-targets.mjs`처럼 배치/컷오버 없이 upsert만 한다.
+
+원래는 R2 고정 키+Pages Function으로 서빙할 계획이었으나, 이 Cloudflare Pages 프로젝트에서 R2 바인딩이 원인 불명으로 전혀 붙지 않는 문제 때문에(2026-09-15, 이름을 바꿔도 재현) Supabase로 옮겼다 — 자세한 경위는 `docs/features/metrics-dashboard.md`의 "데이터 소스" 절 참고.
+
+```
+node load-competitor-data.mjs "C:\경로\경쟁채널 지표 현황.xlsx" "C:\경로\매체별 광고비 raw.xlsx"
+```
+리포트가 갱신될 때마다(File1/File2 둘 다) 재실행. 파일에서 삭제된 과거 행은 upsert만으로는 정리되지 않는다(load-targets.mjs와 동일한 한계) — 필요 시 Supabase에서 수동 확인.
+
 ## 목표 적재 (`load-targets.mjs`)
 `run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 매출기준 | 대분류 | 귀속월 | 목표)를
 읽어 5대분류로 재분류(`대행수익` 등은 `기타광고`로 흡수)한 뒤 `sales_targets` 테이블에 upsert한다. 배치/컷오버 개념이

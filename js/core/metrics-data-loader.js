@@ -1,14 +1,20 @@
 // ============================================================
 // js/core/metrics-data-loader.js
-// 지표 대시보드(경쟁채널 벤치마크) 전용 데이터 연결·파싱 — data-loader.js 다음, features/* 이전 로드
+// 지표 대시보드(경쟁채널 벤치마크) 전용 데이터 연결 — data-loader.js 다음, features/* 이전 로드
 //
-// File1(경쟁채널 지표 현황, R2 키 competitor-ratings.xlsx)과 File2(매체별 광고비 raw,
-// R2 키 competitor-revenue.xlsx)를 functions/competitor-ratings.js / functions/competitor-revenue.js
-// 프록시로 받아 파싱한다. ENA 자신의 수치는 외부 추정치보다 내부 매출(rawData)이 정확하므로,
-// File2에서 KT ENA 쪽 매출만 내부 값으로 치환한다(자세한 배경은 docs/features/metrics-dashboard.md).
+// File1(경쟁채널 지표 현황)·File2(매체별 광고비 raw)는 원래 R2에서 xlsx로 직접 서빙했으나,
+// 이 Cloudflare Pages 프로젝트에서 R2 바인딩이 원인 불명으로 전혀 붙지 않는 문제가 있어(2026-09-15,
+// 이름을 바꿔 새로 만들어도 재현 — DASHBOARD_BUCKET/TEST_BUCKET 둘 다 env에 안 잡힘. SUPABASE_URL 등
+// 일반 변수는 정상 작동) Supabase로 옮겼다. scripts/etl/load-competitor-data.mjs가 두 엑셀을 미리
+// long-format으로 파싱해 competitor_ratings/competitor_revenue 테이블에 적재해두면, 여기서는
+// /api/competitor-ratings·/api/competitor-revenue(supabase-proxy 경유, requireMetricsAccess로 이메일
+// 허용목록 검사)로 이미 정리된 JSON을 그대로 받는다 — SheetJS 파싱은 이제 이 파일에 없다(ETL 쪽에만
+// 있음, 두 파싱 로직은 동일한 코드를 유지할 것 — scripts/etl/load-competitor-data.mjs 상단 주석 참고).
+// ENA 자신의 수치는 외부 추정치보다 내부 매출(rawData)이 정확하므로, File2에서 KT ENA 쪽 매출만
+// 내부 값으로 치환한다(자세한 배경은 docs/features/metrics-dashboard.md).
 //
 // 지연 로딩 대상: 부팅 시(init.js)가 아니라 "지표 대시보드" 탭을 처음 열 때 fetchMetricsDataHttp()가
-// 1회 호출된다(호출부는 js/features/metrics-dashboard.js). 이 파일은 fetch/parse/치환만 담당하고
+// 1회 호출된다(호출부는 js/features/metrics-dashboard.js). 이 파일은 fetch/치환만 담당하고
 // 렌더링은 전혀 하지 않는다 — data-loader.js가 rawData까지만 책임지는 것과 같은 경계.
 // ============================================================
 
@@ -43,53 +49,46 @@
     // (plan 확정사항 2) — UI가 토글을 바꿀 때마다 이 값을 갱신하고 rebuildMetricsSubstitution(newMode)를 부른다.
     let metricsBasisMode = 'performance';
 
-    const METRICS_RATINGS_URL = './competitor-ratings';
-    const METRICS_REVENUE_URL = './competitor-revenue';
-    const REVENUE_SHEET_NAME = '변환용';
-    const RATINGS_SHEET_NAME = '변환용취합';
-    // 실 File2 샘플로 확인됨(2026-09-15): 헤더가 "YYYY-MM"이 아니라 "YYYY-MM-01"(항상 일=01) —
-    // 날짜 서식이 적용된 셀이라 SheetJS가 그대로 문자열로 뽑아낸다. 끝의 "-01"은 버리고 연/월만 쓴다.
-    const YM_COL_REGEX = /^(\d{4})-(\d{2})-\d{2}$/;
-    const RATINGS_MONTH_COLS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+    const METRICS_RATINGS_URL = '/api/competitor-ratings';
+    const METRICS_REVENUE_URL = '/api/competitor-revenue';
 
     // ------------------------------------------------------------
     // fetchMetricsDataHttp() — 지연 로딩 진입점
     // ------------------------------------------------------------
-    // fetchDataHttp()(data-loader.js)와 동일한 상대경로+캐시버스팅+credentials:'include' 패턴을 쓴다.
-    // idempotent: 이미 진행 중이거나 끝난 fetch가 있으면 그 프라미스를 그대로 돌려준다(중복 fetch 방지).
-    // 실패하면 캐시를 비워서 다음 호출(탭 재진입 등)이 재시도할 수 있게 한다.
+    // js/core/data-loader.js의 fetchDataSupabase()와 동일한 패턴 — getAuthorizationHeader()로 JWT를
+    // Authorization 헤더에 실어 /api/* 프록시를 부른다(credentials:'include'는 이제 불필요 — R2
+    // 직접 서빙 때 쓰던 방식). idempotent: 이미 진행 중이거나 끝난 fetch가 있으면 그 프라미스를
+    // 그대로 돌려준다(중복 fetch 방지). 실패하면 캐시를 비워서 다음 호출(탭 재진입 등)이 재시도할 수 있게 한다.
     function fetchMetricsDataHttp() {
       if (metricsDataFetchPromise) return metricsDataFetchPromise;
 
-      // 이 두 파일은 /api/* 프록시와 마찬가지로 Supabase Auth JWT를 요구한다(현재는 이메일
-      // 허용목록까지 검사 — shared/supabase-proxy.mjs의 requireMetricsAccess() 참고, 롤아웃 초기라
-      // 소수에게만 공개). getAuthorizationHeader()는 js/core/auth.js가 정의한다(로드 순서상 이 파일보다 앞).
-      const fetchWorkbook = (url) => {
-        const cacheBustUrl = url + '?t=' + Date.now();
-        return getAuthorizationHeader().then(authHeader =>
-          fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include', headers: authHeader ? { Authorization: authHeader } : {} })
-        ).then(res => {
-            if (res.status === 403) throw new Error('경쟁채널 지표 열람 권한이 없습니다.');
-            if (!res.ok) {
-              // 500 등은 본문에 err.message가 실려 오므로(functions/competitor-*.js), 상태코드만이
-              // 아니라 본문도 같이 읽어서 보여준다 — 안 그러면 "500"만 보이고 원인을 알 수 없다
-              // (2026-09-15 실제로 원인 특정 못 한 사례).
-              return res.text().then(body => {
-                throw new Error(`HTTP Error ${res.status} (${url})${body ? ' — ' + body.slice(0, 300) : ''}`);
-              });
-            }
-            if (res.url && res.url.includes('cloudflareaccess.com')) throw new Error('Cloudflare Access authentication required');
-            return res.arrayBuffer();
-          })
-          .then(buf => XLSX.read(buf, { type: 'array' }));
-      };
+      const fetchJson = (url) => getAuthorizationHeader().then(authHeader =>
+        fetch(url, { cache: 'no-store', headers: authHeader ? { Authorization: authHeader } : {} })
+      ).then(res => {
+        if (res.status === 403) throw new Error('경쟁채널 지표 열람 권한이 없습니다.');
+        if (!res.ok) {
+          return res.text().then(body => {
+            throw new Error(`HTTP Error ${res.status} (${url})${body ? ' — ' + body.slice(0, 300) : ''}`);
+          });
+        }
+        return res.json();
+      });
 
+      // Supabase 행은 snake_case(ETL이 그렇게 적재 — scripts/etl/load-competitor-data.mjs)라
+      // 나머지 코드 전체가 기대하는 camelCase 필드명으로 변환한다. 필드명 매핑 외 가공 없음
+      // (정규화·치환·파싱은 ETL 쪽에서 이미 끝난 채로 들어온다).
       metricsDataFetchPromise = Promise.all([
-        fetchWorkbook(METRICS_RATINGS_URL),
-        fetchWorkbook(METRICS_REVENUE_URL)
-      ]).then(([ratingsWb, revenueWb]) => {
-        metricsRatingsData = parseCompetitorRatingsWorkbook(ratingsWb);
-        metricsRevenueDataOriginal = parseCompetitorRevenueWorkbook(revenueWb);
+        fetchJson(METRICS_RATINGS_URL),
+        fetchJson(METRICS_REVENUE_URL)
+      ]).then(([ratingsRows, revenueRows]) => {
+        metricsRatingsData = ratingsRows.map(r => ({
+          year: r.year, indexMode: r.index_mode, metricCode: r.metric_code, metricLabel: r.metric_label,
+          channel: r.channel, month: r.month, value: Number(r.value)
+        }));
+        metricsRevenueDataOriginal = revenueRows.map(r => ({
+          channel: r.channel, operatorMajor: r.operator_major, operatorMid: r.operator_mid,
+          channelGroup: r.channel_group, year: r.year, month: r.month, revenue: Number(r.revenue)
+        }));
         rebuildMetricsSubstitution(metricsBasisMode);
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
@@ -101,133 +100,6 @@
       });
 
       return metricsDataFetchPromise;
-    }
-
-    // 채널명 whitespace 정규화 — 원본에 'ENA PLAY '처럼 trailing space가 섞여 있는 경우가 실제로
-    // 있다고 확인됨(plan 참고). 다른 정규화(대소문자 등)는 하지 않는다 — 원본 표기를 그대로 신뢰.
-    function normalizeMetricsChannelName(val) {
-      return (val === null || val === undefined) ? '' : val.toString().trim();
-    }
-
-    // File1(`변환용취합`)은 같은 방송사가 연도/행마다 표기가 갈린다(실 샘플로 확인, 2026-09-15) —
-    // trim만으로는 못 잡는 내부 표기 차이(괄호 유무, 공백 위치)라 별도로 하나로 합친다. 이걸 안 하면
-    // 같은 채널의 월별 데이터가 두 이름으로 쪼개져 최신월 조회·트렌드차트에서 일부 달이 누락된다.
-    const RATINGS_CHANNEL_CANONICAL_MAP = { 'MBC 전국': 'MBC(전국)', 'SBS (민방포함)': 'SBS(민방포함)' };
-    function canonicalizeRatingsChannelName(val) {
-      const name = normalizeMetricsChannelName(val);
-      return RATINGS_CHANNEL_CANONICAL_MAP[name] || name;
-    }
-
-    // ------------------------------------------------------------
-    // parseCompetitorRevenueWorkbook() — File2(매체별 광고비 raw), 시트 `변환용`
-    // 컬럼: 채널｜사업자대분류｜사업자중분류｜채널그룹｜2019-01…2026-07 (연월 wide 컬럼)
-    // wide → long: 채널×연월 조합 1행. 시트/컬럼이 예상과 다르면 던지지 않고 [] + console.warn.
-    // ------------------------------------------------------------
-    function parseCompetitorRevenueWorkbook(workbook) {
-      try {
-        const sheet = workbook.Sheets[REVENUE_SHEET_NAME];
-        if (!sheet) {
-          console.warn(`[metrics-data-loader] File2(경쟁채널 매출)에 "${REVENUE_SHEET_NAME}" 시트가 없습니다. 시트 목록: ${workbook.SheetNames.join(', ')}`);
-          return [];
-        }
-        const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
-        if (jsonRows.length === 0) {
-          console.warn(`[metrics-data-loader] File2 "${REVENUE_SHEET_NAME}" 시트에 데이터 행이 없습니다.`);
-          return [];
-        }
-
-        const firstRowKeys = Object.keys(jsonRows[0]);
-        const requiredCols = ['채널', '사업자대분류', '사업자중분류', '채널그룹'];
-        const missingCols = requiredCols.filter(c => !firstRowKeys.includes(c));
-        if (missingCols.length > 0) {
-          console.warn(`[metrics-data-loader] File2 "${REVENUE_SHEET_NAME}" 시트에 예상 컬럼이 없습니다(누락: ${missingCols.join(', ')}). 실제 컬럼: ${firstRowKeys.join(', ')}`);
-          return [];
-        }
-
-        const ymCols = firstRowKeys.filter(k => YM_COL_REGEX.test(k));
-        if (ymCols.length === 0) {
-          console.warn(`[metrics-data-loader] File2 "${REVENUE_SHEET_NAME}" 시트에서 "YYYY-MM" 형식의 월별 매출 컬럼을 찾지 못했습니다.`);
-          return [];
-        }
-
-        const rows = [];
-        jsonRows.forEach(r => {
-          const channel = normalizeMetricsChannelName(r['채널']);
-          if (!channel) return;
-          const channelGroup = normalizeMetricsChannelName(r['채널그룹']) || channel;
-          const operatorMajor = (r['사업자대분류'] || '').toString().trim();
-          const operatorMid = (r['사업자중분류'] || '').toString().trim();
-
-          ymCols.forEach(col => {
-            const m = col.match(YM_COL_REGEX);
-            const year = parseInt(m[1], 10);
-            const month = parseInt(m[2], 10);
-            const revenue = Number(r[col]) || 0;
-            rows.push({ channel, operatorMajor, operatorMid, channelGroup, year, month, revenue });
-          });
-        });
-        return rows;
-      } catch (err) {
-        console.warn('[metrics-data-loader] File2(경쟁채널 매출) 파싱 중 오류:', err);
-        return [];
-      }
-    }
-
-    // ------------------------------------------------------------
-    // parseCompetitorRatingsWorkbook() — File1(경쟁채널 지표 현황), 시트 `변환용취합`
-    // 컬럼: 연도｜INDEX｜구분｜채널｜1…12 (월 wide 컬럼, 연도별로 행이 나뉨)
-    // 구분값(예: "03.채널시청률")에서 번호 접두어를 떼어 metricCode/metricLabel로 분리.
-    // 01/02.광고매출 행은 스킵(File2로 대체 — plan 확정사항).
-    // ------------------------------------------------------------
-    function parseCompetitorRatingsWorkbook(workbook) {
-      try {
-        const sheet = workbook.Sheets[RATINGS_SHEET_NAME];
-        if (!sheet) {
-          console.warn(`[metrics-data-loader] File1(경쟁채널 지표)에 "${RATINGS_SHEET_NAME}" 시트가 없습니다. 시트 목록: ${workbook.SheetNames.join(', ')}`);
-          return [];
-        }
-        const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
-        if (jsonRows.length === 0) {
-          console.warn(`[metrics-data-loader] File1 "${RATINGS_SHEET_NAME}" 시트에 데이터 행이 없습니다.`);
-          return [];
-        }
-
-        const firstRowKeys = Object.keys(jsonRows[0]);
-        const requiredCols = ['연도', 'INDEX', '구분', '채널'];
-        const missingCols = requiredCols.filter(c => !firstRowKeys.includes(c));
-        if (missingCols.length > 0) {
-          console.warn(`[metrics-data-loader] File1 "${RATINGS_SHEET_NAME}" 시트에 예상 컬럼이 없습니다(누락: ${missingCols.join(', ')}). 실제 컬럼: ${firstRowKeys.join(', ')}`);
-          return [];
-        }
-
-        const rows = [];
-        jsonRows.forEach(r => {
-          const year = parseInt(r['연도'], 10);
-          if (!year) return;
-          const indexMode = (r['INDEX'] || '').toString().trim();
-          const rawGubun = (r['구분'] || '').toString().trim();
-          if (!rawGubun) return;
-          const codeMatch = rawGubun.match(/^(\d+)\./);
-          const metricCode = codeMatch ? codeMatch[1] : '';
-          // 01/02.광고매출은 쓰지 않는다 — File2 기반 파생 매출로 대체(plan 확정사항).
-          if (metricCode === '01' || metricCode === '02') return;
-          const metricLabel = codeMatch ? rawGubun.slice(codeMatch[0].length).trim() : rawGubun;
-          const channel = canonicalizeRatingsChannelName(r['채널']);
-          if (!channel) return;
-
-          RATINGS_MONTH_COLS.forEach(col => {
-            if (!(col in r)) return;
-            if (r[col] === '') return;
-            const value = Number(r[col]);
-            if (isNaN(value)) return;
-            rows.push({ year, indexMode, metricCode, metricLabel, channel, month: parseInt(col, 10), value });
-          });
-        });
-        return rows;
-      } catch (err) {
-        console.warn('[metrics-data-loader] File1(경쟁채널 지표) 파싱 중 오류:', err);
-        return [];
-      }
     }
 
     // ------------------------------------------------------------

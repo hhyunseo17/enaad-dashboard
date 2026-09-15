@@ -5,16 +5,19 @@
 ## 개요
 광고전략팀이 정기 수신하는 외부 리포트 2종을 KT ENA 내부 매출과 나란히 벤치마킹하는 화면. 기존 매출 대시보드(`main` 이하 15개 뷰)와 완전히 분리된 두 번째 데이터셋·컨트롤로 동작한다 — `selectedYears`/`selectedMonths`/`revenueBasisMode`(state.js)를 공유하지 않고, 이 탭 전용 상태(`metricsSelectedYear` 등, state.js 하단 별도 블록)를 쓴다.
 
-## 향후 계획 — Supabase 전환은 지금 안 한다
-메인 매출 대시보드처럼 결국 Supabase로 옮길 수 있지만, **지금은 R2+클라이언트 파싱을 그대로 유지**하기로 결정함(2026-09-15). 이유: 실 File1/File2 샘플이 아직 없어 시트/컬럼 구조를 검증하지 못한 상태라 스키마를 확정할 수 없고, 두 파일 다 메인 매출(27,000행)과 달리 작아서(16개 지표×소수 채널×12개월) DB로 옮길 성능상 이유도 없다. 실 데이터로 위 "확인 필요" 항목들을 다 확인하고 화면이 안정된 뒤에 전환을 재검토한다 — 그때 참고할 선례는 메인 매출의 xlsx→Supabase 전환(`scripts/etl/`, `supabase/schema.sql`)이다.
+## 데이터 소스 — R2가 아니라 Supabase (2026-09-15 전환)
+원래 계획은 `addata.xlsx`와 같은 R2 고정 키+Pages Function 프록시+클라이언트 SheetJS 파싱이었다(당시 "지금은 R2 유지" 결정도 이 문서에 있었다). 그런데 **이 Cloudflare Pages 프로젝트에서 R2 버킷 바인딩이 원인 불명으로 전혀 붙지 않는 문제**가 있었다 — 대시보드에 바인딩을 정확히 추가하고, 삭제 후 재생성하고, 이름을 아예 새로 만들어도(`TEST_BUCKET`) `context.env`에 안 잡혔다(반면 `SUPABASE_URL` 같은 일반 텍스트/Secret 변수는 정상 작동 — R2 바인딩만의 계정/프로젝트 차원 문제로 보임). 원인을 못 찾아 R2 경로를 포기하고 Supabase로 옮겼다.
 
-## 데이터 소스 (R2 고정 키 → Pages Function 프록시 → 클라이언트 파싱)
-| 소스 | R2 키 / 프록시 | 시트 | 담당 |
+| 소스 | 테이블 | ETL | API |
 |---|---|---|---|
-| File1: 경쟁채널 지표 현황 | `competitor-ratings.xlsx` → `functions/competitor-ratings.js` | `변환용취합` (`연도｜INDEX｜구분｜채널｜1…12`) | 시청률·GRP·CPRP 등 16개 방송 지표 → `metricsRatingsData` |
-| File2: 매체별 광고비 raw | `competitor-revenue.xlsx` → `functions/competitor-revenue.js` | `변환용` (`채널｜사업자대분류｜사업자중분류｜채널그룹｜YYYY-MM…`) | 매출·시장규모·M/S → `metricsRevenueData` |
+| File1: 경쟁채널 지표 현황 | `competitor_ratings` | `scripts/etl/load-competitor-data.mjs` | `/api/competitor-ratings` |
+| File2: 매체별 광고비 raw | `competitor_revenue` | (같은 스크립트) | `/api/competitor-revenue` |
 
-두 프록시 모두 `addata.js`(기존 매출 데이터용)를 그대로 미러링한다(`context.env.DASHBOARD_BUCKET.get()` → etag/Cache-Control → `object.body` 스트림). 파일명이 갱신 때마다 바뀌므로 고정 키에 덮어쓰는 방식이라 프론트는 파일명을 몰라도 된다.
+- **적재**: `node scripts/etl/load-competitor-data.mjs <File1.xlsx> <File2.xlsx>` — File1/File2를 wide→long 변환·채널명 정규화까지 마친 뒤 두 테이블에 upsert(unique key: ratings=`year,index_mode,metric_code,channel,month`, revenue=`channel,year,month`). `sales_targets`(`load-targets.mjs`)와 같은 패턴 — 배치/컷오버 없음, 리포트 갱신 때마다 재실행. 파일에서 사라진 과거 행은 upsert만으로는 안 지워진다(수동 확인 필요, load-targets.mjs와 동일한 한계).
+- **API**: `functions/api/competitor-ratings.js`/`competitor-revenue.js` → `shared/supabase-proxy.mjs`의 `handleCompetitorRatingsRequest()`/`handleCompetitorRevenueRequest()` → `proxyView(env, 'competitor_ratings'|'competitor_revenue')`(다른 `/api/*`와 같은 PostgREST 프록시 함수, 페이지네이션 포함). `requireAuth`가 아니라 `requireMetricsAccess`를 쓴다(로그인만으로 부족 — 이메일 허용목록, 아래 "접근 제한" 절).
+- **테이블은 작아서**(2만/8천행대, `v_bonbu_sales`의 26,000행과 비교해도 비슷한 규모지만 컬럼 수가 훨씬 적다) 별도 뷰나 컬럼 별칭 단축 없이 `select=*` 그대로 쓴다.
+- Supabase 행은 snake_case(`operator_major` 등)로 오므로 `js/core/metrics-data-loader.js`의 `fetchMetricsDataHttp()`가 camelCase(`operatorMajor` 등)로 필드명만 바꿔준다 — 그 외 가공(정규화·번호 제거·wide→long)은 전부 ETL 쪽에서 이미 끝난 채로 들어온다. 클라이언트에는 이제 SheetJS 파싱이 없다.
+- R2 기반 구버전 코드(`functions/competitor-ratings.js`/`competitor-revenue.js`, `parseCompetitorRatingsWorkbook()`/`parseCompetitorRevenueWorkbook()`)는 삭제했다 — R2 바인딩 문제가 이 프로젝트 자체의 문제라 "안전망"으로 남겨둘 이유가 없었다(작동한 적이 없는 경로).
 
 **지연 로딩**: 부팅 시(`init.js`)가 아니라 "지표 대시보드" 탭을 처음 열 때 `fetchMetricsDataHttp()`가 1회 호출된다(`renderMetricsDashboard()`가 매번 부르지만 진행 중/완료된 fetch가 있으면 그 프라미스를 그대로 돌려주므로 idempotent). `rawData`(메인 매출)가 아직 없는 극단적인 경우엔 "매출 데이터 로딩 중" 메시지를 띄우고 1.5초 후 재시도한다.
 
@@ -72,8 +75,8 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 ## 핵심 함수 지도
 | 함수 | 파일 | 역할 |
 |---|---|---|
-| `fetchMetricsDataHttp()` | metrics-data-loader.js | File1·File2 병렬 fetch(idempotent 캐시) |
-| `parseCompetitorRatingsWorkbook()` / `parseCompetitorRevenueWorkbook()` | metrics-data-loader.js | SheetJS 세부사항이 갇힌 단일 지점, wide→long 변환 |
+| `fetchMetricsDataHttp()` | metrics-data-loader.js | `/api/competitor-ratings`·`/api/competitor-revenue` 병렬 fetch(idempotent 캐시) + snake_case→camelCase 매핑 |
+| `parseCompetitorRatingsWorkbook()` / `parseCompetitorRevenueWorkbook()` | scripts/etl/load-competitor-data.mjs | SheetJS 세부사항이 갇힌 단일 지점, wide→long 변환(ETL 쪽으로 이전, 클라이언트엔 더 이상 없음) |
 | `computeEnaMonthlyRevenue(y, m, basisMode, channelFilter?)` | metrics-data-loader.js | rawData에서 ENA 계열 월매출 재계산 |
 | `rebuildMetricsSubstitution(basisMode)` | metrics-data-loader.js | `metricsRevenueDataOriginal` → `metricsRevenueData` 파생(KT ENA만 치환) |
 | `metricsGroupRevenueMap(period, scopeMode)` | metrics-dashboard.js | 채널그룹별 월 매출 총합(자기참조 행 우선, 없으면 세부채널 합) |
@@ -96,7 +99,7 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 ## 접근 제한 — 롤아웃 초기 이메일 허용목록
 다른 `/api/*`·`addata.js`는 로그인만 하면 전원 접근 가능하지만, 이 기능(File1/File2)만 예외로 소수(현재 1인, `hyunseo@ktena.co.kr`)에게만 공개한다.
 
-- **실제 차단(서버)**: `shared/supabase-proxy.mjs`의 `requireMetricsAccess(env, request)` — JWT를 검증한 뒤 `email`이 허용목록에 없으면 403. 허용목록은 Cloudflare Pages 환경변수 `METRICS_ALLOWED_EMAILS`(콤마 구분)로 재배포 없이 갱신하며, 미설정 시 코드 내 기본값(`hyunseo@ktena.co.kr`) 하나만 허용한다. `functions/competitor-ratings.js`/`competitor-revenue.js` 둘 다 `onRequest` 맨 앞에서 호출한다.
+- **실제 차단(서버)**: `shared/supabase-proxy.mjs`의 `requireMetricsAccess(env, request)` — JWT를 검증한 뒤 `email`이 허용목록에 없으면 403. 허용목록은 Cloudflare Pages 환경변수 `METRICS_ALLOWED_EMAILS`(콤마 구분)로 재배포 없이 갱신하며, 미설정 시 코드 내 기본값(`hyunseo@ktena.co.kr`) 하나만 허용한다. `handleCompetitorRatingsRequest()`/`handleCompetitorRevenueRequest()`(shared/supabase-proxy.mjs) 둘 다 맨 앞에서 호출 — `functions/api/competitor-ratings.js`/`competitor-revenue.js`가 그 얇은 진입점이다.
 - **UI 숨김(클라이언트)**: `js/core/auth.js`의 `METRICS_ALLOWED_EMAILS` 배열 + `applyMetricsAccessGate()` — `ensureAuthenticated()`가 로그인 세션 확정 후 호출해 허용되지 않은 이메일이면 헤더의 `#dashboardTabMetrics` 탭 버튼 자체를 숨긴다. 이건 UX일 뿐이라 콘솔로 우회 가능 — 실제 방어선은 위 서버 쪽 403.
 - **두 목록은 반드시 같이 갱신한다.** 어긋나면 "탭은 보이는데 데이터는 403 에러"(auth.js만 갱신) 또는 "탭은 없는데 URL로 들어가면 실제로는 허용됨"(supabase-proxy.mjs만 갱신) 같은 불일치가 생긴다.
 - **사람 추가/제거 절차**: ① Cloudflare Pages 대시보드 → 환경변수 `METRICS_ALLOWED_EMAILS`에 이메일 추가(콤마 구분, Production/Preview 둘 다) → ② `js/core/auth.js`의 `METRICS_ALLOWED_EMAILS` 배열도 같은 목록으로 수정 후 재배포. 팀 전체 공개로 전환할 때는 이 절 전체(서버 체크 호출 + 클라이언트 숨김 로직)를 제거하면 된다 — 다른 `/api/*`와 동일하게 "로그인만 하면 접근 가능"으로 돌아간다.
@@ -122,4 +125,4 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
-3. **File1 원본 파일 용량이 46MB**로 크다(다른 시트에 이미지/스타일이 많이 포함된 것으로 보임, 실제로 쓰는 `변환용취합` 시트는 1,968행뿐). 매번 클라이언트가 전체 파일을 내려받아 SheetJS로 파싱해야 하므로, 네트워크·기기에 따라 "지표 대시보드" 탭 첫 진입이 느릴 수 있다 — 체감 느리면 리포트 작성자에게 `변환용취합` 시트만 남긴 경량 버전 요청을 고려.
+3. ~~File1 원본 파일 용량이 46MB로 커서 클라이언트 첫 진입이 느릴 수 있다~~ — Supabase 전환(위 참고)으로 해소됨. 이제 클라이언트는 `competitor_ratings`(21,258행) JSON만 받는다 — 46MB xlsx 자체는 ETL 실행 시에만 Node가 읽는다.

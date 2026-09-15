@@ -24,9 +24,14 @@ js/features/               shared-helpers, detail-pivots, kpi,
                            new-advertiser, upfront, ranking, bucket, detail-data
 functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
   addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js  api/targets.js
+  api/competitor-ratings.js  api/competitor-revenue.js   (지표 대시보드, Supabase 경유 — 아래 참고)
 shared/supabase-proxy.mjs  Supabase 프록시 공용 로직 (functions/api/*.js + worker.js가 공유)
 .claude/agents/            feature-dev, data, reviewer
-worker.js / wrangler.toml  standalone Cloudflare Worker(R2 서빙 + Supabase 프록시) 설정 — 현재 미배포, 향후 Pages→Worker 전환 대비
+worker.js / wrangler.toml  standalone Cloudflare Worker(R2 서빙 + Supabase 프록시) 설정 — 현재 미배포, 향후 Pages→Worker 전환 대비.
+  wrangler.toml은 pages_build_output_dir을 반드시 갖고 있어야 한다(2026-09-15 확인) — 없으면
+  Cloudflare Pages Git 빌드가 "invalid, skipping"으로 파일 전체를 무시한다. main(Workers 전용 키)을
+  pages_build_output_dir과 같이 두는 것도 invalid 처리 원인이라 wrangler.toml에는 main을 넣지 않는다
+  (worker.js 자체 배포 시에는 CLI 인자나 별도 설정으로 지정할 것).
 supabase/schema.sql        Supabase 스키마 (raw_sales_rows/v_sales_normalized/v_bonbu_sales/upfront_contracts 등)
 scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 프로젝트, 수동 실행)
 ```
@@ -41,7 +46,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/core/state.js                 전역변수·색상팔레트 (가장 먼저)
   js/core/theme-system.js          CH/mapPivotHtml/toggleTheme + Chart.register
   js/core/data-loader.js           연결·파싱·정규화 + export/유틸 (매출 데이터셋)
-  js/core/metrics-data-loader.js   지표 대시보드 전용 연결·파싱·ENA 치환 (File1/File2, 지연 로딩)
+  js/core/metrics-data-loader.js   지표 대시보드 전용 연결(Supabase 경유, /api/competitor-*)·ENA 치환 (지연 로딩)
   js/core/filters.js               체크박스/필터/applyFilters() (매출 데이터셋 전용)
   js/features/shared-helpers.js    신규광고주 판별, 차트 모드 토글
   js/features/pivot-builder.js     피벗 엔진 + PIVOT_PRESETS (detail-pivots보다 먼저)
