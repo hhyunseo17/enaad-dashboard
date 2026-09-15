@@ -200,7 +200,17 @@ async function verifySupabaseJwt(env, request) {
   if (!payload.exp || payload.exp * 1000 < Date.now()) return null;
   if (payload.role !== 'authenticated' && payload.aud !== 'authenticated') return null;
 
-  const jwk = await findJwk(env, jwtHeader.kid);
+  // findJwk()→fetchJwks()는 SUPABASE_URL로 외부 fetch를 한다 — 네트워크 실패나 env 미설정 시
+  // 여기서 예외가 나면 전체 요청이 500으로 죽는다(2026-09-15, competitor-ratings.js에서 실제 발생).
+  // 검증 실패와 동일하게 취급해 401로 내려가게 한다 — 인증 실패는 원래도 이 함수가 null을 돌려주는
+  // 정상 경로이므로, 네트워크 문제로 검증을 "못" 한 경우도 같은 결과(비로그인 취급)가 안전하다.
+  let jwk;
+  try {
+    jwk = await findJwk(env, jwtHeader.kid);
+  } catch (err) {
+    console.error('JWKS 조회 실패:', err.message);
+    return null;
+  }
   if (!jwk) return null;
 
   try {

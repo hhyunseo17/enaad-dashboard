@@ -4,9 +4,13 @@ import { requireMetricsAccess } from '../shared/supabase-proxy.mjs';
 // 다른 addata.js/functions/api/*.js는 로그인만 하면 전원 접근 가능 — 이 두 파일만 예외).
 export async function onRequest(context) {
   const { env, request } = context;
-  const authError = await requireMetricsAccess(env, request);
-  if (authError) return authError;
+  // requireMetricsAccess()도 이 try 안에 넣는다 — 밖에 있으면 그 안의 예외(JWKS fetch 실패 등)가
+  // 메시지 없는 플랫폼 500으로 죽어서 원인을 알 수 없다(2026-09-15 실제 발생, err.message 없는
+  // 빈 500만 보임 — 원인 특정 못 함). 여기 안에 넣으면 최소한 err.message는 응답에 남는다.
   try {
+    const authError = await requireMetricsAccess(env, request);
+    if (authError) return authError;
+
     if (!env.DASHBOARD_BUCKET) {
       return new Response('R2 바인딩이 없습니다: DASHBOARD_BUCKET', { status: 500 });
     }

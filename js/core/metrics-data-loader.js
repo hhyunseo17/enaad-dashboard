@@ -70,7 +70,14 @@
           fetch(cacheBustUrl, { cache: 'no-store', credentials: 'include', headers: authHeader ? { Authorization: authHeader } : {} })
         ).then(res => {
             if (res.status === 403) throw new Error('경쟁채널 지표 열람 권한이 없습니다.');
-            if (!res.ok) throw new Error(`HTTP Error ${res.status} (${url})`);
+            if (!res.ok) {
+              // 500 등은 본문에 err.message가 실려 오므로(functions/competitor-*.js), 상태코드만이
+              // 아니라 본문도 같이 읽어서 보여준다 — 안 그러면 "500"만 보이고 원인을 알 수 없다
+              // (2026-09-15 실제로 원인 특정 못 한 사례).
+              return res.text().then(body => {
+                throw new Error(`HTTP Error ${res.status} (${url})${body ? ' — ' + body.slice(0, 300) : ''}`);
+              });
+            }
             if (res.url && res.url.includes('cloudflareaccess.com')) throw new Error('Cloudflare Access authentication required');
             return res.arrayBuffer();
           })
