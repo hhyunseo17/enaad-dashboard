@@ -69,7 +69,10 @@ export function parseCompetitorRevenueWorkbook(buffer) {
       const m = col.match(YM_COL_REGEX);
       const year = parseInt(m[1], 10);
       const month = parseInt(m[2], 10);
-      const revenue = Math.round(Number(r[col]) || 0);
+      // File2 원본 수치는 백만원 단위다(실 샘플로 확인, 2026-09-15 — ENA 내부 매출 치환값(원 단위,
+      // rawData.amount 기준)과 100만 배 차이가 나서 M/S가 KT ENA 100%로 나오는 버그의 원인이었다).
+      // 이 코드베이스 전역 관례(rawData.amount·차트 /1e8 등)에 맞춰 여기서 원 단위로 통일한다.
+      const revenue = Math.round((Number(r[col]) || 0) * 1000000);
       rows.push({ channel, operator_major: operatorMajor, operator_mid: operatorMid, channel_group: channelGroup, year, month, revenue });
     });
   });

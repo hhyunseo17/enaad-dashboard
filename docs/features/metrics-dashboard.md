@@ -122,6 +122,11 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 6. **`metricsRatingsChannelSelection()`의 "사업자명 = File1 채널명" 가정이 5개 사업자에서 깨졌다** — File2 채널그룹명 `MBC`/`SBS`/`MBC PLUS`/`CJENM`/`SBS미디어넷`이 File1 채널명과 표기가 달라(괄호·공백·대소문자) 전부 매칭 실패, "사업자 비교" 모드에서 CPRP/채널시청률/GRP 미니차트·상세표가 이 5개 사업자에 대해 조용히 비었다. `OPERATOR_TO_RATINGS_CHANNEL_ALIAS` 별칭 맵으로 5개 전부 수정(`metrics-dashboard.js`) — 단 **SBS미디어넷→"SBS Plus"는 근사치**다(File1에 사업자 단위 행이 없어 대표 서브채널 하나로 대신함, 실제로 SBS미디어넷 전체를 대표하는 값인지는 아님).
 7. **File2에 KT ENA 자기참조 총합 행은 실제로 없다** — 우려했던 대로였고, 기존 합성 로직(`rebuildMetricsSubstitution()`)이 정상 동작함을 실 데이터로 확인.
 
+## Supabase 전환 후 실 데이터로 추가 확인된 버그 (2026-09-15, 로그인해서 실제로 띄워본 뒤 발견)
+8. **[치명적, 수정됨] File2 매출 수치가 백만원 단위인데 원 단위로 그대로 적재됐다.** ENA 자사매출 치환값(`computeEnaMonthlyRevenue()`, `rawData.amount` 기준 — 원 단위)과 100만 배 차이가 나서 M/S가 항상 KT ENA 100%로 나오고 경쟁사 매출이 사실상 0으로 묻혔다. `scripts/etl/load-competitor-data.mjs`에서 `revenue`에 `×1,000,000`을 적용해 원 단위로 통일 후 재적재.
+9. **[수정됨] File1이 아직 안 걷힌 미래 달을 값 0으로 미리 채워둔 placeholder 행을 갖고 있었다** — "260910 기준" 리포트인데 10~12월 CPRP·채널시청률이 정확히 0. "최신 달"을 고르는 로직(`metricsRatingsLatestPeriod()`, 미니 트렌드차트)이 이 0을 진짜 데이터로 오인해 KPI가 전부 0/미니차트 끝부분이 0으로 찍혔다. 두 곳 다 `value !== 0` 조건을 추가해 0-달을 "미보고"로 건너뛰도록 수정.
+10. **월 선택 UI가 누락돼 있었다** — plan에 "연도·월 선택 UI 재사용"이 명시돼 있었는데 연도만 구현되고 월이 빠져 있었음. `metricsSelectedMonths`(state.js) + `#metricsMonthPills`(매출 대시보드 `#monthPills`와 동일 마크업/패턴, `nextPillSelection()`/`isAdditiveClick()` 재사용) 추가 — `metricsMonthsInYear()`(M/S·매출 트렌드차트) · `metricsRatingsLatestPeriod()`(KPI 3·4·5) · 미니 트렌드차트 월 목록에 전부 반영.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.

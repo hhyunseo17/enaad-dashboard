@@ -10,9 +10,14 @@
     // ------------------------------------------------------------
     // KPI 3·4·5 — CPRP(원) / ENA 채널시청률(소수 3자리) / 시청률 1%당 매출(억원)
     // ------------------------------------------------------------
+    // File1 원본이 아직 안 걷힌 미래 달을 값 0으로 미리 채워둔 placeholder 행을 갖고 있다(실 샘플로
+    // 확인, 2026-09-15 — "260910 기준" 리포트인데 10~12월 CPRP·채널시청률이 전부 정확히 0). "최신
+    // 달"을 고를 때 0은 "아직 안 채워짐"으로 보고 건너뛴다 — CPRP·시청률·GRP는 실제로 0이 나올 일이
+    // 없는 지표라, 값 0을 진짜 데이터로 오인하면 KPI가 (안 채워진) 최신 달을 골라 0으로 찍힌다.
     function metricsRatingsLatestPeriod(metricCode, channel, indexMode, year) {
       if (!metricCode) return null;
-      const months = metricsRatingsData.filter(r => r.metricCode === metricCode && r.channel === channel && r.indexMode === indexMode && r.year === year).map(r => r.month);
+      let months = metricsRatingsData.filter(r => r.metricCode === metricCode && r.channel === channel && r.indexMode === indexMode && r.year === year && r.value !== 0).map(r => r.month);
+      if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
       return months.length ? { year, month: Math.max(...months) } : null;
     }
     function metricsRatingsValueAt(metricCode, channel, indexMode, period) {
@@ -68,7 +73,10 @@
       if (chartInstances[chartKey]) { chartInstances[chartKey].destroy(); chartInstances[chartKey] = null; }
       if (!metricCode) return; // 해당 라벨의 지표를 File1에서 찾지 못함 — 빈 캔버스로 둔다.
 
-      const months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === metricsIndexMode && r.year === metricsSelectedYear).map(r => r.month))].sort((a, b) => a - b);
+      // value===0인 달은 제외한다 — File1의 미보고 미래 달 placeholder(위 metricsRatingsLatestPeriod
+      // 주석 참고). 안 걸러내면 트렌드 끝부분이 0으로 뚝 떨어져 보인다.
+      let months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === metricsIndexMode && r.year === metricsSelectedYear && r.value !== 0).map(r => r.month))].sort((a, b) => a - b);
+      if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
       const labels = months.map(m => `${m}월`);
       const channels = metricsRatingsChannelSelection();
 

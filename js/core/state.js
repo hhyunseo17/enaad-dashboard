@@ -261,6 +261,7 @@
     // (plan 확정사항 2 — 매출 탭과 상태가 꼬이면 안 된다).
     // ============================================================
     let metricsSelectedYear = null;        // 단일 연도 선택. null이면 첫 렌더에서 데이터의 최신 연도로 채운다.
+    let metricsSelectedMonths = [];        // 월 선택(복수, 비어있으면 전체) — 매출 대시보드 selectedMonths와 같은 원칙, 별개 상태.
     let metricsIndexMode = '전체';          // File1 INDEX 컬럼: '전체'(일평균) | '프라임타임'
     let metricsScopeMode = 'payTv';        // '전체'(지상파+유료방송) | 'payTv'(유료방송, 기본) | 'cable'(케이블)
     let metricsCompareUnit = 'operator';   // 'operator'(① 사업자 비교, 기본) | 'channel'(② 대표채널 비교)

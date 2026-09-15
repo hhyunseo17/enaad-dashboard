@@ -26,9 +26,11 @@
       return mode === 'all' ? '지상파+유료방송' : mode === 'cable' ? '케이블' : '유료방송';
     }
 
-    // 데이터에 실제로 있는 (연도 내) 월 목록 — 오름차순.
+    // 데이터에 실제로 있는 (연도 내) 월 목록 — 오름차순. metricsSelectedMonths(월 선택 pill, 비어있으면
+    // 전체)로 좁힌다 — 매출 대시보드의 selectedMonths와 같은 원칙, 이 탭 전용 상태라 전역과 분리.
     function metricsMonthsInYear(rows, year) {
-      return [...new Set(rows.filter(r => r.year === year).map(r => r.month))].sort((a, b) => a - b);
+      const months = [...new Set(rows.filter(r => r.year === year).map(r => r.month))].sort((a, b) => a - b);
+      return metricsSelectedMonths.length > 0 ? months.filter(m => metricsSelectedMonths.includes(m)) : months;
     }
     // 그 연도의 가장 최근 월. 없으면 null.
     function metricsLatestPeriod(rows, year) {
@@ -210,6 +212,32 @@
       container.innerHTML = years.map(y => `<button class="pill-btn${y === metricsSelectedYear ? ' active' : ''}" data-year="${y}">${y}년</button>`).join('');
       container.querySelectorAll('.pill-btn').forEach(btn => {
         btn.addEventListener('click', () => { metricsSelectedYear = parseInt(btn.getAttribute('data-year'), 10); renderMetricsDashboard(); });
+      });
+    }
+
+    // 월 선택 — dashboard.html에 정적 마크업(전체+1~12월, 매출 대시보드 #monthPills와 동일 구조)이라
+    // 매번 다시 그릴 필요 없이 클릭 핸들러만 한 번 붙인다(container.dataset.wired로 중복 바인딩 방지).
+    // nextPillSelection()/isAdditiveClick()은 js/core/filters.js의 기존 범용 헬퍼 재사용.
+    function setupMetricsMonthPills() {
+      const container = document.getElementById('metricsMonthPills');
+      if (!container || container.dataset.wired) return;
+      container.dataset.wired = '1';
+      container.querySelectorAll('.pill-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const val = btn.getAttribute('data-month');
+          if (val === 'all') metricsSelectedMonths = [];
+          else metricsSelectedMonths = nextPillSelection(metricsSelectedMonths, parseInt(val, 10), isAdditiveClick(e));
+          syncMetricsMonthPillActive();
+          renderMetricsDashboard();
+        });
+      });
+    }
+    function syncMetricsMonthPillActive() {
+      const container = document.getElementById('metricsMonthPills');
+      if (!container) return;
+      container.querySelectorAll('.pill-btn').forEach(btn => {
+        const val = btn.getAttribute('data-month');
+        btn.classList.toggle('active', val === 'all' ? metricsSelectedMonths.length === 0 : metricsSelectedMonths.includes(parseInt(val, 10)));
       });
     }
 
@@ -422,6 +450,8 @@
 
       metricsEnsureDefaultSelections();
       setupMetricsYearPills();
+      setupMetricsMonthPills();
+      syncMetricsMonthPillActive();
       renderMetricsOperatorCheckboxes();
       renderMetricsChannelCheckboxes();
       updateMetricsDropdownLabel('Operator');
