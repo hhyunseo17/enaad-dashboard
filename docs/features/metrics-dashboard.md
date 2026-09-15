@@ -102,8 +102,18 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 - **사람 추가/제거 절차**: ① Cloudflare Pages 대시보드 → 환경변수 `METRICS_ALLOWED_EMAILS`에 이메일 추가(콤마 구분, Production/Preview 둘 다) → ② `js/core/auth.js`의 `METRICS_ALLOWED_EMAILS` 배열도 같은 목록으로 수정 후 재배포. 팀 전체 공개로 전환할 때는 이 절 전체(서버 체크 호출 + 클라이언트 숨김 로직)를 제거하면 된다 — 다른 `/api/*`와 동일하게 "로그인만 하면 접근 가능"으로 돌아간다.
 - 클라이언트 fetch(`js/core/metrics-data-loader.js`의 `fetchMetricsDataHttp()`)는 `getAuthorizationHeader()`(auth.js)로 JWT를 `Authorization: Bearer` 헤더에 실어 보낸다 — 이게 없으면 서버 쪽 `requireMetricsAccess()`가 401로 막는다.
 
-## 확인 필요 (실 File1/File2 샘플 확보 후)
-1. File2가 채널그룹 자기참조 총합 행(`channel === channelGroup`)을 실제로 포함하는지 — KT ENA는 데이터 계층이 없으면 합성하지만 경쟁사는 폴백 합산에 의존한다.
-2. File1의 metricCode 번호 체계 — 특히 "06/07.eq-GRPs"로 보이는 두 코드가 실제로 무엇을 가르는지(전체/프라임타임 중복인지, 다른 개념인지). `metricsFindMetricCode()`는 라벨 텍스트로 찾고 `indexMode`로 동률을 깨지만, 사람이 원본 "구분" 열을 직접 보고 확인해야 한다.
-3. `metricsRatingsChannelSelection()`의 "사업자명 = File1 채널명" 매핑 — 경쟁사 채널명이 실제로 몇 개나 일치하는지, 안 맞는 사업자가 있으면 미니차트·상세표 티저에서 조용히 빠진다(에러 없이 ENA 단독으로 줄어들 뿐이다).
-4. 상세표(`metricsDetail`)의 16개 지표 중 03/09/11 외 나머지(10/12~16, 광고주수·브랜드수 등) 단위 — `metricsFormatRatingValue()`의 최종 `else` 분기(숫자만 표기)가 실제로 맞는 단위인지.
+## 실 샘플로 검증 완료 (2026-09-15)
+`(IMC 실적기준) ENA 경쟁채널 지표 현황 (260910 기준).xlsx` / `(IMC 실적기준) 매체별 광고비 raw (8월 마감, 9월 스타트).xlsx` 두 실 파일로 프로덕션 코드를 직접 돌려 검증(Node에 `xlsx` 패키지로 실행, `scripts/etl`의 기존 관례와 동일한 방식) — 아래 항목은 전부 **버그로 확인되어 수정 완료**됐다. 재발 방지용으로 남겨둔다.
+
+1. **[치명적, 수정됨] File2 연월 컬럼 포맷이 가정과 달랐다.** 계획 당시엔 `"2026-07"`(YYYY-MM)로 가정했지만 실제 헤더는 `"2026-07-01"`(항상 일=01, 날짜 서식 셀)이다. 기존 `YM_COL_REGEX`(`/^(\d{4})-(\d{2})$/`)는 이 형식에 전혀 매치하지 않아 **File2 파싱이 통째로 빈 배열을 반환**했다(매출·M-S·랭킹·트렌드 전부 빈 화면). `metrics-data-loader.js`의 정규식을 `-\d{2}$` 트레일링 매치로 수정.
+2. **[치명적, 수정됨] "채널시청률" 라벨 검색이 엉뚱한 지표(08)에 걸렸다.** File1의 실제 "구분" 값은 03="채널 시청률"(공백 있음), 08="채널시청률 1%당 eq-GRPs"(공백 없음, "채널시청률"로 시작) — 계획 당시 검색어 `'채널시청률'`(공백 없음)이 부분일치로 03이 아니라 08에 먼저 걸렸다. `metricsFindMetricCode()`에 `exact` 옵션을 추가해 rating 검색만 완전일치로 바꿔 해결(`js/features/metrics-dashboard.js`/`metrics-ratings.js`). 같은 이유로 상세표 셀 포맷터(`metricsFormatRatingValue()`)도 GRP 체크를 시청률 체크보다 앞에 두도록 순서를 바꿨다(안 그러면 08 행이 %로 잘못 찍힘).
+3. **eq-GRPs는 정말 두 지표였다** — 06="누적 eq-GRPs"(연간 누적치), 07="1일 eq-GRPs"(월별 1일 평균). "INDEX(전체/프라임타임) 중복 아닌지" 우려가 있었는데 아니었다 — CPRP·채널시청률처럼 "1일" 단위 성격인 07을 GRP 트렌드에 쓴다(06은 상세표에서만 조회 가능).
+4. **"시청률 1%당 매출" 라벨도 공백 위치가 달랐다**("1%당"이 아니라 "1% 당") — 검색·비교 전에 공백을 전부 제거하도록 `metricsFindMetricCode()`를 고쳐서 이런 공백 드리프트에 전반적으로 강해졌다.
+5. **File1 안에서도 같은 방송사가 표기 두 가지로 쪼개져 있었다** — "MBC(전국)"/"MBC 전국", "SBS(민방포함)"/"SBS (민방포함)". `parseCompetitorRatingsWorkbook()`에 `canonicalizeRatingsChannelName()`을 추가해 파싱 시점에 하나로 합친다(안 그러면 같은 채널의 월별 데이터가 두 이름으로 쪼개져 최신월 조회·트렌드에서 일부 달이 빠진다).
+6. **`metricsRatingsChannelSelection()`의 "사업자명 = File1 채널명" 가정이 5개 사업자에서 깨졌다** — File2 채널그룹명 `MBC`/`SBS`/`MBC PLUS`/`CJENM`/`SBS미디어넷`이 File1 채널명과 표기가 달라(괄호·공백·대소문자) 전부 매칭 실패, "사업자 비교" 모드에서 CPRP/채널시청률/GRP 미니차트·상세표가 이 5개 사업자에 대해 조용히 비었다. `OPERATOR_TO_RATINGS_CHANNEL_ALIAS` 별칭 맵으로 5개 전부 수정(`metrics-dashboard.js`) — 단 **SBS미디어넷→"SBS Plus"는 근사치**다(File1에 사업자 단위 행이 없어 대표 서브채널 하나로 대신함, 실제로 SBS미디어넷 전체를 대표하는 값인지는 아님).
+7. **File2에 KT ENA 자기참조 총합 행은 실제로 없다** — 우려했던 대로였고, 기존 합성 로직(`rebuildMetricsSubstitution()`)이 정상 동작함을 실 데이터로 확인.
+
+## 남은 확인 필요
+1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
+2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
+3. **File1 원본 파일 용량이 46MB**로 크다(다른 시트에 이미지/스타일이 많이 포함된 것으로 보임, 실제로 쓰는 `변환용취합` 시트는 1,968행뿐). 매번 클라이언트가 전체 파일을 내려받아 SheetJS로 파싱해야 하므로, 네트워크·기기에 따라 "지표 대시보드" 탭 첫 진입이 느릴 수 있다 — 체감 느리면 리포트 작성자에게 `변환용취합` 시트만 남긴 경량 버전 요청을 고려.

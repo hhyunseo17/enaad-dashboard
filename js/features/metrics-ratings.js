@@ -37,7 +37,7 @@
       metricsRenderBadge('metricsKpiCprpYoyBadge', '전년', metricsGrowthPct(cprpNow, cprpYoy), '%');
 
       // ENA 채널시청률 — 소수점 셋째 자리까지(plan 확정사항 3, File1 원본 정밀도를 살린다).
-      const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx);
+      const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx, true); // exact — "채널시청률 1%당 eq-GRPs"(08)와 접두어 충돌 방지
       const ratingPeriod = metricsRatingsLatestPeriod(ratingCode, channel, idx, metricsSelectedYear);
       const ratingNow = metricsRatingsValueAt(ratingCode, channel, idx, ratingPeriod);
       const ratingMom = metricsRatingsValueAt(ratingCode, channel, idx, metricsPrevMonthPeriod(ratingPeriod));
@@ -94,21 +94,23 @@
       });
     }
     function renderMetricsCprpTrendChart() { renderMetricsMiniTrendChart('chartMetricsCprpTrend', 'metricsCprpTrend', metricsFindMetricCode(METRICS_LABEL.cprp, metricsIndexMode), 1000, '원', 0); }
-    function renderMetricsRatingTrendChart() { renderMetricsMiniTrendChart('chartMetricsRatingTrend', 'metricsRatingTrend', metricsFindMetricCode(METRICS_LABEL.rating, metricsIndexMode), 1, '%', 3); }
+    function renderMetricsRatingTrendChart() { renderMetricsMiniTrendChart('chartMetricsRatingTrend', 'metricsRatingTrend', metricsFindMetricCode(METRICS_LABEL.rating, metricsIndexMode, true), 1, '%', 3); }
     function renderMetricsGrpTrendChart() { renderMetricsMiniTrendChart('chartMetricsGrpTrend', 'metricsGrpTrend', metricsFindMetricCode(METRICS_LABEL.grp, metricsIndexMode), 1, '', 1); }
 
     // ------------------------------------------------------------
     // 지표별 값 표기 — 지표마다 단위가 다르므로(%, 원, GRP, 억원, 건수…) pvFormatCell(금액 전용,
-    // ÷1,000,000)을 쓸 수 없다. metricLabel 텍스트로 단위를 판별한다(1차 버전 — 정확한 코드/단위
-    // 매핑은 실 샘플로 검증 필요, docs 참고).
+    // ÷1,000,000)을 쓸 수 없다. metricLabel 텍스트로 단위를 판별한다.
+    // "08. 채널시청률 1%당 eq-GRPs"가 '시청률'을 포함하면서 '매출'은 없는 라벨이라 GRP 체크를
+    // 먼저 해야 한다 — 순서를 바꾸면(시청률 체크가 먼저면) 08이 %로 잘못 찍힌다(실 샘플로 확인,
+    // 2026-09-15). 나머지(광고주수/브랜드수 등)는 전부 건수라 마지막 분기(숫자만)로 충분하다.
     // ------------------------------------------------------------
     function metricsFormatRatingValue(metricLabel, value) {
       if (value === null || value === undefined) return '-';
       if (metricLabel.includes('CPRP')) return Math.round(value * 1000).toLocaleString() + '원';
       if (metricLabel.includes('시청률') && metricLabel.includes('매출')) return value.toFixed(2) + '억원';
-      if (metricLabel.includes('시청률')) return value.toFixed(3) + '%';
       if (metricLabel.includes('GRP')) return value.toFixed(1);
-      return value.toLocaleString(undefined, { maximumFractionDigits: 2 }); // 광고주수/브랜드수 등 나머지 — 단위 미확인, 숫자만
+      if (metricLabel.includes('시청률')) return value.toFixed(3) + '%';
+      return value.toLocaleString(undefined, { maximumFractionDigits: 2 }); // 광고주수/브랜드수 등 — 전부 건수
     }
 
     // ------------------------------------------------------------

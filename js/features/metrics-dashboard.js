@@ -63,12 +63,21 @@
     }
 
     // File1(경쟁채널 지표 현황)은 "구분" 원문에서 번호(01./03. 등)를 뗀 텍스트가 metricLabel이다.
-    // 번호 자체(metricCode)는 파일마다 밀릴 수 있어(예: eq-GRPs가 06/07 두 코드로 나뉜 것처럼 보이는
-    // 경우 — 실제 샘플로 확인되지 않았다) 라벨 텍스트로 코드를 찾는다. 후보가 여럿이면 현재
-    // indexMode(전체/프라임타임)에 실제 데이터가 있는 쪽을 우선한다.
-    const METRICS_LABEL = { rating: '채널시청률', cprp: 'CPRP', revPerRating: '시청률 1%당 매출', grp: 'eq-GRPs' };
-    function metricsFindMetricCode(labelSubstring, indexMode) {
-      const matches = [...new Set(metricsRatingsData.filter(r => r.metricLabel.includes(labelSubstring)).map(r => r.metricCode))];
+    // 번호 자체(metricCode)는 파일마다 밀릴 수 있어 라벨 텍스트로 코드를 찾는다. 실 샘플(2026-09-15)로
+    // 16개 전체 확인됨 — 06="누적 eq-GRPs" / 07="1일 eq-GRPs" / 08="채널시청률 1%당 eq-GRPs"로 서로
+    // 다른 지표다(추측했던 "같은 지표의 INDEX 분화"가 아니었다). GRP 트렌드는 CPRP·채널시청률과
+    // 같은 "1일 단위" 성격으로 맞추기 위해 07을 쓴다. 공백은 원본에서 항목마다 들쭉날쭉하다(예:
+    // "채널 시청률"엔 공백이 있고 "채널시청률 1%당 eq-GRPs"엔 없다, "1% 당"처럼 %뒤에도 공백이 있다) —
+    // 그래서 비교 전에 공백을 전부 제거한다. 그래도 "채널 시청률"(03)은 공백만 지우면 "채널시청률
+    // 1%당 eq-GRPs"(08)의 접두어와 겹치므로, rating만 부분일치가 아니라 완전일치로 찾는다.
+    const METRICS_LABEL = { rating: '채널시청률', cprp: 'CPRP', revPerRating: '시청률1%당매출', grp: '1일eq-GRPs' };
+    function metricsStripWs(s) { return (s || '').replace(/\s+/g, ''); }
+    function metricsFindMetricCode(labelSubstring, indexMode, exact) {
+      const target = metricsStripWs(labelSubstring);
+      const matches = [...new Set(metricsRatingsData.filter(r => {
+        const label = metricsStripWs(r.metricLabel);
+        return exact ? label === target : label.includes(target);
+      }).map(r => r.metricCode))];
       if (matches.length <= 1) return matches[0] || null;
       const withIndex = matches.find(code => metricsRatingsData.some(r => r.metricCode === code && r.indexMode === indexMode));
       return withIndex || matches[0];
@@ -121,15 +130,25 @@
     // File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다(개별 채널명만 있다) — 그래서 CPRP/채널시청률/
     // eq-GRPs 차트·상세표는 비교단위가 '사업자'여도 채널명 직접 선택으로 좁힌다: ENA는 항상 대표채널
     // ENA로 고정하고, 나머지는 '대표채널 비교' 선택을 그대로 쓰거나(② 선택 시) '사업자 비교'에서는
-    // 사업자명이 File1의 채널명과 완전히 일치하는 것만 자동으로 잡는다. 일치하는 이름이 없으면
-    // ENA 단독으로 대체한다 — 이 매핑은 실 샘플 파일로 검증되지 않았다(아래 report 참고).
+    // 사업자명(File2 채널그룹)이 File1의 채널명과 완전히 일치하는 것만 자동으로 잡는다.
+    // 실 샘플로 확인됨(2026-09-15) — 표기가 달라 완전일치가 안 되는 주요 사업자 5개는 별도 매핑:
+    // MBC/SBS는 File1이 "MBC(전국)"/"SBS(민방포함)"로 적고, MBC PLUS·CJENM은 대소문자·공백만 다르다.
+    // SBS미디어넷은 File1에 사업자 단위 행 자체가 없어 대표 채널 하나(SBS Plus)로 근사한다 — 이건
+    // 진짜 매핑이 아니라 근사치이므로 실제로 SBS미디어넷 전체를 대표하는지 사람이 확인 필요.
+    const OPERATOR_TO_RATINGS_CHANNEL_ALIAS = {
+      'MBC': 'MBC(전국)', 'SBS': 'SBS(민방포함)', 'MBC PLUS': 'MBC Plus', 'CJENM': 'CJ ENM', 'SBS미디어넷': 'SBS Plus'
+    };
     function metricsRatingsChannelSelection() {
       const set = new Set([ENA_REPRESENTATIVE_CHANNEL]);
       if (metricsCompareUnit === 'channel') {
         metricsSelectedChannels.forEach(c => set.add(c));
       } else {
         const ratingChannels = new Set(metricsRatingsData.map(r => r.channel));
-        metricsSelectedOperators.forEach(op => { if (op !== ENA_CHANNEL_GROUP && ratingChannels.has(op)) set.add(op); });
+        metricsSelectedOperators.forEach(op => {
+          if (op === ENA_CHANNEL_GROUP) return;
+          const mapped = OPERATOR_TO_RATINGS_CHANNEL_ALIAS[op] || op;
+          if (ratingChannels.has(mapped)) set.add(mapped);
+        });
       }
       return [...set];
     }

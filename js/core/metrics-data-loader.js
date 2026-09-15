@@ -47,7 +47,9 @@
     const METRICS_REVENUE_URL = './competitor-revenue';
     const REVENUE_SHEET_NAME = '변환용';
     const RATINGS_SHEET_NAME = '변환용취합';
-    const YM_COL_REGEX = /^(\d{4})-(\d{2})$/;
+    // 실 File2 샘플로 확인됨(2026-09-15): 헤더가 "YYYY-MM"이 아니라 "YYYY-MM-01"(항상 일=01) —
+    // 날짜 서식이 적용된 셀이라 SheetJS가 그대로 문자열로 뽑아낸다. 끝의 "-01"은 버리고 연/월만 쓴다.
+    const YM_COL_REGEX = /^(\d{4})-(\d{2})-\d{2}$/;
     const RATINGS_MONTH_COLS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
     // ------------------------------------------------------------
@@ -98,6 +100,15 @@
     // 있다고 확인됨(plan 참고). 다른 정규화(대소문자 등)는 하지 않는다 — 원본 표기를 그대로 신뢰.
     function normalizeMetricsChannelName(val) {
       return (val === null || val === undefined) ? '' : val.toString().trim();
+    }
+
+    // File1(`변환용취합`)은 같은 방송사가 연도/행마다 표기가 갈린다(실 샘플로 확인, 2026-09-15) —
+    // trim만으로는 못 잡는 내부 표기 차이(괄호 유무, 공백 위치)라 별도로 하나로 합친다. 이걸 안 하면
+    // 같은 채널의 월별 데이터가 두 이름으로 쪼개져 최신월 조회·트렌드차트에서 일부 달이 누락된다.
+    const RATINGS_CHANNEL_CANONICAL_MAP = { 'MBC 전국': 'MBC(전국)', 'SBS (민방포함)': 'SBS(민방포함)' };
+    function canonicalizeRatingsChannelName(val) {
+      const name = normalizeMetricsChannelName(val);
+      return RATINGS_CHANNEL_CANONICAL_MAP[name] || name;
     }
 
     // ------------------------------------------------------------
@@ -194,7 +205,7 @@
           // 01/02.광고매출은 쓰지 않는다 — File2 기반 파생 매출로 대체(plan 확정사항).
           if (metricCode === '01' || metricCode === '02') return;
           const metricLabel = codeMatch ? rawGubun.slice(codeMatch[0].length).trim() : rawGubun;
-          const channel = normalizeMetricsChannelName(r['채널']);
+          const channel = canonicalizeRatingsChannelName(r['채널']);
           if (!channel) return;
 
           RATINGS_MONTH_COLS.forEach(col => {
