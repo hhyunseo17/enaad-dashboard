@@ -7,7 +7,7 @@ export async function onRequest(context) {
   // TEMP DEBUG (2026-09-15) — DASHBOARD_BUCKET이 계속 안 잡히는 원인 진단용. 키 이름만 보여주고
   // 값은 노출 안 함. 원인 확인되면 바로 제거할 것.
   if (new URL(request.url).searchParams.has('_debugenv')) {
-    return new Response(JSON.stringify(Object.keys(env)), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ keys: Object.keys(env), commit: env.CF_PAGES_COMMIT_SHA, branch: env.CF_PAGES_BRANCH }), { headers: { 'Content-Type': 'application/json' } });
   }
   // requireMetricsAccess()도 이 try 안에 넣는다 — 밖에 있으면 그 안의 예외(JWKS fetch 실패 등)가
   // 메시지 없는 플랫폼 500으로 죽어서 원인을 알 수 없다(2026-09-15 실제 발생, err.message 없는
