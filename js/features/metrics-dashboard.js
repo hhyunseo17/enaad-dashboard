@@ -381,7 +381,11 @@
       const labels = months.map(m => `${m}월`);
 
       // series: byCategory면 ①선택 사업자들이 실제로 속한 지상파/종편/케이블만(있는 것만) 지상파→
-      // 종편→케이블 순서로, 아니면 사업자별로 ①선택 순서 그대로.
+      // 종편→케이블 순서로(케이블이 배열 맨 끝 = 스택 맨 위, KT ENA가 속한 구분이라 이미 맨 위에 옴),
+      // 아니면 사업자별로 ①선택 순서 그대로 — 단, KT ENA는 항상 배열 맨 끝(=스택 맨 위)에 오도록
+      // 재배치한다(2026-09-16, 사용자 요청: "맨 위에 KT ENA를 놔줘" — Chart.js는 datasets 배열의
+      // 마지막 항목을 스택 맨 위에 그린다). 색상은 원래 ①선택 순서(ENA가 맨 앞인 상태)를 기준으로
+      // 먼저 배정한 뒤 배열만 stable sort로 옮겨서, 재배치 때문에 다른 사업자들의 색이 밀리지 않게 한다.
       let series;
       if (byCategory) {
         const presentCats = [...new Set(ops.map(op => METRICS_OPERATOR_SCOPE[op]).filter(Boolean))]
@@ -389,7 +393,8 @@
         series = presentCats.map(cat => ({ key: cat, label: cat, color: seriesColor(METRICS_SCOPE_ORDER[cat]) }));
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${presentCats.join('/')}, 선택 사업자 기준)`;
       } else {
-        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : seriesColor(i) }));
+        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : seriesColor(i), isEna: metricsIsEnaName(op) }));
+        series.sort((a, b) => (a.isEna === b.isEna) ? 0 : (a.isEna ? 1 : -1)); // stable — ENA만 맨 끝으로, 나머지 상대 순서 유지
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
       }
 
