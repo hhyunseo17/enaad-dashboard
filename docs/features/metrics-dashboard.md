@@ -243,6 +243,12 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
     - CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종이 `ENA_CHANNELS.includes(ch)`로 ENA DRAMA/PLAY/STORY까지 대표채널 'ENA'와 같은 강조색(파랑, `RC('curr')`)을 줬다 — 56번에서 ②채널이 다중 확장을 지원하게 되면서 ENA 계열 여러 개를 동시에 선택하는 경우가 생겼고, 이때 전부 같은 파랑이라 서로 구분이 안 됐다. `isEna` 판정을 `ch === ENA_REPRESENTATIVE_CHANNEL`(정확히 대표채널 'ENA'만)로 좁히고, `nonEnaChannels`도 같은 기준으로 다시 계산 — ENA DRAMA 등은 이제 경쟁사와 같은 팔레트에서 각자 다른 색을 받는다("ENA 계열이라는 표시"보다 "서로 구분되는 것"을 우선).
     - 헤더 탭의 "신규" 배지(`.dashboard-tab-badge-new`)와 "① 사업자"/"② 채널" 라벨의 원문자 번호를 메인 페이지 + 피벗 상세 화면 8개(총 18곳) + M/S 피벗 표 제목에서 전부 제거, 사용 안 하는 CSS 규칙도 함께 정리.
 
+59. **헤더 탭 이름 변경 + 모든 차트 범례 KT ENA 최우선 정렬** — 사용자 요청(2026-09-16): "지표 대시보드 -> 헤더에 이름 경쟁채널 지표 정도로 바꿔주고" + "모든 차트에서 범례는 KT ENA가 가장 앞에 나오도록".
+    - `#dashboardTabMetrics` 버튼 텍스트를 "지표 대시보드"→"경쟁채널 지표"로 변경(dashboard.html). 코드 내부 주석·`VIEW_CONFIG`/함수명 등은 그대로 둠(사용자가 가리킨 건 화면에 보이는 탭 라벨 하나뿐).
+    - `metricsLegendGenerateLabels(chart)`(metrics-dashboard.js) 신설 — Chart.js 기본 `generateLabels()` 호출 결과를 각 dataset의 `_isEna` 플래그로 안정 정렬(stable sort)해 KT ENA/대표채널 ENA를 항상 맨 앞으로 옮긴다. **실제 datasets 배열 순서는 건드리지 않는다** — "방송광고시장 규모 추이" 스택 막대는 55번 이전부터 "ENA가 스택 맨 위에 오도록" 배열 맨 끝에 ENA를 두고 있는데(Chart.js는 마지막 dataset을 스택 맨 위에 그림), 그 요구와 "범례는 맨 앞" 요구가 서로 반대라 배열 자체가 아니라 범례 표시 순서만 별도로 재배치해 둘 다 만족시켰다.
+    - 라벨 텍스트(사업자/채널마다 표시 이름이 다름 — 예: `SBS(민방포함)`→`SBS`)로 판별하면 깨지기 쉬워, 각 dataset 생성 시점에 `_isEna: true/false`를 직접 붙여두고 그 플래그만 읽는다 — 매출 트렌드(`metricsIsEnaName(name)`)·CPRP/채널시청률/eq-GRPs/광고주수 미니차트(`ch === ENA_REPRESENTATIVE_CHANNEL`)·시장규모 추이(각 `series` 항목의 기존 `isEna` 값 재사용) 3곳 모두 이미 갖고 있던 ENA 판별 로직을 그대로 재사용, 새로 만들지 않았다.
+    - M/S 트렌드(단일 라인, 범례 자체가 꺼져 있음)·매출 랭킹(단일 막대 dataset, 범례 꺼짐)은 범례가 없어 대상에서 제외.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
