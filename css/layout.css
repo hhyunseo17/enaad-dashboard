@@ -537,4 +537,9 @@
 .metrics-detail-teaser { position: relative; max-height: 260px; overflow: hidden; }
 .metrics-detail-teaser::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--bg-elevated)); pointer-events: none; }
 .metrics-detail-more { display: flex; justify-content: center; padding-top: 12px; }
+
+/* 매출 4개 차트 카드 아래 "피벗으로 보기" 접기 섹션 진입 버튼(2026-09-16, 사용자 요청 — 기존
+   피벗 엔진 연동, 기본은 접힘). 펼치면 .dd-layout(1fr 340px)이 카드 폭 안에서 그대로 퍼진다 —
+   channel/category 피벗과 같은 사이드바 폭을 쓴다(카드가 화면 절반이라도 줄이지 않는다). */
+.metrics-pivot-toggle-row { display: flex; justify-content: flex-end; padding-top: 10px; }
 .auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }

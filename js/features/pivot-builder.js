@@ -52,6 +52,7 @@
       if (fieldKey === 'year') return `${rawValue}년`;
       if (fieldKey === 'month') return `${rawValue}월`;
       if (fieldKey === 'isUpfront') return String(rawValue) === 'true' ? '업프론트' : '업프론트 미계약';
+      if (fieldKey === 'channelGroup') return metricsOperatorDisplayName(rawValue); // File1 원본 표기 대신 화면 관례 이름 — detail-data.js의 ddFormatFieldValue와 짝
       return rawValue;
     }
 
@@ -84,6 +85,7 @@
       deptOrder: (a, b) => compareDeptOrder(a, b),                 // shared-helpers.js
       categoryOrder: (a, b) => pvOrderListCompare(categoryOrderList, a, b), // state.js
       channelOrder: (a, b) => pvOrderListCompare(PV_CHANNEL_ORDER, a, b),
+      scopeOrder: (a, b) => pvOrderListCompare(PV_SCOPE_ORDER, a, b),
     };
     // 고정 순서 목록 기준 비교 — 목록에 있는 것이 먼저, 둘 다 없으면 이름순.
     function pvOrderListCompare(list, a, b) {
@@ -372,6 +374,10 @@
     // 채널 표시 순서 — 매출순이 아니라 편성 순서(원본 renderChannelPivotTable의 targetOrder).
     const PV_CHANNEL_ORDER = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', '기타', 'CHING', 'ONT', '헬스메디TV'];
 
+    // 지표 대시보드 매출 피벗(scope 행)의 표시 순서 — metrics-dashboard.js의 METRICS_SCOPE_ORDER와 동일
+    // (2026-09-16, 사용자 요청 "케이블은 케이블끼리, 종편은 종편끼리 붙여놔줘"를 이 표에도 그대로 적용).
+    const PV_SCOPE_ORDER = ['지상파', '종편', '케이블'];
+
     // 접힘 상태를 두 객체에 나눠 담는 피벗(채널·대행사)을 위한 어댑터.
     // 1단계는 앞 객체, `||`가 들어간 하위 경로는 뒤 객체로 보낸다 — 엔진은 맵 하나만 알면 되고,
     // 기존 toggleChannelNode/toggleAgencyNode 등이 쓰던 전역도 그대로 살아 있어 스위치를 껐다 켜도 이어진다.
@@ -637,6 +643,111 @@
         render: () => renderMetricsDetailPivot(),
         parentView: 'metricsMain',
       },
+
+      // 지표 대시보드 매출 4개 차트(시장규모 추이 / M/S 트렌드 / 매출 트렌드 / 매출 랭킹)에 딸린
+      // "피벗으로 보기" — 네 프리셋 모두 데이터 원본(metricsRevenueData)과 축이 사실상 같다(2026-09-16,
+      // 사용자 요청: "각 차트별로" = 차트마다 독립된 피벗 UI, 데이터 자체가 달라야 한다는 뜻은 아님).
+      // custom을 붙이지 않는다 — File1 매출은 rawData.amount와 같은 원 단위 관례라 엔진의 pvFormatCell을
+      // 그대로 쓸 수 있다(metricsDetail처럼 단위가 %·GRP 등으로 갈리는 경우가 아니다).
+      metricsMarketByScopePivot: {
+        rows: ['scope', 'channelGroup'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        columns: ['year', 'month'],
+        values: [{ field: 'revenue', agg: 'sum' }],
+        sourceFilter: null,
+        dataSource: () => metricsRevenueData,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsMarketByScopePivot,
+        expandedCols: () => expandedMetricsMarketByScopeYearColumns,
+        render: () => renderPresetPivot('metricsMarketByScopePivot'),
+        resetBtn: 'metricsMarketByScopePivotResetBtn',
+        layoutId: 'metricsMarketByScopePivotSection', builderBtn: 'metricsMarketByScopePivotBuilderBtn',
+        builderDom: { fieldList:'metricsMarketByScopeDdFieldList', filterBar:'metricsMarketByScopeDdFilterBar', filters:'metricsMarketByScopeDdWellFilterBody', columns:'metricsMarketByScopeDdWellColumnsBody', rows:'metricsMarketByScopeDdWellRowsBody', values:'metricsMarketByScopeDdWellValuesBody' },
+        dom: { head1: 'metricsMarketByScopePivotHeaderRow1', head2: 'metricsMarketByScopePivotHeaderRow2', body: 'metricsMarketByScopePivotTableBody', total: 'metricsMarketByScopePivotTotalAmount' },
+      },
+
+      metricsMsTrendPivot: {
+        rows: ['scope', 'channelGroup'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        columns: ['year', 'month'],
+        values: [{ field: 'revenue', agg: 'sum' }],
+        sourceFilter: null,
+        dataSource: () => metricsRevenueData,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsMsTrendPivot,
+        expandedCols: () => expandedMetricsMsTrendYearColumns,
+        render: () => renderPresetPivot('metricsMsTrendPivot'),
+        resetBtn: 'metricsMsTrendPivotResetBtn',
+        layoutId: 'metricsMsTrendPivotSection', builderBtn: 'metricsMsTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsMsTrendDdFieldList', filterBar:'metricsMsTrendDdFilterBar', filters:'metricsMsTrendDdWellFilterBody', columns:'metricsMsTrendDdWellColumnsBody', rows:'metricsMsTrendDdWellRowsBody', values:'metricsMsTrendDdWellValuesBody' },
+        dom: { head1: 'metricsMsTrendPivotHeaderRow1', head2: 'metricsMsTrendPivotHeaderRow2', body: 'metricsMsTrendPivotTableBody', total: 'metricsMsTrendPivotTotalAmount' },
+      },
+
+      metricsRevenueTrendPivot: {
+        rows: ['scope', 'channelGroup'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        columns: ['year', 'month'],
+        values: [{ field: 'revenue', agg: 'sum' }],
+        sourceFilter: null,
+        dataSource: () => metricsRevenueData,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsRevenueTrendPivot,
+        expandedCols: () => expandedMetricsRevenueTrendYearColumns,
+        render: () => renderPresetPivot('metricsRevenueTrendPivot'),
+        resetBtn: 'metricsRevenueTrendPivotResetBtn',
+        layoutId: 'metricsRevenueTrendPivotSection', builderBtn: 'metricsRevenueTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsRevenueTrendDdFieldList', filterBar:'metricsRevenueTrendDdFilterBar', filters:'metricsRevenueTrendDdWellFilterBody', columns:'metricsRevenueTrendDdWellColumnsBody', rows:'metricsRevenueTrendDdWellRowsBody', values:'metricsRevenueTrendDdWellValuesBody' },
+        dom: { head1: 'metricsRevenueTrendPivotHeaderRow1', head2: 'metricsRevenueTrendPivotHeaderRow2', body: 'metricsRevenueTrendPivotTableBody', total: 'metricsRevenueTrendPivotTotalAmount' },
+      },
+
+      metricsRevenueRankingPivot: {
+        rows: ['scope', 'channelGroup'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        columns: ['year', 'month'],
+        values: [{ field: 'revenue', agg: 'sum' }],
+        sourceFilter: null,
+        dataSource: () => metricsRevenueData,
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsRevenueRankingPivot,
+        expandedCols: () => expandedMetricsRevenueRankingYearColumns,
+        render: () => renderPresetPivot('metricsRevenueRankingPivot'),
+        resetBtn: 'metricsRevenueRankingPivotResetBtn',
+        layoutId: 'metricsRevenueRankingPivotSection', builderBtn: 'metricsRevenueRankingPivotBuilderBtn',
+        builderDom: { fieldList:'metricsRevenueRankingDdFieldList', filterBar:'metricsRevenueRankingDdFilterBar', filters:'metricsRevenueRankingDdWellFilterBody', columns:'metricsRevenueRankingDdWellColumnsBody', rows:'metricsRevenueRankingDdWellRowsBody', values:'metricsRevenueRankingDdWellValuesBody' },
+        dom: { head1: 'metricsRevenueRankingPivotHeaderRow1', head2: 'metricsRevenueRankingPivotHeaderRow2', body: 'metricsRevenueRankingPivotTableBody', total: 'metricsRevenueRankingPivotTotalAmount' },
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -652,10 +763,16 @@
     const PV_UP_FIELDS = ['dept', 'upfrontAdvertiser', 'agency', 'agencyGroup', 'advertiser', 'manager',
       'categoryReclassified', 'subCategory', 'channel', 'industry', 'broadDigital'];
 
+    // 지표 대시보드 매출 4종 피벗은 metricsRevenueData(File1 사업자별 매출)만 읽어서 놓을 수 있는 필드가
+    // 이 다섯 개뿐이다 — 매출 대시보드 rawData의 부서·광고주 같은 필드는 애초에 이 데이터셋에 없다.
+    const PV_METRICS_REVENUE_FIELDS = ['scope', 'channelGroup', 'year', 'month', 'revenue'];
+
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
       goalTrendPivot: PV_GOAL_FIELDS, goalDeptPivot: PV_GOAL_FIELDS,
       agencyCompPivot: PV_AC_FIELDS, upfrontPivot: PV_UP_FIELDS,
+      metricsMarketByScopePivot: PV_METRICS_REVENUE_FIELDS, metricsMsTrendPivot: PV_METRICS_REVENUE_FIELDS,
+      metricsRevenueTrendPivot: PV_METRICS_REVENUE_FIELDS, metricsRevenueRankingPivot: PV_METRICS_REVENUE_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
@@ -857,7 +974,7 @@
     // 정렬은 **레벨 번호가 아니라 필드**에 붙는다. 사용자가 축 순서를 바꿔도 부서는 팀 순서,
     // 채널은 편성 순서를 그대로 따라가야 하기 때문이다. 프리셋에 없는 필드는 값 내림차순.
     // 필드가 스스로 갖는 고정 순서(프리셋과 무관하다 — 부서는 어디서나 팀 번호순이다).
-    const PV_FIELD_ORDER_SORTER = { dept: 'deptOrder', categoryReclassified: 'categoryOrder', channel: 'channelOrder' };
+    const PV_FIELD_ORDER_SORTER = { dept: 'deptOrder', categoryReclassified: 'categoryOrder', channel: 'channelOrder', scope: 'scopeOrder' };
     function pvRowSorterFor(preset, field, cfg) {
       // 이름순은 **필드를 아는** 비교자로 만든다. 연·월을 문자로 비교하면 1, 10, 11, 12, 2… 가 된다.
       const byLabel = (dir) => (a, b) => pvCompareFieldValues(field, a, b, dir === 'desc' ? 'desc' : 'asc');
@@ -958,9 +1075,19 @@
         config: pvConfigFor(viewKey), render: () => p.render(), dom: p.builderDom, viewKey,
         maxValues: 1, hiddenFields: PV_HIDDEN_FIELDS,
         fieldList: list, allowedFields: list ? new Set(list) : null,
+        // 필터 well의 값 목록(getDetailDataFieldUniqueValues, detail-data.js)이 읽을 데이터셋.
+        // 지정 없는 나머지 여섯 피벗은 null이라 기존과 동일하게 rawData를 그대로 쓴다.
+        dataSource: p.dataSource || null,
       };
     }
-    function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
+    // 다른 10개 피벗은 자기만의 화면이라 currentView가 곧 편집 대상이지만, metricsMain엔 4개 프리셋이
+    // 나란히 얹혀 있어 currentView 하나로는 어떤 걸 만지는지 알 수 없다 — pvToggleBuilder()/
+    // toggleMetricsPivotSection()이 적어둔 pvActiveMetricsPresetKey(state.js)를 대신 본다
+    // (2026-09-16, reviewer 에이전트가 발견한 버그 수정 — 자세한 배경은 그 변수 주석 참고).
+    function pvBuilderCtx() {
+      const key = (currentView === 'metricsMain' && pvActiveMetricsPresetKey && PIVOT_PRESETS[pvActiveMetricsPresetKey]) ? pvActiveMetricsPresetKey : currentView;
+      return pvBuilderCtxFor(key);
+    }
     function renderPvBuilderPanel(viewKey) {
       const ctx = pvBuilderCtxFor(viewKey);
       if (ctx) renderDetailDataBuilderPanels(ctx);
@@ -986,6 +1113,9 @@
     function pvToggleBuilder(viewKey) {
       const preset = PIVOT_PRESETS[viewKey]; if (!preset || !preset.layoutId) return;
       const el = document.getElementById(preset.layoutId); if (!el) return;
+      // metricsMain에 얹힌 4개 프리셋은 currentView만으로 자신을 특정할 수 없다 — 지금 만지는
+      // 프리셋을 명시적으로 적어둔다(pvBuilderCtx()가 읽는다, 위 pvActiveMetricsPresetKey 주석 참고).
+      if (currentView === 'metricsMain') pvActiveMetricsPresetKey = viewKey;
       const open = el.classList.toggle('dd-layout-collapsed') === false;
       const btn = preset.builderBtn && document.getElementById(preset.builderBtn);
       // 이름('표 편집')은 그대로 두고 **눌린 상태와 화살표 방향**으로만 알린다 — 버튼 폭이 흔들리지
@@ -1091,4 +1221,25 @@
       document.getElementById(preset.dom.total).innerText = (primary.agg === 'count' || primary.agg === 'distinct')
         ? `${(grand || 0).toLocaleString()} 건`
         : `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
+    }
+
+    // ==========================================================================
+    // 지표 대시보드 매출 4개 차트의 "피벗으로 보기" 접기/펼치기
+    // ==========================================================================
+    // 차트 카드 바로 아래 섹션을 기본 접힘으로 두고, 처음 펼칠 때만 그린다(다른 6개 피벗은 화면
+    // 자체가 별도 탭이라 처음부터 렌더링됐지만, 이건 차트 카드에 얹는 부가 UI라 접힌 동안은
+    // 대상 DOM이 없거나 비어 있을 수 있어 굳이 미리 그릴 이유가 없다).
+    function toggleMetricsPivotSection(viewKey) {
+      const preset = PIVOT_PRESETS[viewKey]; if (!preset) return;
+      const open = !metricsPivotSectionOpen[viewKey];
+      metricsPivotSectionOpen[viewKey] = open;
+      // 이 섹션을 지금 만지고 있다는 표시(위 pvActiveMetricsPresetKey 주석 참고) — 닫을 땐 자신이
+      // 활성 상태였을 때만 지운다(다른 섹션이 이미 활성으로 덮어썼다면 그걸 지우면 안 된다).
+      if (open) pvActiveMetricsPresetKey = viewKey;
+      else if (pvActiveMetricsPresetKey === viewKey) pvActiveMetricsPresetKey = null;
+      const section = document.getElementById(viewKey + 'Section');
+      if (section) section.hidden = !open;
+      const btn = document.getElementById(viewKey + 'ToggleBtn');
+      if (btn) btn.textContent = open ? '피벗 접기 ▴' : '피벗으로 보기 ▾';
+      if (open) preset.render();
     }

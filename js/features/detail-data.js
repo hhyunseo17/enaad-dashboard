@@ -47,13 +47,19 @@
 
     // 특정 화면에서만 쓰는 필드는 공용 목록에 넣지 않고 여기에만 이름을 둔다 — 세부데이터와 여섯 피벗의
     // 필드 목록이 그 화면에서만 의미 있는 항목으로 길어지지 않게 하기 위함이다.
-    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주' };
+    // scope/channelGroup/revenue는 지표 대시보드 매출 4종 피벗(metricsMarketByScopePivot 등, pivot-builder.js
+    // PV_FIELD_WHITELIST)에서만 쓴다 — metricsRevenueData(File1 사업자별 매출) 전용 필드라 공용 DETAIL_DATA_FIELDS엔 없다.
+    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출' };
     function detailDataFieldLabel(key) {
       const f = DETAIL_DATA_FIELDS.find(x => x.key === key);
       return f ? f.label : (DD_EXTRA_FIELD_LABELS[key] || key);
     }
     function ddEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
-    function getDetailDataAggOptions(field) { return field === 'amount' ? ['sum', 'avg', 'count', 'distinct'] : ['count', 'distinct']; }
+    // amount(매출 대시보드)와 revenue(지표 대시보드 metricsRevenueData)는 각 데이터셋에서 유일한 금액
+    // 필드라 축(행/열/필터)에 놓을 이유가 없다 — 값 well 전용이고, 기본 집계도 합계다. 나머지는 개수/고유
+    // 개수만 의미가 있다(예: 대분류 개수를 세는 건 되지만 대분류를 더하는 건 안 된다).
+    const DD_VALUE_ONLY_FIELDS = new Set(['amount', 'revenue']);
+    function getDetailDataAggOptions(field) { return DD_VALUE_ONLY_FIELDS.has(field) ? ['sum', 'avg', 'count', 'distinct'] : ['count', 'distinct']; }
     function getDetailDataValueLabel(v) { return `${DETAIL_DATA_AGG_LABELS[v.agg] || v.agg} : ${detailDataFieldLabel(v.field)}`; }
 
     function fmtDetailDataAmount(won) {
@@ -73,6 +79,7 @@
       if (fieldKey === 'year') return `${rawValue}년`;
       if (fieldKey === 'month') return `${rawValue}월`;
       if (fieldKey === 'isUpfront') return String(rawValue) === 'true' ? '업프론트' : '업프론트 미계약';
+      if (fieldKey === 'channelGroup') return metricsOperatorDisplayName(rawValue); // File1 원본 표기(예: 'SBS(민방포함)') 대신 화면 관례 이름('SBS')
       return rawValue;
     }
 
@@ -394,7 +401,7 @@
     }
 
     function makeDetailDataValueEntry(fieldKey) {
-      return { id: detailDataValueIdCounter++, field: fieldKey, agg: fieldKey === 'amount' ? 'sum' : 'count' };
+      return { id: detailDataValueIdCounter++, field: fieldKey, agg: DD_VALUE_ONLY_FIELDS.has(fieldKey) ? 'sum' : 'count' };
     }
 
     function onDetailDataWellDrop(ev, wellName) {
@@ -406,7 +413,7 @@
       const fieldKey = payload.field;
       if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); ddRerender(); return; }
       if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
-      if (fieldKey === 'amount' && wellName !== 'values') return; // amount는 값 well 전용
+      if (DD_VALUE_ONLY_FIELDS.has(fieldKey) && wellName !== 'values') return; // amount/revenue는 값 well 전용
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
         if (payload.valueId != null) {
@@ -433,7 +440,7 @@
       if (!payload || !payload.field) return;
       const fieldKey = payload.field;
       if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
-      if (fieldKey === 'amount' && wellName !== 'values') return;
+      if (DD_VALUE_ONLY_FIELDS.has(fieldKey) && wellName !== 'values') return;
       if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
         const arr = ddCfg().values;
@@ -465,9 +472,14 @@
     // ==========================================================================
     // 필터 값 팝오버
     // ==========================================================================
+    // 기본은 rawData(매출 대시보드 전체 행)다. metricsRevenueData처럼 다른 데이터셋을 쓰는 피벗은
+    // 프리셋이 dataSource를 지정해 두면 pvBuilderCtxFor가 그걸 ctx.dataSource로 넘긴다 — 안 그러면
+    // 'scope'/'channelGroup' 같은 필드가 rawData엔 없는 값이라 필터 후보가 항상 빈 목록이 된다.
     function getDetailDataFieldUniqueValues(fieldKey) {
+      const ctx = ddCtx();
+      const source = (ctx && ctx.dataSource) ? ctx.dataSource() : rawData;
       const set = new Set();
-      rawData.forEach(r => { const v = r[fieldKey]; if (v !== undefined && v !== null && v !== '') set.add(v); });
+      source.forEach(r => { const v = r[fieldKey]; if (v !== undefined && v !== null && v !== '') set.add(v); });
       return [...set].sort((a, b) => String(a).localeCompare(String(b), 'ko'));
     }
     function toggleDetailDataFilterPopover(fieldKey) {
