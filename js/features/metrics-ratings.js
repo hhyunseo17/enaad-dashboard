@@ -121,7 +121,7 @@
           const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === p.year && r.month === p.month && r.channel === ch);
           return row ? row.value * valueMultiplier : null;
         });
-        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, spanGaps: true };
+        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, spanGaps: true, _isEna: isEna };
       });
 
       // suggestedMax는 "적어도 이만큼은 돼야 한다"는 하한 힌트일 뿐 상한을 막지 못한다 — grace를
@@ -139,7 +139,7 @@
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           // 범례·축 폰트 크기는 "매출 트렌드"(renderMetricsRevenueTrendChart)와 같은 수준으로 맞춘다
           // (2026-09-15, 사용자 요청 — 카드 크기를 이미 매출 트렌드와 맞췄으니 글자 크기도 맞아야 함).
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
           scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
             y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }

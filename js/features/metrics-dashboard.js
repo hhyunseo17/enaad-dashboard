@@ -707,7 +707,7 @@
         type: 'bar',
         data: {
           labels, datasets: series.map((ser, i) => ({
-            label: ser.label, data: dataBySeries[i], backgroundColor: ddBarFill(ser.color), borderRadius: 0, ...ddStackSeparator(),
+            label: ser.label, data: dataBySeries[i], backgroundColor: ddBarFill(ser.color), borderRadius: 0, _isEna: !!ser.isEna, ...ddStackSeparator(),
             datalabels: isShare ? { display: false } : {
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
               display: (ctx) => i === series.length - 1,
@@ -718,7 +718,7 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => isShare ? `${c.dataset.label}: ${c.raw.toFixed(1)}%` : `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
           scales: { x: { stacked: true, offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
             y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => isShare ? v + '%' : metricsFmtNum(v, 0) + '억' } }) }
@@ -763,6 +763,20 @@
     // 매출 트렌드(라인, 비교단위별) / 매출 랭킹(가로막대, 선택 항목 강조)
     // ------------------------------------------------------------
     function metricsIsEnaName(name) { return name === ENA_CHANNEL_GROUP || name === ENA_REPRESENTATIVE_CHANNEL; }
+    // 모든 지표 대시보드 차트의 범례에서 KT ENA(또는 대표채널 'ENA')를 항상 맨 앞에 오도록 재배치
+    // (2026-09-16, 사용자 요청: "모든 차트에서 범례는 KT ENA가 가장 앞에 나오도록"). 실제 datasets
+    // 배열 순서(스택 차트는 "ENA가 스택 맨 위" 요구 때문에 배열 맨 끝에 온다 — 위 renderMetricsMarketByScopeChart
+    // 참고)는 그대로 두고, 범례 항목만 안정 정렬(stable sort)로 옮긴다 — 각 데이터셋에 미리 붙여둔
+    // `_isEna` 플래그로 판별(라벨 텍스트는 채널/사업자마다 표시 이름이 달라 파싱하기 불안정하다).
+    function metricsLegendGenerateLabels(chart) {
+      const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+      items.sort((a, b) => {
+        const aEna = !!(chart.data.datasets[a.datasetIndex] && chart.data.datasets[a.datasetIndex]._isEna);
+        const bEna = !!(chart.data.datasets[b.datasetIndex] && chart.data.datasets[b.datasetIndex]._isEna);
+        return (aEna === bEna) ? 0 : (aEna ? -1 : 1);
+      });
+      return items;
+    }
     // KT ENA 전용 경쟁사 팔레트 — 왜 theme-system.js의 서수 팔레트(seriesColor(), 10색)를 그대로 못
     // 쓰는지: 그 팔레트의 0번이 KT ENA 전용 강조색 RC('curr')과 같은 계열의 파랑이라 빼야 했는데,
     // 그러면 9색밖에 안 남는다 — File1 사업자는 최대 14개(ENA 포함, "지상파+유료방송" 범위 선택
@@ -817,7 +831,7 @@
           return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
         const color = metricsIsEnaName(name) ? RC('curr') : metricsCompetitorColor(nonEnaNames.indexOf(name));
-        return { label: metricsOperatorDisplayName(name), data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
+        return { label: metricsOperatorDisplayName(name), data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true, _isEna: metricsIsEnaName(name) };
       });
 
       const ctx = canvas.getContext('2d');
@@ -825,7 +839,7 @@
         type: 'line', data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
           // grace:0 — 매출은 음수가 될 수 없는데 ddValueAxis() 기본값(grace:15%)이 데이터 최솟값(0
           // 근처) 아래로도 15% 여유를 대칭으로 붙여, Chart.js가 "예쁜 간격"을 고르는 과정에서 축이
