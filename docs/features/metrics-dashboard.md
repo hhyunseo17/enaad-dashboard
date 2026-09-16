@@ -267,6 +267,8 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 
 65. **이메일 허용목록 롤아웃 종료 — main 병합과 함께 전원 공개로 전환** — 사용자 요청(2026-09-16): "이거 일단 메인에 반영해주고 supabase에서도 가입가능한 사람 다 보이게 해줘". 위 "접근 제한 — 롤아웃 초기 이메일 허용목록" 절 전체가 이제 해당 없음 — `js/core/auth.js`의 `METRICS_ALLOWED_EMAILS` 배열과 `shared/supabase-proxy.mjs`의 `requireMetricsAccess()` 내부 허용목록 검사를 제거해, 다른 `/api/*`와 동일하게 "로그인만 하면 전원 접근 가능"으로 되돌렸다. 함수명·호출부(`handleCompetitorRatingsRequest` 등 3곳)는 그대로 두고 내부 구현만 `requireAuth()`와 동등하게 단순화 — 나중에 다시 좁힐 일이 생기면 이 함수 하나만 고치면 된다(반대로 안 쓰게 된 `forbiddenResponse()`는 제거). `METRICS_DASHBOARD_ENABLED`(state.js) 마스터 롤백 스위치는 그대로 유지 — 문제가 생기면 이 한 줄로 전체 탭을 다시 숨길 수 있다. `feature/metrics-dashboard` 브랜치를 `main`으로 병합(fast-forward)해 이 지점부터는 프로덕션에도 반영된다.
 
+66. **CPRP/채널시청률/eq-GRPs/광고주수 미니차트 제목 크기를 위 차트들과 통일 + main 재병합** — 사용자 지적(스크린샷 첨부, 2026-09-16): "이 차트 4개 제목 크기 위에 있는 차트 제목이랑 같은 사이즈로 바꿔줘 너무 작아 메인에 반영해줘". 61번에서 "수도권 개인 2049 기준" 배지를 넣으며 4개 카드 h2에 인라인 `font-size:14px`가 걸려 있었는데(원래도 작았음, 이번에 화면으로 직접 비교하고 나서야 드러남), 위쪽 "방송광고시장 규모 추이"/"KT ENA M/S 트렌드" 카드 h2는 인라인 오버라이드가 없어 `.card-box-title h2`의 기본값(17px, css/layout.css)을 그대로 쓰고 있었다 — 4개 카드의 인라인 font-size를 제거해 같은 기본값을 따르도록 통일. `feature/metrics-dashboard`를 다시 `main`으로 fast-forward 병합 후 배포.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
