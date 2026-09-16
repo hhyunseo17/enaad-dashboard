@@ -68,7 +68,7 @@
         <!-- "매출 대시보드"/"지표 대시보드" 상위 탭. family 기준 강조는 syncDashboardTabs()(view-router.js)가 처리. -->
         <nav class="dashboard-tabs">
           <button id="dashboardTabSales" class="dashboard-tab active" onclick="switchView('main')">매출 대시보드</button>
-          <button id="dashboardTabMetrics" class="dashboard-tab" onclick="switchView('metricsMain')">지표 대시보드 <span class="dashboard-tab-badge-new">신규</span></button>
+          <button id="dashboardTabMetrics" class="dashboard-tab" onclick="switchView('metricsMain')">지표 대시보드</button>
         </nav>
       </div>
 
@@ -1246,7 +1246,7 @@
       </section>
 
       <!-- 지표 대시보드 전용 컨트롤바. 메인 매출 대시보드의 filter-bar와 독립 — 자기만의
-           연도·일평균/프라임타임·범위·비교단위·①사업자→②채널 토글을 갖는다. 단, 취급고/회계(매출기준)만은
+           연도·일평균/프라임타임·범위·비교단위·사업자→채널 토글을 갖는다. 단, 취급고/회계(매출기준)만은
            이 탭 전용 상태를 따로 두지 않고 메인 대시보드의 전역 revenueBasisMode(state.js)를 그대로
            공유한다 — "취급고를 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를
            가져와 KT ENA/ENA 채널 매출로 쓴다"는 개념(2026-09-15, 사용자 요청). 버튼은 이 탭에도 있어
@@ -1307,7 +1307,7 @@
             <span class="filter-hint">CPRP·채널시청률·eq-GRPs에만 반영</span>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsOperator')">
                 <span id="labelMetricsOperator">전체 사업자</span> ▾
@@ -1321,7 +1321,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')">
                 <span id="labelMetricsChannel">대표채널 자동</span> ▾
@@ -1561,7 +1561,7 @@
             <div id="metricsMarketByScopePivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsMarketByScopePivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMarketByScopePivotOperator')">
                 <span id="metricsMarketByScopePivotLabelOperator">전체 사업자</span> ▾
@@ -1573,7 +1573,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsMarketByScopePivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMarketByScopePivotChannel')">
                 <span id="metricsMarketByScopePivotLabelChannel">대표채널 자동</span> ▾
@@ -1654,7 +1654,7 @@
             <div id="metricsMsTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsMsTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMsTrendPivotOperator')">
                 <span id="metricsMsTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -1666,7 +1666,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsMsTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMsTrendPivotChannel')">
                 <span id="metricsMsTrendPivotLabelChannel">대표채널 자동</span> ▾
@@ -1682,7 +1682,7 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">①선택 사업자별 M/S(%) 월별 피벗</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">선택 사업자별 M/S(%) 월별 피벗</h2>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <button class="btn btn-sm" id="metricsMsTrendPivotResetBtn" onclick="pvResetPivot('metricsMsTrendPivot')" style="display:none;">↺ 원래대로</button>
@@ -1747,7 +1747,7 @@
             <div id="metricsRevenueTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsRevenueTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueTrendPivotOperator')">
                 <span id="metricsRevenueTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -1759,7 +1759,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsRevenueTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueTrendPivotChannel')">
                 <span id="metricsRevenueTrendPivotLabelChannel">대표채널 자동</span> ▾
@@ -1840,7 +1840,7 @@
             <div id="metricsRevenueRankingPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsRevenueRankingPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueRankingPivotOperator')">
                 <span id="metricsRevenueRankingPivotLabelOperator">전체 사업자</span> ▾
@@ -1852,7 +1852,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsRevenueRankingPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueRankingPivotChannel')">
                 <span id="metricsRevenueRankingPivotLabelChannel">대표채널 자동</span> ▾
@@ -1933,7 +1933,7 @@
             <div id="metricsCprpTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsCprpTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsCprpTrendPivotOperator')">
                 <span id="metricsCprpTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -1945,7 +1945,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsCprpTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsCprpTrendPivotChannel')">
                 <span id="metricsCprpTrendPivotLabelChannel">대표채널 자동</span> ▾
@@ -2026,7 +2026,7 @@
             <div id="metricsRatingTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsRatingTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRatingTrendPivotOperator')">
                 <span id="metricsRatingTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -2038,7 +2038,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsRatingTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRatingTrendPivotChannel')">
                 <span id="metricsRatingTrendPivotLabelChannel">대표채널 자동</span> ▾
@@ -2119,7 +2119,7 @@
             <div id="metricsGrpTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsGrpTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGrpTrendPivotOperator')">
                 <span id="metricsGrpTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -2131,7 +2131,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsGrpTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGrpTrendPivotChannel')">
                 <span id="metricsGrpTrendPivotLabelChannel">대표채널 자동</span> ▾
@@ -2212,7 +2212,7 @@
             <div id="metricsAdvCountTrendPivotMonthPills" class="pills-group"></div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">① 사업자</span>
+            <span class="filter-label">사업자</span>
             <div class="multi-dropdown" id="dropdownMetricsAdvCountTrendPivotOperator">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsAdvCountTrendPivotOperator')">
                 <span id="metricsAdvCountTrendPivotLabelOperator">전체 사업자</span> ▾
@@ -2224,7 +2224,7 @@
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label">② 채널</span>
+            <span class="filter-label">채널</span>
             <div class="multi-dropdown" id="dropdownMetricsAdvCountTrendPivotChannel">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsAdvCountTrendPivotChannel')">
                 <span id="metricsAdvCountTrendPivotLabelChannel">대표채널 자동</span> ▾

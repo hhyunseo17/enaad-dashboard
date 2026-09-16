@@ -107,12 +107,15 @@
       // (연도 제한 없이 확인 — 구조적으로 없는 채널과 "이 연도만 마침 없는" 채널을 구분하기 위해서다).
       const channels = metricsRatingsChannelSelection()
         .filter(ch => metricsRatingsData.some(r => r.metricCode === metricCode && r.indexMode === indexMode && r.channel === ch));
-      const nonEnaChannels = channels.filter(ch => !ENA_CHANNELS.includes(ch)); // metricsCompetitorColor() 색 충돌 방지(metrics-dashboard.js 참고)
+      // 대표채널 'ENA'만 강조색(파랑)을 받는다 — ENA DRAMA/PLAY/STORY까지 전부 파랑이면 ②에서
+      // 여러 개를 동시에 골랐을 때 서로 구분이 안 된다(2026-09-16, 사용자 지적: "ENA 계열채널도
+      // ENA랑 색이 다 너무 똑같아서 별로네" — ②가 다중 채널 확장을 지원하게 되면서 ENA 계열 여러
+      // 개가 한 차트에 같이 뜨는 경우가 생겼다). ENA DRAMA 등은 이제 경쟁사와 같은 팔레트에서
+      // 각자 다른 색을 받는다 — "ENA 계열이라는 표시"보다 "서로 구분되는 것"이 우선.
+      const nonEnaChannels = channels.filter(ch => ch !== ENA_REPRESENTATIVE_CHANNEL);
 
       const datasets = channels.map((ch) => {
-        // ENA_CHANNELS.includes() — 대표채널 비교 모드에서 ENA DRAMA/PLAY/STORY를 골라도 강조색을
-        // 받는다(예전엔 대표채널 "ENA" 단일값만 있어 정확히 일치 비교로 충분했다).
-        const isEna = ENA_CHANNELS.includes(ch);
+        const isEna = ch === ENA_REPRESENTATIVE_CHANNEL;
         const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch)); // 0번(파랑)은 ENA 전용
         const data = periods.map(p => {
           const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === p.year && r.month === p.month && r.channel === ch);

@@ -491,7 +491,6 @@
 .dashboard-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 14px; font-weight: 500; border: none; background: transparent; color: var(--control-fg); border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s ease, color 0.12s ease; font-family: inherit; white-space: nowrap; }
 .dashboard-tab:hover { color: var(--primary-blue-on-glow); background: var(--primary-blue-glow); }
 .dashboard-tab.active { background: var(--primary-blue-glow); color: var(--primary-blue-on-glow); font-weight: 600; }
-.dashboard-tab-badge-new { display: inline-flex; align-items: center; padding: 1px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0; border-radius: var(--radius-full); background: var(--accent-red-bg); color: var(--accent-red); }
 
 /* 데이터 기준 날짜 한 줄(2026-09-16 — 출처 설명 범례는 사용자 요청으로 없애고 이 한 줄만 남김). */
 .metrics-source-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 8px 18px; background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); font-size: 12.5px; color: var(--text-secondary); }
