@@ -149,6 +149,20 @@
     // 광고주수(12번)는 File1에 '전체' 인덱스만 있다 — 항상 '전체'로 고정 조회(위 함수 주석 참고).
     function renderMetricsAdvCountTrendChart() { renderMetricsMiniTrendChart('chartMetricsAdvCountTrend', 'metricsAdvCountTrend', metricsFindMetricCode(METRICS_LABEL.advCount, '전체', true), 1, '개사', 0, '전체'); }
 
+    // metricsMain의 "② 채널" 변경 전용 재렌더 — ②는 이 4개 미니차트(metricsRatingsChannelSelection()
+    // 참고)만 바꾼다. KPI 1~6·시장규모 추이·M/S·매출 트렌드/랭킹은 전부 ①선택 사업자 기준이라
+    // ②를 바꿔도 값이 그대로인데, renderMetricsDashboard() 전체를 다시 부르면 이 차트들도 매번
+    // destroy+재생성돼(Chart.js) 인트로 애니메이션이 다시 돈다 — 값은 안 바뀌었는데 뭔가 바뀐 것처럼
+    // 보여 헷갈린다는 지적(2026-09-16, 사용자: "채널을 선택하는 경우에 사업자 매출 차트는 안 바뀔
+    // 거잖아? 이거 새로 불러오는 애니메이션이 있어서 값 바뀌는 줄 알고 헷갈리더라고"). ②변경 시엔
+    // 이 4개만 다시 그린다.
+    function renderMetricsChannelDependentCharts() {
+      renderMetricsCprpTrendChart();
+      renderMetricsRatingTrendChart();
+      renderMetricsGrpTrendChart();
+      renderMetricsAdvCountTrendChart();
+    }
+
     // ------------------------------------------------------------
     // CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종의 피벗 dataSource(2026-09-16, 사용자 요청:
     // "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘") — renderMetricsMiniTrendChart()와

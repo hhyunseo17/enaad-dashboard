@@ -565,7 +565,13 @@
         label.innerText = sel.length === 0 ? '대표채널 자동' : sel.length <= 2 ? sel.join(', ') : `${sel.length}개 선택됨`;
       }
     }
-    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', renderMetricsDashboard); }
+    // onChange가 renderMetricsDashboard()(전체 재렌더)가 아니라 renderMetricsChannelDependentCharts()
+    // (metrics-ratings.js, ②에 실제로 의존하는 미니차트 4개만)인 이유는 그 함수 주석 참고 — ②는
+    // KPI·시장규모·M/S·매출 트렌드/랭킹 어느 것도 안 바꾸는데 전체를 다시 그리면 안 바뀐 차트까지
+    // Chart.js가 destroy+재생성돼 인트로 애니메이션이 돌아 "값이 바뀐 줄" 헷갈리게 했다(2026-09-16,
+    // 사용자 지적). 최초 렌더(페이지 진입 시 renderMetricsDashboard()가 이 함수를 호출하는 그 순간)는
+    // onChange를 안 타므로 영향 없다 — 사용자가 실제로 ②를 조작할 때만 이 좁은 재렌더가 쓰인다.
+    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', renderMetricsChannelDependentCharts); }
 
     // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)만 아직 이 범용 함수를 쓴다 — ①②는
     // 위 metricsSetupXxxCheckboxes()가 각자 처리하므로 더 이상 여기서 다루지 않는다.
