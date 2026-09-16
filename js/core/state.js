@@ -270,9 +270,10 @@
     let metricsMarketByScopeMode = 'amount'; // 시장규모 추이 차트 전용: 'amount'(금액, 기본) | 'share'(비중 100% 누적)
     let metricsRevenueTrendScale = 'linear'; // 매출 트렌드 차트 전용: 'linear'(기본) | 'log' — CJ ENM처럼 한 계열이 압도적으로 커서
                                               // 나머지가 바닥에 뭉치는 문제를 로그축으로 완화(2026-09-15, 사용자 요청)
-    let metricsCompareUnit = 'operator';   // 'operator'(① 사업자 비교, 기본) | 'channel'(② 대표채널 비교)
     let metricsSelectedOperators = [];     // ① 선택된 채널그룹(사업자) 목록 — 렌더 시 비어 있으면 기본값(KT ENA+매출상위)으로 채운다.
-    let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(대표채널 비교 모드, ①에서 캐스케이딩).
+    let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(①에서 캐스케이딩) — 비어 있으면 CPRP/시청률/GRP 등은
+                                            // ①사업자별 대표채널로 자동 대체한다(metricsRatingsChannelSelection(), 2026-09-16 —
+                                            // "사업자 비교/대표채널 비교" 토글은 폐지, ②를 직접 체크하는 것 자체가 선택이다).
     let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태
     let expandedMetricsDetailYearColumns = {}; // metricsDetail 상세표: 연도 열 펼침 상태
 

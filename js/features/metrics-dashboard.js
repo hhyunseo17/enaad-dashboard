@@ -148,12 +148,13 @@
     }
     // CPRP/채널시청률/eq-GRPs/광고주수/상세표가 쓰는 채널 목록 — 위 ①②선택을 그대로 공유한다
     // (2026-09-16, 사용자 요청 — 예전엔 File1↔File2 별칭이 안 맞는 문제로 고정 목록을 썼으나, 이제
-    // 매출까지 전부 File1 하나뿐이라 그 문제 자체가 없어졌다). "대표채널 비교"(metricsCompareUnit
-    // ==='channel')면 실제로 선택된 개별 채널(②)을, "사업자 비교"면 각 사업자의 대표채널(①의 첫
-    // 번째 하위 채널, 없으면 사업자명 자체 — CPRP·시청률 같은 비율 지표는 사업자 내 여러 채널 값을
-    // 더하거나 평균낼 수 없어 하나로 근사한다)을 쓴다.
+    // 매출까지 전부 File1 하나뿐이라 그 문제 자체가 없어졌다). "사업자 비교/대표채널 비교" 토글은
+    // 폐지했다(2026-09-16, 사용자 지적 — "②채널을 어차피 직접 찍으니 토글이 의미 없다") — ②에서
+    // 실제로 체크한 채널이 있으면 그대로 쓰고, 비어 있으면 ①선택 사업자의 대표채널(①의 첫 번째
+    // 하위 채널, 없으면 사업자명 자체 — CPRP·시청률 같은 비율 지표는 사업자 내 여러 채널 값을
+    // 더하거나 평균낼 수 없어 하나로 근사한다)로 자동 대체한다.
     function metricsRatingsChannelSelection() {
-      if (metricsCompareUnit === 'channel' && metricsSelectedChannels.length > 0) return metricsSelectedChannels;
+      if (metricsSelectedChannels.length > 0) return metricsSelectedChannels;
       return metricsSelectedOperators.map(metricsRepresentativeChannel);
     }
 
@@ -178,9 +179,8 @@
         const ranked = Object.entries(sums).filter(([g, v]) => g !== ENA_CHANNEL_GROUP && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
         metricsSelectedOperators = [ENA_CHANNEL_GROUP, ...ranked];
       }
-      if (metricsCompareUnit === 'channel' && metricsSelectedChannels.length === 0) {
-        metricsSelectedChannels = metricsChannelsForOperators(metricsSelectedOperators).slice(0, 5);
-      }
+      // ②채널은 기본값을 채우지 않는다 — 비워두면 metricsRatingsChannelSelection()이 알아서
+      // ①사업자별 대표채널로 자동 대체한다(위 함수 주석 참고).
     }
 
     // ------------------------------------------------------------
@@ -217,16 +217,6 @@
       document.getElementById('btnMetricsScopeChartShare').classList.toggle('active', mode === 'share');
       renderMetricsMarketByScopeChart();
     }
-    function setMetricsCompareUnit(unit) {
-      metricsCompareUnit = unit;
-      document.getElementById('btnMetricsCompareOperator').classList.toggle('active', unit === 'operator');
-      document.getElementById('btnMetricsCompareChannel').classList.toggle('active', unit === 'channel');
-      const chBtn = document.getElementById('btnMetricsChannelDropdown');
-      if (chBtn) chBtn.disabled = unit !== 'channel';
-      if (unit === 'channel' && metricsSelectedChannels.length === 0) metricsSelectedChannels = metricsChannelsForOperators(metricsSelectedOperators).slice(0, 5);
-      renderMetricsDashboard();
-    }
-
     function setupMetricsYearPills() {
       const container = document.getElementById('metricsYearPills');
       if (!container) return;
@@ -297,9 +287,8 @@
     }
     function updateMetricsDropdownLabel(type) {
       const label = document.getElementById(`labelMetrics${type}`); if (!label) return;
-      if (type === 'Channel' && metricsCompareUnit !== 'channel') { label.innerText = '전체(사업자 총합)'; return; }
       const sel = type === 'Operator' ? metricsSelectedOperators.map(metricsOperatorDisplayName) : metricsSelectedChannels;
-      if (sel.length === 0) label.innerText = '선택 없음';
+      if (sel.length === 0) label.innerText = type === 'Channel' ? '대표채널 자동' : '선택 없음';
       else if (sel.length <= 2) label.innerText = sel.join(', ');
       else label.innerText = `${sel.length}개 선택됨`;
     }

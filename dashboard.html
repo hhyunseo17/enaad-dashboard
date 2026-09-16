@@ -1286,7 +1286,6 @@
               <button class="pill-btn active" id="btnMetricsScopePayTv" onclick="setMetricsScopeMode('payTv')">유료방송</button>
               <button class="pill-btn" id="btnMetricsScopeCable" onclick="setMetricsScopeMode('cable')">케이블</button>
             </div>
-            <span class="filter-hint">①사업자 선택 후보군만 좁힘(KPI1·2는 항상 전체 산업 기준, M/S·시장·비중은 ①선택 사업자 합 기준)</span>
           </div>
           <div class="filter-group">
             <span class="filter-label">기준</span>
@@ -1295,14 +1294,6 @@
               <button class="pill-btn" id="btnMetricsIndexPrime" onclick="setMetricsIndexMode('프라임타임')">프라임타임</button>
             </div>
             <span class="filter-hint">CPRP·채널시청률·eq-GRPs에만 반영</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">비교단위</span>
-            <div class="pills-group">
-              <button class="pill-btn active" id="btnMetricsCompareOperator" onclick="setMetricsCompareUnit('operator')">사업자 비교</button>
-              <button class="pill-btn" id="btnMetricsCompareChannel" onclick="setMetricsCompareUnit('channel')">대표채널 비교</button>
-            </div>
-            <span class="filter-hint">CPRP·채널시청률·eq-GRPs·광고주수·상세표에만 반영(매출은 항상 사업자 단위)</span>
           </div>
           <div class="filter-group">
             <span class="filter-label">① 사업자</span>
@@ -1321,8 +1312,8 @@
           <div class="filter-group">
             <span class="filter-label">② 채널</span>
             <div class="multi-dropdown" id="dropdownMetricsChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')" disabled>
-                <span id="labelMetricsChannel">전체(사업자 총합)</span> ▾
+              <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')">
+                <span id="labelMetricsChannel">대표채널 자동</span> ▾
               </button>
               <div class="multi-dropdown-panel" id="panelMetricsChannel">
                 <label class="checkbox-item checkbox-item-all">
@@ -1331,6 +1322,7 @@
                 <div id="listMetricsChannelCheckboxes" class="checkbox-list"></div>
               </div>
             </div>
+            <span class="filter-hint">CPRP·채널시청률·eq-GRPs·광고주수·상세표에만 반영(비워두면 ①사업자별 대표채널 자동 사용, 매출은 항상 사업자 단위)</span>
           </div>
         </div>
       </section>
