@@ -234,6 +234,12 @@
       document.getElementById('btnMetricsScopeChartShare').classList.toggle('active', mode === 'share');
       renderMetricsMarketByScopeChart();
     }
+    function setMetricsMarketByScopeGrouping(mode) {
+      metricsMarketByScopeGrouping = mode;
+      document.getElementById('btnMetricsScopeGroupOperator').classList.toggle('active', mode === 'operator');
+      document.getElementById('btnMetricsScopeGroupCategory').classList.toggle('active', mode === 'category');
+      renderMetricsMarketByScopeChart();
+    }
     function setupMetricsYearPills() {
       const container = document.getElementById('metricsYearPills');
       if (!container) return;
@@ -355,11 +361,13 @@
     }
 
     // ------------------------------------------------------------
-    // 방송광고시장 규모 추이 — ①선택 사업자별로 쌓는다(2026-09-16, 사용자 요청 — 지상파/종편/케이블
-    // 카테고리 고정이 아니라 "시장"·"비중"도 M/S와 똑같이 ①선택을 따라야 한다는 지적). ENA는
-    // 강조색(RC('curr')), 나머지는 서수 팔레트(seriesColor) — 매출 트렌드/랭킹차트와 동일한 색 규칙.
-    // "비중" 모드(metricsMarketByScopeMode==='share')는 같은 선택 구성을 월별 100% 누적으로 바꿔
-    // "선택 사업자들 사이에서 각자 비중이 달에 따라 어떻게 바뀌는지"를 보여준다.
+    // 방송광고시장 규모 추이 — 기본은 ①선택 사업자별로 쌓는다(2026-09-16 — "시장"·"비중"도 M/S와
+    // 똑같이 ①선택을 따라야 한다는 지적). "사업자별/구분별" 토글(metricsMarketByScopeGrouping)로
+    // 지상파/종편/케이블 구분별 스택도 볼 수 있다(2026-09-16, 사용자 요청: "기존처럼 지상파/종편/
+    // 케이블 구분으로 볼 수 있는 거도 같이 있었으면 좋겠거든? 물론 선택된 사업자 기준이겠지") — 이
+    // 구분별 뷰도 전체 시장이 아니라 ①선택 사업자만 그 소속 구분으로 묶어 집계한다. ENA는 강조색
+    // (RC('curr')), 나머지는 서수 팔레트(seriesColor) — 매출 트렌드/랭킹차트와 동일한 색 규칙.
+    // "비중" 모드(metricsMarketByScopeMode==='share')는 같은 구성을 월별 100% 누적으로 바꾼다.
     // ------------------------------------------------------------
     function renderMetricsMarketByScopeChart() {
       const canvas = document.getElementById('chartMetricsMarketByScope'); if (!canvas) return;
@@ -368,30 +376,49 @@
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
       const ops = metricsSelectedOperators;
       const isShare = metricsMarketByScopeMode === 'share';
-      document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
-      if (!months.length || !ops.length) return;
+      const byCategory = metricsMarketByScopeGrouping === 'category';
+      if (!months.length || !ops.length) { document.getElementById('metricsMarketByScopeChartTitle').innerText = '방송광고시장 규모 추이'; return; }
       const labels = months.map(m => `${m}월`);
 
-      const dataByOp = ops.map(() => []);
+      // series: byCategory면 ①선택 사업자들이 실제로 속한 지상파/종편/케이블만(있는 것만) 지상파→
+      // 종편→케이블 순서로, 아니면 사업자별로 ①선택 순서 그대로.
+      let series;
+      if (byCategory) {
+        const presentCats = [...new Set(ops.map(op => METRICS_OPERATOR_SCOPE[op]).filter(Boolean))]
+          .sort((a, b) => METRICS_SCOPE_ORDER[a] - METRICS_SCOPE_ORDER[b]);
+        series = presentCats.map(cat => ({ key: cat, label: cat, color: seriesColor(METRICS_SCOPE_ORDER[cat]) }));
+        document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${presentCats.join('/')}, 선택 사업자 기준)`;
+      } else {
+        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : seriesColor(i) }));
+        document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
+      }
+
+      const dataBySeries = series.map(() => []);
       months.forEach(m => {
         const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, 'all'); // 선택 자체가 이미 범위 안에서 고른 것 — 이중 필터링 안 함
-        const monthTotal = ops.reduce((s, op) => s + (groups[op] || 0), 0);
-        ops.forEach((op, i) => {
-          const v = groups[op] || 0;
-          dataByOp[i].push(isShare ? (monthTotal > 0 ? (v / monthTotal * 100) : 0) : (v / 1e8));
+        const valueByKey = {};
+        if (byCategory) {
+          series.forEach(s => { valueByKey[s.key] = 0; });
+          ops.forEach(op => { const cat = METRICS_OPERATOR_SCOPE[op]; if (cat && valueByKey.hasOwnProperty(cat)) valueByKey[cat] += (groups[op] || 0); });
+        } else {
+          ops.forEach(op => { valueByKey[op] = groups[op] || 0; });
+        }
+        const monthTotal = series.reduce((s, ser) => s + valueByKey[ser.key], 0);
+        series.forEach((ser, i) => {
+          const v = valueByKey[ser.key];
+          dataBySeries[i].push(isShare ? (monthTotal > 0 ? (v / monthTotal * 100) : 0) : (v / 1e8));
         });
       });
 
-      const colors = ops.map((op, i) => metricsIsEnaName(op) ? RC('curr') : seriesColor(i));
       const ctx = canvas.getContext('2d');
       chartInstances.metricsMarketByScope = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels, datasets: ops.map((op, i) => ({
-            label: metricsOperatorDisplayName(op), data: dataByOp[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator(),
+          labels, datasets: series.map((ser, i) => ({
+            label: ser.label, data: dataBySeries[i], backgroundColor: ddBarFill(ser.color), borderRadius: 0, ...ddStackSeparator(),
             datalabels: isShare ? { display: false } : {
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
-              display: (ctx) => i === ops.length - 1,
+              display: (ctx) => i === series.length - 1,
               anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
               formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? metricsFmtNum(total, 1) + '억' : ''; }
             }

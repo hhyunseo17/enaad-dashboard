@@ -268,6 +268,9 @@
     let metricsIndexMode = '전체';          // File1 INDEX 컬럼: '전체'(일평균) | '프라임타임'
     let metricsScopeMode = 'payTv';        // '전체'(지상파+유료방송) | 'payTv'(유료방송, 기본) | 'cable'(케이블)
     let metricsMarketByScopeMode = 'amount'; // 시장규모 추이 차트 전용: 'amount'(금액, 기본) | 'share'(비중 100% 누적)
+    let metricsMarketByScopeGrouping = 'operator'; // 시장규모 추이 차트 전용: 'operator'(①선택 사업자별 스택, 기본) |
+                                              // 'category'(지상파/종편/케이블 구분별 스택 — ①선택 사업자만 집계, 2026-09-16
+                                              // 사용자 요청: "기존처럼 지상파/종편/케이블 구분으로 볼 수 있는 거도 같이 있었으면")
     let metricsRevenueTrendScale = 'linear'; // 매출 트렌드 차트 전용: 'linear'(기본) | 'log' — CJ ENM처럼 한 계열이 압도적으로 커서
                                               // 나머지가 바닥에 뭉치는 문제를 로그축으로 완화(2026-09-15, 사용자 요청)
     let metricsSelectedOperators = [];     // ① 선택된 사업자(채널그룹) 목록 — ②채널과 독립적으로 선택한다(2026-09-16, 더 이상 캐스케이딩 아님).
