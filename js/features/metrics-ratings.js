@@ -169,6 +169,24 @@
     function metricsGrpDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.grp, metricsIndexMode, false); }
     function metricsAdvCountDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.advCount, '전체', true); } // 광고주수는 항상 '전체' 고정(위 렌더 함수 주석 참고)
 
+    // 위 4개 피벗 상세 화면의 "② 채널" 체크박스 후보 목록 — 메인 페이지의 기본 후보(metricsChannelsForOperators())를
+    // 그대로 쓰면 이 지표에 값이 아예 없는 채널(예: MBN/TV조선처럼 File1 채널 단위 지표 15개에 없는
+    // 사업자)까지 섞여 나온다(2026-09-16, 사용자 지적: "이 차트들에서도 예를들어 지금 값이 있는
+    // 채널들은 클릭하면 띄워줘야지" — 미니차트 범례는 이미 "데이터 없는 채널 제외"인데, 피벗의 ②채널
+    // 후보 목록은 그 필터를 안 타고 있었다). 범위 안 사업자 전체 후보에서 이 metricCode+indexMode로
+    // 실제 값이 하나라도 있는 채널만 남긴다.
+    function metricsRatingsChannelCandidates(labelKey, indexMode, exact) {
+      const code = metricsFindMetricCode(labelKey, indexMode, exact);
+      if (!code) return [];
+      const withData = new Set();
+      metricsRatingsData.forEach(r => { if (r.metricCode === code && r.indexMode === indexMode && r.value !== 0) withData.add(r.channel); });
+      return metricsChannelsForOperators(metricsAllOperatorGroups()).filter(ch => withData.has(ch));
+    }
+    function metricsCprpChannelCandidates() { return metricsRatingsChannelCandidates(METRICS_LABEL.cprp, metricsIndexMode, false); }
+    function metricsRatingChannelCandidates() { return metricsRatingsChannelCandidates(METRICS_LABEL.rating, metricsIndexMode, true); }
+    function metricsGrpChannelCandidates() { return metricsRatingsChannelCandidates(METRICS_LABEL.grp, metricsIndexMode, false); }
+    function metricsAdvCountChannelCandidates() { return metricsRatingsChannelCandidates(METRICS_LABEL.advCount, '전체', true); }
+
     // ------------------------------------------------------------
     // 지표별 값 표기 — 지표마다 단위가 다르므로(%, 원, GRP, 억원, 건수…) pvFormatCell(금액 전용,
     // ÷1,000,000)을 쓸 수 없다. metricLabel 텍스트로 단위를 판별한다.

@@ -86,7 +86,22 @@
       categoryOrder: (a, b) => pvOrderListCompare(categoryOrderList, a, b), // state.js
       channelOrder: (a, b) => pvOrderListCompare(PV_CHANNEL_ORDER, a, b),
       scopeOrder: (a, b) => pvOrderListCompare(PV_SCOPE_ORDER, a, b),
+      // ENA(사업자 'KT ENA' 또는 개별 채널 'ENA'/'ENA DRAMA'/'ENA PLAY'/'ENA STORY')를 값 크기와
+      // 무관하게 항상 맨 위로 고정한다(2026-09-16, 사용자 요청: "어느 테이블이나 ENA가 최상단") —
+      // 나머지는 그대로 valueDesc(값 큰 순)를 따른다. 지표 대시보드 피벗 9개(사업자 단위 4개 + M/S +
+      // 채널 단위 4개) 전용 — 매출 대시보드의 channelOrder(PV_CHANNEL_ORDER, 전체 채널 고정순서)와는
+      // 다르다(그건 값과 무관한 완전 고정순서, 이건 ENA만 예외로 빼고 나머지는 값순 유지).
+      enaFirstValueDesc: pvPinFirst([ENA_CHANNEL_GROUP, ...ENA_CHANNELS], (a, b, ta, tb) => tb - ta),
     };
+    function pvPinFirst(names, baseSorter) {
+      return (a, b, ta, tb) => {
+        const aFirst = names.includes(a), bFirst = names.includes(b);
+        if (aFirst && !bFirst) return -1;
+        if (!aFirst && bFirst) return 1;
+        if (aFirst && bFirst) return names.indexOf(a) - names.indexOf(b);
+        return baseSorter(a, b, ta, tb);
+      };
+    }
     // 고정 순서 목록 기준 비교 — 목록에 있는 것이 먼저, 둘 다 없으면 이름순.
     function pvOrderListCompare(list, a, b) {
       const ia = list.indexOf(a), ib = list.indexOf(b);
@@ -658,7 +673,7 @@
       metricsMarketByScopePivot: {
         rows: ['scope', 'channelGroup'],
         rowFallbacks: ['(미지정)', '(미지정)'],
-        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'enaFirstValueDesc' },
         columns: ['year', 'month'],
         values: [{ field: 'revenue', agg: 'sum' }],
         sourceFilter: null,
@@ -691,7 +706,7 @@
       metricsMsTrendPivot: {
         rows: ['channelGroup'],
         rowFallbacks: ['(미지정)'],
-        fieldSorters: { channelGroup: 'valueDesc' }, // 시장규모 추이 피벗과 같은 원칙 — 점유율 큰 사업자가 위로
+        fieldSorters: { channelGroup: 'enaFirstValueDesc' }, // 시장규모 추이 피벗과 같은 원칙 — 점유율 큰 사업자가 위로
         columns: ['year', 'month'],
         values: [{ field: 'share', agg: 'avg', format: 'percent' }],
         sourceFilter: null,
@@ -716,7 +731,7 @@
       metricsRevenueTrendPivot: {
         rows: ['scope', 'channelGroup'],
         rowFallbacks: ['(미지정)', '(미지정)'],
-        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'enaFirstValueDesc' },
         columns: ['year', 'month'],
         values: [{ field: 'revenue', agg: 'sum' }],
         sourceFilter: null,
@@ -741,7 +756,7 @@
       metricsRevenueRankingPivot: {
         rows: ['scope', 'channelGroup'],
         rowFallbacks: ['(미지정)', '(미지정)'],
-        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        fieldSorters: { scope: 'scopeOrder', channelGroup: 'enaFirstValueDesc' },
         columns: ['year', 'month'],
         values: [{ field: 'revenue', agg: 'sum' }],
         sourceFilter: null,
@@ -773,10 +788,12 @@
       metricsCprpTrendPivot: {
         rows: ['channel'],
         rowFallbacks: ['(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
         values: [{ field: 'value', agg: 'avg', format: { multiplier: 1000, decimals: 0, suffix: ' 원' } }], // File1 원본 단위는 천원
         sourceFilter: null,
         dataSource: () => metricsCprpDataForPivot(),
+        channelCandidates: () => metricsCprpChannelCandidates(),
         columnDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,
@@ -798,10 +815,12 @@
       metricsRatingTrendPivot: {
         rows: ['channel'],
         rowFallbacks: ['(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
         values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 3, suffix: '%' } }], // 소수 3자리 — plan 확정사항, File1 원본 정밀도
         sourceFilter: null,
         dataSource: () => metricsRatingDataForPivot(),
+        channelCandidates: () => metricsRatingChannelCandidates(),
         columnDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,
@@ -823,10 +842,12 @@
       metricsGrpTrendPivot: {
         rows: ['channel'],
         rowFallbacks: ['(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
         values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 1, suffix: '' } }],
         sourceFilter: null,
         dataSource: () => metricsGrpDataForPivot(),
+        channelCandidates: () => metricsGrpChannelCandidates(),
         columnDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,
@@ -848,10 +869,12 @@
       metricsAdvCountTrendPivot: {
         rows: ['channel'],
         rowFallbacks: ['(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
         values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 0, suffix: '개사' } }],
         sourceFilter: null,
         dataSource: () => metricsAdvCountDataForPivot(),
+        channelCandidates: () => metricsAdvCountChannelCandidates(),
         columnDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,

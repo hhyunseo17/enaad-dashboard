@@ -462,12 +462,21 @@
     function setupMetricsMonthPills() { metricsSetupMonthPills('metricsMonthPills', renderMetricsDashboard); }
     function syncMetricsMonthPillActive() { metricsSyncMonthPillActive('metricsMonthPills'); }
 
-    // 매출 4개 피벗 상세 화면(view-router.js VIEW_CONFIG)의 공통 진입점 — 조회조건 pill을 그 화면
-    // 전용 컨테이너(viewKey+'YearPills'/'MonthPills')에 붙이고 프리셋을 그린다.
+    // 매출 4개 + 지표 4개 피벗 상세 화면(view-router.js VIEW_CONFIG)의 공통 진입점 — 조회조건 pill과
+    // ①②선택 체크박스를 전부 그 화면 전용 컨테이너(viewKey+'YearPills' 등)에 붙이고 프리셋을 그린다
+    // (2026-09-16, 사용자 지적: "각 피벗테이블에서 이 상단조회는 메인 페이지에 있는 걸 같이 써야지.
+    // 채널 확장하려고 해도 할 수가 없네" — 예전엔 연도/월 pill만 있고 ①②는 metricsMain에만 있어서
+    // 피벗 화면 안에서는 채널 선택을 못 바꿨다).
     function renderMetricsPivotView(viewKey) {
       const rerender = () => renderMetricsPivotView(viewKey);
       metricsSetupYearPills(viewKey + 'YearPills', rerender);
       metricsSetupMonthPills(viewKey + 'MonthPills', rerender);
+      metricsSetupOperatorCheckboxes(viewKey + 'OperatorCheckboxes', viewKey + 'CheckAllOperator', viewKey + 'LabelOperator', rerender);
+      // channelCandidates(선택) — CPRP/채널시청률/eq-GRPs/광고주수 피벗은 이 지표에 실제 값이 있는
+      // 채널만 후보로 좁힌 함수를 프리셋에 등록해 둔다(metrics-ratings.js) — 나머지(매출/M-S 4종)는
+      // 미지정이라 기존처럼 "범위 안 사업자 전체의 모든 하위 채널"을 그대로 쓴다.
+      const preset = PIVOT_PRESETS[viewKey];
+      metricsSetupChannelCheckboxes(viewKey + 'ChannelCheckboxes', viewKey + 'CheckAllChannel', viewKey + 'LabelChannel', rerender, preset && preset.channelCandidates);
       renderPresetPivot(viewKey);
     }
 
@@ -476,43 +485,94 @@
     // 자유롭지 않네? 그냥 이거 독립적으로 선택하게 하자" — 예전엔 ②후보가 ①에서 체크한 사업자에만
     // 캐스케이딩됐고, ①을 바꾸면 ②선택이 조용히 잘려나갔다). ②의 후보 목록은 "범위" 안 사업자 전체
     // (`metricsAllOperatorGroups()`)를 기준으로 하되, ①에서 실제로 뭘 체크했는지는 더 이상 안 본다.
-    function renderMetricsOperatorCheckboxes() {
-      const container = document.getElementById('listMetricsOperatorCheckboxes'); if (!container) return;
+    //
+    // metricsMain과 8개 피벗 상세 화면이 전부 이 체크박스를 조작할 수 있어야 해서(위 renderMetricsPivotView()
+    // 주석 참고), 연도/월 pill과 같은 원칙으로 containerId 3개(목록/전체선택/라벨) + onChange 콜백을
+    // 받는 범용 버전으로 짰다 — inline onchange="..." HTML 문자열 대신 addEventListener로 콜백을 JS
+    // 클로저 그대로 넘긴다(문자열로는 함수 참조를 못 넘기므로, 화면마다 다른 렌더 대상을 알려줄 방법이
+    // 이것뿐이다). 후보 목록 자체가 매번 바뀔 수 있어(범위 토글 등) 매 렌더마다 innerHTML을 통째로
+    // 새로 만든다 — 월 pill처럼 "한 번만 만들고 재사용"하지 않는다.
+    function metricsSetupOperatorCheckboxes(listId, checkAllId, labelId, onChange) {
+      const container = document.getElementById(listId); if (!container) return;
       const list = metricsAllOperatorGroups();
-      container.innerHTML = list.map(op => `<label class="checkbox-item"><input type="checkbox" value="${op}" onchange="onMetricsOperatorCheckboxChange()" ${metricsSelectedOperators.includes(op) ? 'checked' : ''}> ${metricsOperatorDisplayName(op)}</label>`).join('');
-      const checkAll = document.getElementById('checkAllMetricsOperator');
+      container.innerHTML = list.map(op => `<label class="checkbox-item"><input type="checkbox" value="${op}" ${metricsSelectedOperators.includes(op) ? 'checked' : ''}> ${metricsOperatorDisplayName(op)}</label>`).join('');
+      container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          metricsSelectedOperators = Array.from(container.querySelectorAll('input:checked')).map(x => x.value);
+          metricsSyncOperatorCheckboxHeader(checkAllId, labelId);
+          onChange();
+        });
+      });
+      const checkAll = document.getElementById(checkAllId);
+      if (checkAll) {
+        checkAll.onchange = () => {
+          container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = checkAll.checked);
+          metricsSelectedOperators = Array.from(container.querySelectorAll('input:checked')).map(x => x.value);
+          metricsSyncOperatorCheckboxHeader(checkAllId, labelId);
+          onChange();
+        };
+      }
+      metricsSyncOperatorCheckboxHeader(checkAllId, labelId);
+    }
+    function metricsSyncOperatorCheckboxHeader(checkAllId, labelId) {
+      const list = metricsAllOperatorGroups();
+      const checkAll = document.getElementById(checkAllId);
       if (checkAll) { const all = list.length > 0 && list.every(op => metricsSelectedOperators.includes(op)); checkAll.checked = all; checkAll.indeterminate = !all && metricsSelectedOperators.length > 0; }
+      const label = document.getElementById(labelId);
+      if (label) {
+        const sel = metricsSelectedOperators.map(metricsOperatorDisplayName);
+        label.innerText = sel.length === 0 ? '선택 없음' : sel.length <= 2 ? sel.join(', ') : `${sel.length}개 선택됨`;
+      }
     }
-    function onMetricsOperatorCheckboxChange() {
-      const container = document.getElementById('listMetricsOperatorCheckboxes');
-      metricsSelectedOperators = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
-      renderMetricsDashboard();
+    function setupMetricsOperatorCheckboxes() { metricsSetupOperatorCheckboxes('listMetricsOperatorCheckboxes', 'checkAllMetricsOperator', 'labelMetricsOperator', renderMetricsDashboard); }
+
+    // candidatesFn(선택) — 지정 없으면 기존과 동일하게 "범위 안 사업자 전체의 모든 하위 채널"
+    // (metricsChannelsForOperators(metricsAllOperatorGroups())). CPRP/채널시청률/eq-GRPs/광고주수
+    // 피벗 4종은 이 지표에 실제 값이 있는 채널만 후보로 좁힌 함수를 넘긴다(2026-09-16, 사용자 지적:
+    // "이 차트들에서도 예를들어 지금 값이 있는 채널들은 클릭하면 띄워줘야지" + "ENA DRAMA, tvN
+    // DRAMA 등등 같은 것들도 말이야" — 미니차트 범례처럼 데이터 없는 채널은 아예 후보에서 빼되,
+    // ENA DRAMA/tvN DRAMA 같은 대표채널 아닌 하위 채널도 값만 있으면 그대로 후보에 남긴다).
+    function metricsSetupChannelCheckboxes(listId, checkAllId, labelId, onChange, candidatesFn) {
+      const container = document.getElementById(listId); if (!container) return;
+      const getList = candidatesFn || (() => metricsChannelsForOperators(metricsAllOperatorGroups()));
+      const list = getList();
+      container.innerHTML = list.map(ch => `<label class="checkbox-item"><input type="checkbox" value="${ch}" ${metricsSelectedChannels.includes(ch) ? 'checked' : ''}> ${ch}</label>`).join('');
+      container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          metricsSelectedChannels = Array.from(container.querySelectorAll('input:checked')).map(x => x.value);
+          metricsSyncChannelCheckboxHeader(checkAllId, labelId, getList);
+          onChange();
+        });
+      });
+      const checkAll = document.getElementById(checkAllId);
+      if (checkAll) {
+        checkAll.onchange = () => {
+          container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = checkAll.checked);
+          metricsSelectedChannels = Array.from(container.querySelectorAll('input:checked')).map(x => x.value);
+          metricsSyncChannelCheckboxHeader(checkAllId, labelId, getList);
+          onChange();
+        };
+      }
+      metricsSyncChannelCheckboxHeader(checkAllId, labelId, getList);
     }
-    function renderMetricsChannelCheckboxes() {
-      const container = document.getElementById('listMetricsChannelCheckboxes'); if (!container) return;
-      const list = metricsChannelsForOperators(metricsAllOperatorGroups());
-      container.innerHTML = list.map(ch => `<label class="checkbox-item"><input type="checkbox" value="${ch}" onchange="onMetricsChannelCheckboxChange()" ${metricsSelectedChannels.includes(ch) ? 'checked' : ''}> ${ch}</label>`).join('');
-      const checkAll = document.getElementById('checkAllMetricsChannel');
+    function metricsSyncChannelCheckboxHeader(checkAllId, labelId, getList) {
+      const list = (getList || (() => metricsChannelsForOperators(metricsAllOperatorGroups())))();
+      const checkAll = document.getElementById(checkAllId);
       if (checkAll) { const all = list.length > 0 && list.every(ch => metricsSelectedChannels.includes(ch)); checkAll.checked = all; checkAll.indeterminate = !all && metricsSelectedChannels.length > 0; }
+      const label = document.getElementById(labelId);
+      if (label) {
+        const sel = metricsSelectedChannels;
+        label.innerText = sel.length === 0 ? '대표채널 자동' : sel.length <= 2 ? sel.join(', ') : `${sel.length}개 선택됨`;
+      }
     }
-    function onMetricsChannelCheckboxChange() {
-      const container = document.getElementById('listMetricsChannelCheckboxes');
-      metricsSelectedChannels = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
-      renderMetricsDashboard();
-    }
+    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', renderMetricsDashboard); }
+
+    // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)만 아직 이 범용 함수를 쓴다 — ①②는
+    // 위 metricsSetupXxxCheckboxes()가 각자 처리하므로 더 이상 여기서 다루지 않는다.
     function toggleAllMetricsCheckboxes(type, master) {
       const container = document.getElementById(`listMetrics${type}Checkboxes`);
       container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = master.checked);
-      if (type === 'Operator') onMetricsOperatorCheckboxChange();
-      else if (type === 'Channel') onMetricsChannelCheckboxChange();
-      else if (type === 'DetailMetric') onMetricsDetailMetricCheckboxChange(); // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)
-    }
-    function updateMetricsDropdownLabel(type) {
-      const label = document.getElementById(`labelMetrics${type}`); if (!label) return;
-      const sel = type === 'Operator' ? metricsSelectedOperators.map(metricsOperatorDisplayName) : metricsSelectedChannels;
-      if (sel.length === 0) label.innerText = type === 'Channel' ? '대표채널 자동' : '선택 없음';
-      else if (sel.length <= 2) label.innerText = sel.join(', ');
-      else label.innerText = `${sel.length}개 선택됨`;
+      onMetricsDetailMetricCheckboxChange();
     }
 
     // ------------------------------------------------------------
@@ -858,10 +918,8 @@
       setupMetricsYearPills();
       setupMetricsMonthPills();
       syncMetricsMonthPillActive();
-      renderMetricsOperatorCheckboxes();
-      renderMetricsChannelCheckboxes();
-      updateMetricsDropdownLabel('Operator');
-      updateMetricsDropdownLabel('Channel');
+      setupMetricsOperatorCheckboxes();
+      setupMetricsChannelCheckboxes();
 
       renderMetricsRevenueKpis();
       renderMetricsRatingsKpis();          // metrics-ratings.js
