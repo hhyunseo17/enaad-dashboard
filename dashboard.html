@@ -76,12 +76,6 @@
         <div id="breadcrumbBox" style="display: none; align-items: center; gap: 8px;">
           <button class="btn btn-sm" onclick="returnToParentView()">⬅ 메인으로</button>
         </div>
-        <div class="status-badge">
-          <span id="statusDot" class="status-dot"></span>
-          <span id="statusModeText">AUTO-SYNC (HTTP)</span>
-        </div>
-        <span id="fileLastModified" class="sync-time">원본 수정: -</span>
-        <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
         <button class="btn btn-sm" onclick="openDetailDataView()">🔍 세부데이터</button>
         <button id="themeToggleBtn" class="btn btn-sm" onclick="toggleTheme()">☀️ 라이트모드</button>
       </div>
@@ -243,7 +237,22 @@
        VIEW 1: MAIN DASHBOARD VIEW
        ========================================================================== -->
     <div id="mainDashboardView" class="view-section active">
-      
+
+      <!-- 데이터 연결 상태 — 원래 전역 헤더에 있었으나, 지표 대시보드로 넘어가도 계속 보여
+           "이 원본 수정 시각이 지표 데이터에도 적용되나?"로 헷갈리게 했다(2026-09-16, 사용자
+           지적 — "매출 대시보드의 이게 하나 아래 단계에 있어야겠네... 지금 지표대시보드의
+           데이터 기준처럼. 그래야 안 헷갈릴 듯"). metricsMainView의 metricsDataAsOfLabel과
+           같은 위치(뷰 최상단)로 옮겨 매출 대시보드 전용임을 명확히 한다 — 세부데이터/
+           라이트모드/로그아웃은 두 탭 공통이라 헤더에 그대로 둔다. -->
+      <section class="metrics-source-legend">
+        <span class="metrics-legend-chip status-badge">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusModeText">AUTO-SYNC (HTTP)</span>
+        </span>
+        <span id="fileLastModified" class="metrics-legend-chip sync-time">원본 수정: -</span>
+        <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
+      </section>
+
       <!-- Zone 2: Executive Summary KPI Cards -->
       <section class="kpi-grid">
         <div class="kpi-card">
@@ -1475,26 +1484,9 @@
           </div>
         </section>
 
-        <!-- 지표 상세 테이블 티저 -->
-        <section class="table-container">
-          <div class="table-controls">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <h2 style="font-size: 16px; font-weight: 600;">지표 상세 (일부)</h2>
-              <span class="tag-badge">경쟁채널 지표 현황 파일 · File1 16개 지표</span>
-            </div>
-          </div>
-          <div class="metrics-detail-teaser">
-            <div class="table-wrapper">
-              <table class="data-table" id="metricsDetailTeaserTable">
-                <thead><tr id="metricsDetailTeaserHead"></tr></thead>
-                <tbody id="metricsDetailTeaserBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="metrics-detail-more">
-            <button class="btn btn-primary btn-sm" onclick="openMetricsDetailView()">전체 지표 상세 보기 →</button>
-          </div>
-        </section>
+        <!-- 지표 상세 테이블 티저는 폐지(2026-09-16, 사용자 요청: "메인 페이지에서 아래 표는 안
+             나왔으면 좋겠어") — 헤더 "🔍 세부데이터" 버튼이 지표 대시보드에서는 이제 metricsDetail로
+             바로 연결된다(view-router.js openDetailDataView() 참고). -->
 
       </div><!-- /metricsContentBody -->
     </div><!-- /metricsMainView -->

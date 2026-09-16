@@ -29,11 +29,6 @@
       const months = [...new Set(rows.filter(r => r.year === year).map(r => r.month))].sort((a, b) => a - b);
       return metricsSelectedMonths.length > 0 ? months.filter(m => metricsSelectedMonths.includes(m)) : months;
     }
-    // 그 연도의 가장 최근 월. 없으면 null.
-    function metricsLatestPeriod(rows, year) {
-      const months = metricsMonthsInYear(rows, year);
-      return months.length ? { year, month: months[months.length - 1] } : null;
-    }
     function metricsPrevMonthPeriod(p) {
       if (!p) return null;
       return p.month === 1 ? { year: p.year - 1, month: 12 } : { year: p.year, month: p.month - 1 };
@@ -843,5 +838,4 @@
       renderMetricsRatingTrendChart();      // metrics-ratings.js
       renderMetricsGrpTrendChart();         // metrics-ratings.js
       renderMetricsAdvCountTrendChart();    // metrics-ratings.js
-      renderMetricsDetailTeaser();          // metrics-ratings.js
     }

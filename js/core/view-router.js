@@ -122,7 +122,14 @@
     function openBucketPivotView() { switchView('bucket'); }
     function openAdvertiserPivotView() { switchView('advertiser'); }
     function openAgencyPivotView() { switchView('agency'); }
-    function openDetailDataView() { switchView('detailData'); }
+    // 매출 대시보드에서 누르면 기존 세부데이터(자유 피벗 빌더)로, 지표 대시보드에서 누르면
+    // 경쟁채널 지표 상세(metricsDetail)로 — 헤더의 "세부데이터" 버튼 하나가 지금 보고 있는 탭에
+    // 맞는 상세 화면을 연다(2026-09-16, 사용자 요청: "세부데이터를 매출대시보드에서 누르면 기존처럼
+    // 뜨면 되고, 지표대시보드에서 누르면 아래에 있는 표들이 나오는 거야").
+    function openDetailDataView() {
+      const family = (VIEW_CONFIG[currentView] || {}).family;
+      switchView(family === 'metrics' ? 'metricsDetail' : 'detailData');
+    }
     function openGoalTrendPivotView() { switchView('goalTrendPivot'); }
     function openGoalDeptPivotView() { switchView('goalDeptPivot'); }
     function openMetricsMarketByScopePivotView() { switchView('metricsMarketByScopePivot'); }

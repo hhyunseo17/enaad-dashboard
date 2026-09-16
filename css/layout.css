@@ -377,17 +377,8 @@
         flex-wrap: wrap;
         gap: 6px;
       }
-      .header-status .btn-sm,
-      .header-status .status-badge,
-      .header-status .sync-time {
+      .header-status .btn-sm {
         width: auto;
-      }
-      .header-status .status-badge {
-        padding: 5px 10px;
-        font-size: 12px;
-      }
-      .header-status .sync-time {
-        font-size: 12px;
       }
 
       /* 모바일 피벗 테이블: 셀 여백·폰트 축소로 화면에 더 많은 열이 들어오게 함 */
@@ -538,9 +529,4 @@
    패턴을 그대로 쓰되, 두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
 .metrics-cascade-btn { min-width: 160px; }
 
-/* 상세표 티저 — metricsDetail로 들어가기 전 몇 줄만 보여주는 얕은 표. 흐림 그라데이션으로
-   "더 있다"는 인상을 주고, 실제 이동은 "더 보기" 링크가 맡는다. */
-.metrics-detail-teaser { position: relative; max-height: 260px; overflow: hidden; }
-.metrics-detail-teaser::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--bg-elevated)); pointer-events: none; }
-.metrics-detail-more { display: flex; justify-content: center; padding-top: 12px; }
 .auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }

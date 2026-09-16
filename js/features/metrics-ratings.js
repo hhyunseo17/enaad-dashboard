@@ -166,32 +166,6 @@
     }
 
     // ------------------------------------------------------------
-    // 상세표 티저 — metricsMain 하단, 전체 지표 중 앞 6개만 보여준다("더 보기" → metricsDetail).
-    // ------------------------------------------------------------
-    function renderMetricsDetailTeaser() {
-      const head = document.getElementById('metricsDetailTeaserHead');
-      const body = document.getElementById('metricsDetailTeaserBody');
-      if (!head || !body) return;
-      const channels = metricsRatingsChannelSelection();
-      const scoped = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode);
-      // 티저는 "최신 스냅샷" 한 시점만 보여준다(구간 합산 아님) — 여러 연도가 선택돼도 그 중 최신
-      // 연도를 기준으로 삼는다(단일-앵커 관례, 2026-09-16).
-      const period = metricsLatestPeriod(scoped, metricsPrimaryYear());
-
-      head.innerHTML = `<th style="text-align:left;">지표</th>` + channels.map(c => `<th style="text-align:right;">${c}</th>`).join('');
-      if (!period) { body.innerHTML = `<tr><td colspan="${channels.length + 1}" style="text-align:center; color:var(--text-tertiary); padding:16px;">선택 연도에 데이터가 없습니다</td></tr>`; return; }
-
-      const labels = [...new Set(scoped.map(r => r.metricLabel))].slice(0, 6);
-      body.innerHTML = labels.map(label => {
-        const cells = channels.map(ch => {
-          const row = scoped.find(r => r.metricLabel === label && r.channel === ch && r.year === period.year && r.month === period.month);
-          return `<td style="text-align:right;">${metricsFormatRatingValue(label, row ? row.value : null)}</td>`;
-        }).join('');
-        return `<tr><td>${label}</td>${cells}</tr>`;
-      }).join('');
-    }
-
-    // ------------------------------------------------------------
     // metricsDetail — File1 16개 지표 × 채널 전체 상세(연도별 월 열). "정적 트리 표"(1차 버전 —
     // 드래그앤드롭 빌더는 없다). pvBuildTree/pvBuildVisibleColumns/pvRenderColumnHeaderRows(전부
     // 범용, 금액 가정 없음)는 그대로 재사용하고, 행 렌더·셀 포맷만 지표별로 자체 작성한다 —
