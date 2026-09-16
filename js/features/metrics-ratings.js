@@ -213,12 +213,19 @@
     // ------------------------------------------------------------
     function metricsFormatRatingValue(metricLabel, value) {
       if (value === null || value === undefined) return '-';
+      if (metricLabel.includes('AD Ratio')) return (value * 100).toFixed(1) + '%'; // File1 원본이 0~1 사이 비율값(2026-09-16, 사용자 요청)
       if (metricLabel.includes('CPRP')) return Math.round(value * 1000).toLocaleString() + '원';
       if (metricLabel.includes('시청률') && metricLabel.includes('매출')) return metricsFmtNum(value, 2) + '억원';
       if (metricLabel.includes('GRP')) return metricsFmtNum(value, 1);
       if (metricLabel.includes('시청률')) return value.toFixed(3) + '%';
       return value.toLocaleString(undefined, { maximumFractionDigits: 2 }); // 광고주수/브랜드수 등 — 전부 건수
     }
+    // 합계(요약) 행에서 값을 아예 안 보여줄 지표들 — 비율/평균/건수 성격이라 채널을 다 더하거나
+    // 단순합산하면 의미가 없다(2026-09-16, 사용자 요청: "이것들은 요약 값 다 넣지 말아줘"). eq-GRPs
+    // 계열(06/07/08)·채널시청률(03/04)은 그대로 둔다 — 시청률·GRP는 도달량 성격이라 채널 총합이
+    // "그 구간 전체 임팩트"로 그나마 해석 가능하지만, 아래 9개는 그렇지 않다(비율 두 개를 더한 값,
+    // 서로 다른 광고주 수를 단순 합산한 값 등은 숫자 자체가 성립하지 않는다).
+    const METRICS_DETAIL_NO_SUMMARY_CODES = new Set(['05', '09', '10', '11', '12', '13', '14', '15', '16']);
 
     // ------------------------------------------------------------
     // metricsDetail — File1 16개 지표 × 채널 전체 상세(연도별 월 열). "정적 트리 표"(1차 버전 —
@@ -259,13 +266,31 @@
       renderMetricsDetailPivot();
     }
 
+    // VIEW_CONFIG.metricsDetail.render()의 실제 진입점 — 다른 8개 피벗 상세 화면(renderMetricsPivotView)
+    // 과 같은 원칙으로, 그리기 전에 이 화면 전용 연도/월 pill부터 세팅한다(2026-09-16, 사용자 지적:
+    // "경쟁채널 지표 상세 페이지도 조회조건은 메인 페이지에 있는 걸 써야지" — 이전엔 pill 자체가 없어
+    // 조회조건과 무관하게 File1이 갖고 있는 연도 전체가 항상 나왔다).
+    function renderMetricsDetailView() {
+      metricsSetupYearPills('metricsDetailYearPills', renderMetricsDetailView);
+      metricsSetupMonthPills('metricsDetailMonthPills', renderMetricsDetailView);
+      renderMetricsDetailPivot();
+    }
     function renderMetricsDetailPivot() {
       const preset = PIVOT_PRESETS.metricsDetail;
       preset.key = 'metricsDetail';
       renderMetricsDetailMetricCheckboxes();
       const cfg = pvConfigFor('metricsDetail');
       const rowFields = cfg.rows, colFields = cfg.columns;
-      let rows = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode);
+      // value!==0 — File1이 아직 안 걷힌 미래 달을 0으로 미리 채워둔 placeholder 행을 실 데이터로
+      // 오인하지 않도록 제외한다(위 4개 미니차트/피벗과 동일한 원칙, docs 로그 9·11번 참고 — 실제로
+      // 2026년 10~12월 다수 지표에 이 placeholder가 전 채널 0으로 박혀 있음을 Supabase로 확인,
+      // 2026-09-16 사용자 지적: "10~12월에 0으로 입력돼 있는 건 그냥 비워놔야돼"). 조회조건(연도/월
+      // 선택)도 메인 페이지·다른 8개 피벗 상세 화면과 같은 원칙으로 반영 — 이전엔 필터링이 아예 없어
+      // File1이 갖고 있는 연도 전체(2025년~)가 조회조건과 무관하게 항상 다 나왔다(2026-09-16, 사용자
+      // 지적: "조회조건은 메인 페이지에 있는 걸 써야지. 25년부터 다 나오네 여기").
+      let rows = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode && r.value !== 0);
+      const periodSet = new Set(metricsSelectedPeriods(rows).map(p => p.year + '-' + p.month));
+      rows = rows.filter(r => periodSet.has(r.year + '-' + r.month));
       if (metricsDetailSelectedMetrics.length > 0) rows = rows.filter(r => metricsDetailSelectedMetrics.includes(r.metricLabel));
 
       const { root, colCombos } = pvBuildTree(rows, rowFields, colFields, cfg.values, ['(미지정)', '(미지정)'], cfg);
@@ -310,9 +335,12 @@
         const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('metricsDetail','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
         const st = depth === 0 ? 'background:#1E293B; color:#F8FAFC; font-weight:700;' : 'background:#151C2C; color:#CBD5E1;';
         let html = `<tr><td class="indent-step-${Math.min(depth + 1, 5)}" style="${st}">${toggle}${k}</td>`;
+        // 요약(depth 0) 행에서 이 지표가 METRICS_DETAIL_NO_SUMMARY_CODES에 있으면 합계 자체를 아예
+        // 계산·표시하지 않는다(위 상수 선언부 참고) — 채널(depth 1 이하) 행은 그대로 실값을 보여준다.
+        const suppressSummary = depth === 0 && METRICS_DETAIL_NO_SUMMARY_CODES.has(metricOrder[k]);
         visibleColumns.forEach(col => {
-          const m = pvMergeMetrics(child, col.leafKeys);
-          const val = m ? m.sums.value : null;
+          let val = null;
+          if (!suppressSummary) { const m = pvMergeMetrics(child, col.leafKeys); val = m ? m.sums.value : null; }
           html += `<td style="text-align:right;">${metricsFormatRatingValue(thisMetricLabel, val === undefined ? null : val)}</td>`;
         });
         html += `</tr>`;
