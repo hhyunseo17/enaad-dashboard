@@ -249,6 +249,8 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
     - 라벨 텍스트(사업자/채널마다 표시 이름이 다름 — 예: `SBS(민방포함)`→`SBS`)로 판별하면 깨지기 쉬워, 각 dataset 생성 시점에 `_isEna: true/false`를 직접 붙여두고 그 플래그만 읽는다 — 매출 트렌드(`metricsIsEnaName(name)`)·CPRP/채널시청률/eq-GRPs/광고주수 미니차트(`ch === ENA_REPRESENTATIVE_CHANNEL`)·시장규모 추이(각 `series` 항목의 기존 `isEna` 값 재사용) 3곳 모두 이미 갖고 있던 ENA 판별 로직을 그대로 재사용, 새로 만들지 않았다.
     - M/S 트렌드(단일 라인, 범례 자체가 꺼져 있음)·매출 랭킹(단일 막대 dataset, 범례 꺼짐)은 범례가 없어 대상에서 제외.
 
+60. **로딩 메시지에 매출 대시보드와 같은 스피너 애니메이션 추가** — 사용자 요청(2026-09-16): "경쟁채널 지표 불러오는 중입니다도 기존 매출 대시보드 같은 애니메이션 넣어줘라". 지금까지 `#metricsLoadingMessage`는 텍스트 한 줄(`innerText`로 매번 덮어씀)뿐이라, 매출 대시보드 부팅 시 전체화면에 뜨는 `#loadingOverlay`(`.spinner` 회전 애니메이션, css/pivot-table.css)와 느낌이 달랐다. **전역 오버레이를 그대로 가져다 쓰지는 않는다** — plan 단계부터 "로딩 인디케이터는 `#metricsMainView` 안에만, 전역 오버레이 안 씀"이 확정 사항이라, `.spinner` 클래스(이미 전역 CSS에 있어 재사용만 하면 됨)만 이 탭 전용 로딩 박스 안에 넣었다. `#metricsLoadingMessage`를 스피너 div + `#metricsLoadingMessageText`(텍스트 전용 하위 요소) 2단 구조로 바꾸고, `renderMetricsDashboard()`의 두 로딩 분기(초기 fetch 중/`rawData` 대기 중)가 이제 `loadingEl.innerText`가 아니라 `loadingTextEl.innerText`만 갱신 — 안 그러면 매번 스피너 div까지 통째로 지워졌다. `loadingEl.style.display`도 `''`(기본값 `block`이라 인라인 `flex-direction`/`align-items` 등이 전혀 먹지 않음) 대신 `'flex'`로 명시.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
