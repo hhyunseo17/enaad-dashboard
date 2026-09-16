@@ -529,4 +529,9 @@
    패턴을 그대로 쓰되, 두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
 .metrics-cascade-btn { min-width: 160px; }
 
+/* 경쟁채널 지표 상세의 "지표" 선택 패널 — .multi-dropdown-panel 기본 min-width(200px)로는 "방송사업자
+   광고매출(백만원)"처럼 긴 지표명이 두 줄로 꺾여 좁아 보였다(2026-09-16, 사용자 지적: "이거 안
+   사이즈 좀 키워줘"). 이 패널만 넓힌다 — ①사업자/②채널(사업자·채널명은 짧다)은 그대로 둔다. */
+#panelMetricsDetailMetric { min-width: 320px; }
+
 .auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }

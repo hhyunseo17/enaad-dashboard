@@ -84,6 +84,10 @@
       // 지표 탭은 자기 컨트롤바(.metrics-control-bar)를 쓰므로 매출 탭의 filter-bar를 숨긴다.
       const filterBarSection = document.getElementById('filterBarSection');
       if (filterBarSection) filterBarSection.style.display = cfg.family === 'metrics' ? 'none' : '';
+      // "실시간 연결/원본 수정"(매출 데이터 전용) — filter-bar와 같은 원칙으로 매출 쪽 전체(15개 뷰)에서
+      // 계속 보이고, 지표 탭에서만 숨긴다(2026-09-16, 사용자: "이거까지는 매출대시보드 내에서는 고정").
+      const salesStatusLegend = document.getElementById('salesStatusLegend');
+      if (salesStatusLegend) salesStatusLegend.style.display = cfg.family === 'metrics' ? 'none' : '';
       syncDashboardTabs(cfg.family);
       // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
       // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.

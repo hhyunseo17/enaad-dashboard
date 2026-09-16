@@ -105,6 +105,23 @@
       <button class="btn btn-sm" onclick="dismissUnknownCategoryNotice()">확인</button>
     </div>
 
+    <!-- 데이터 연결 상태 — 원래 전역 헤더에 있었으나, 지표 대시보드로 넘어가도 계속 보여
+         "이 원본 수정 시각이 지표 데이터에도 적용되나?"로 헷갈리게 했다(2026-09-16, 사용자
+         지적 — "매출 대시보드의 이게 하나 아래 단계에 있어야겠네... 지금 지표대시보드의
+         데이터 기준처럼" + "이 위치는 지표 대시보드에 있는 위치로 옮기는 게 좋을 거 같고 이거까지는
+         매출대시보드 내에서는 고정"). filter-bar와 같은 원칙으로 family==='metrics'일 때만 숨긴다
+         (switchView(), view-router.js) — 매출 쪽 15개 뷰 전체에서 filter-bar처럼 계속 보인다(mainDashboardView
+         안에 넣으면 'main' 화면에서만 보여 드릴다운에서 사라진다 — 세부데이터/라이트모드/로그아웃은
+         두 탭 공통이라 헤더에 그대로 둔다). -->
+    <section class="metrics-source-legend" id="salesStatusLegend">
+      <span class="metrics-legend-chip status-badge">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="statusModeText">AUTO-SYNC (HTTP)</span>
+      </span>
+      <span id="fileLastModified" class="metrics-legend-chip sync-time">원본 수정: -</span>
+      <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
+    </section>
+
     <!-- Zone 1: Global Filters Bar -->
     <section class="filter-bar" id="filterBarSection">
       <!-- 1행: 매출기준 + 전역 동작. 항상 보인다.
@@ -237,21 +254,6 @@
        VIEW 1: MAIN DASHBOARD VIEW
        ========================================================================== -->
     <div id="mainDashboardView" class="view-section active">
-
-      <!-- 데이터 연결 상태 — 원래 전역 헤더에 있었으나, 지표 대시보드로 넘어가도 계속 보여
-           "이 원본 수정 시각이 지표 데이터에도 적용되나?"로 헷갈리게 했다(2026-09-16, 사용자
-           지적 — "매출 대시보드의 이게 하나 아래 단계에 있어야겠네... 지금 지표대시보드의
-           데이터 기준처럼. 그래야 안 헷갈릴 듯"). metricsMainView의 metricsDataAsOfLabel과
-           같은 위치(뷰 최상단)로 옮겨 매출 대시보드 전용임을 명확히 한다 — 세부데이터/
-           라이트모드/로그아웃은 두 탭 공통이라 헤더에 그대로 둔다. -->
-      <section class="metrics-source-legend">
-        <span class="metrics-legend-chip status-badge">
-          <span id="statusDot" class="status-dot"></span>
-          <span id="statusModeText">AUTO-SYNC (HTTP)</span>
-        </span>
-        <span id="fileLastModified" class="metrics-legend-chip sync-time">원본 수정: -</span>
-        <button id="btnToggleDropzone" class="btn btn-sm" style="display: none;">📁 수동 파일 선택</button>
-      </section>
 
       <!-- Zone 2: Executive Summary KPI Cards -->
       <section class="kpi-grid">
@@ -1507,7 +1509,7 @@
             <h2 style="font-size: 16px; font-weight: 600;">지표별 / 채널별 월간 상세</h2>
           </div>
           <div class="filter-group">
-            <span class="filter-label">③ 지표</span>
+            <span class="filter-label">지표</span>
             <div class="multi-dropdown" id="dropdownMetricsDetailMetric">
               <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsDetailMetric')">
                 <span id="labelMetricsDetailMetric">전체 지표</span> ▾
