@@ -40,6 +40,15 @@
     }
     function metricsPrevYearPeriod(p) { return p ? { year: p.year - 1, month: p.month } : null; }
 
+    // 매출 4개 차트 피벗(pivot-builder.js PIVOT_PRESETS)의 dataSource — 위쪽 "조회조건"(연도/월 선택)
+    // 으로 미리 좁힌 파생 배열. 매출 대시보드의 filteredData(top filter-bar로 이미 좁혀진 뒤 피벗에
+    // 들어감)와 구조를 맞춘다(2026-09-16, 사용자 지적: "기본값은 26년 전체인데 피벗도 그래야지 —
+    // 조회조건 위에 그대로 걸려있는 게 매출대시보드랑 구조적으로 같다"). metricsRevenueData 원본을
+    // 그대로 넘기면 File1이 갖고 있는 2021~2026년 전체가 다 보여 위쪽 조회조건과 안 맞았다.
+    function metricsRevenueDataForPivot() {
+      return metricsRevenueData.filter(r => r.year === metricsSelectedYear && (metricsSelectedMonths.length === 0 || metricsSelectedMonths.includes(r.month)));
+    }
+
     // 전월비/전년비 배지 공용 계산. curr/prev 어느 한쪽이라도 없으면(연-월 데이터 없음) null —
     // 호출부가 배지를 숨긴다. prev===0은 성장률(%) 계산에서만 분모라 막고, %p 차이는 0도 유효하다.
     function metricsGrowthPct(curr, prev) {
