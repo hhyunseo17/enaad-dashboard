@@ -2,16 +2,22 @@
 // js/core/metrics-data-loader.js
 // 지표 대시보드(경쟁채널 벤치마크) 전용 데이터 연결 — data-loader.js 다음, features/* 이전 로드
 //
-// File1(경쟁채널 지표 현황)·File2(매체별 광고비 raw)는 원래 R2에서 xlsx로 직접 서빙했으나,
-// 이 Cloudflare Pages 프로젝트에서 R2 바인딩이 원인 불명으로 전혀 붙지 않는 문제가 있어(2026-09-15,
-// 이름을 바꿔 새로 만들어도 재현 — DASHBOARD_BUCKET/TEST_BUCKET 둘 다 env에 안 잡힘. SUPABASE_URL 등
-// 일반 변수는 정상 작동) Supabase로 옮겼다. scripts/etl/load-competitor-data.mjs가 두 엑셀을 미리
-// long-format으로 파싱해 competitor_ratings/competitor_revenue 테이블에 적재해두면, 여기서는
-// /api/competitor-ratings·/api/competitor-revenue(supabase-proxy 경유, requireMetricsAccess로 이메일
-// 허용목록 검사)로 이미 정리된 JSON을 그대로 받는다 — SheetJS 파싱은 이제 이 파일에 없다(ETL 쪽에만
-// 있음, 두 파싱 로직은 동일한 코드를 유지할 것 — scripts/etl/load-competitor-data.mjs 상단 주석 참고).
-// ENA 자신의 수치는 외부 추정치보다 내부 매출(rawData)이 정확하므로, File2에서 KT ENA 쪽 매출만
-// 내부 값으로 치환한다(자세한 배경은 docs/features/metrics-dashboard.md).
+// File2(매체별 광고비 raw)는 분석에서 제외했다(2026-09-16, 사용자 요청) — 마감 전 달(예: 9월)엔
+// KT ENA를 뺀 전 채널그룹이 0원 플레이스홀더라 기본 사업자 랭킹·①②캐스케이딩이 계속 엉키는
+// 버그의 근본 원인이었다. File1(경쟁채널 지표 현황)의 "01.방송사업자 광고매출" 지표가 이미 14개
+// 사업자 단위로 매달 실제 값을 보고하고 있어(File2와 달리 마감 전 달도 0이 아닌 실측/추정치가
+// 들어있음, Supabase로 직접 확인) 매출·시장규모·M/S를 포함한 지표 대시보드 전체를 이제 File1
+// 하나로만 구성한다. File2 서빙 인프라(functions/competitor-revenue.js, ETL, R2 키)는 롤백 여지를
+// 남겨 그대로 두되, 이 파일은 더 이상 호출하지 않는다.
+//
+// File1은 R2에서 xlsx로 직접 서빙했으나, 이 Cloudflare Pages 프로젝트에서 R2 바인딩이 원인 불명으로
+// 전혀 붙지 않는 문제가 있어(2026-09-15, 이름을 바꿔 새로 만들어도 재현) Supabase로 옮겼다.
+// scripts/etl/load-competitor-data.mjs가 엑셀을 미리 long-format으로 파싱해 competitor_ratings
+// 테이블에 적재해두면, 여기서는 /api/competitor-ratings(supabase-proxy 경유, requireMetricsAccess로
+// 이메일 허용목록 검사)로 이미 정리된 JSON을 그대로 받는다 — SheetJS 파싱은 이제 이 파일에 없다
+// (ETL 쪽에만 있음, 두 파싱 로직은 동일한 코드를 유지할 것).
+// ENA 자신의 수치는 외부 추정치보다 내부 매출(rawData)이 정확하므로, File1의 KT ENA 행만 내부 값으로
+// 치환한다(자세한 배경은 docs/features/metrics-dashboard.md).
 //
 // 지연 로딩 대상: 부팅 시(init.js)가 아니라 "지표 대시보드" 탭을 처음 열 때 fetchMetricsDataHttp()가
 // 1회 호출된다(호출부는 js/features/metrics-dashboard.js). 이 파일은 fetch/치환만 담당하고
@@ -21,28 +27,56 @@
     // ------------------------------------------------------------
     // ENA/CATV 화이트리스트
     // ------------------------------------------------------------
-    // File2 `변환용` 시트의 채널그룹 값. KT ENA 계열 전체를 가리키는 상수 — 사업자 비교(①)의 자사 그룹 키.
+    // File1 "01.방송사업자 광고매출"의 채널명 — 사업자(①) 단위 키. KT ENA 계열 전체를 가리키는 상수.
     const ENA_CHANNEL_GROUP = 'KT ENA';
-    // File1(`변환용취합`)은 채널별로 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개만 있고 "KT ENA 합계" 행이
-    // 없다(plan 확정사항 5) — 그래서 CPRP·채널시청률 등 File1 기반 지표는 대표채널 하나만 쓴다.
+    // File1의 채널 단위(03/09 등) 지표는 채널별로 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개만 있고 "KT ENA
+    // 합계" 행이 없다 — 그래서 CPRP·채널시청률 등에서 KT ENA를 "사업자 비교"로 볼 땐 대표채널 하나만 쓴다.
     const ENA_CHANNELS = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY'];
-    // File1 기반 지표(CPRP/채널시청률/eq-GRPs 등)에서 비교 의미가 약한 DRAMA/PLAY/STORY는 빼고
-    // 대표채널 "ENA" 단일값만 쓴다(plan 확정사항 5).
     const ENA_REPRESENTATIVE_CHANNEL = 'ENA';
     // rawData(메인 매출 데이터셋) 쪽 KT ENA 계열 채널 전체 — js/core/filters.js의 updateFilterCheckboxes()
     // 안에 있는 targetOrder 배열과 동일 목록이다(그 배열은 함수 지역 스코프라 여기서 재사용할 수 없어
-    // 그대로 복제해 둔다 — 값이 바뀌면 두 곳을 함께 고칠 것). File2의 "KT ENA" 채널그룹 11개
-    // 세부채널(ENA/ENA DRAMA/ENA PLAY/ENA STORY/ONCE/OLIFE/CHING/ONT/헬스메디TV/ENA SPORTS/기타광고매출)과는
-    // 이름이 정확히 1:1 대응하지 않는다(예: rawData에는 "기타광고매출"이라는 채널명이 없다) — 그래서
-    // computeEnaMonthlyRevenue()는 File2 쪽 세부채널을 따라가지 않고 rawData 쪽 이 목록으로 직접 합산한다.
+    // 그대로 복제해 둔다 — 값이 바뀌면 두 곳을 함께 고칠 것).
     const KT_ENA_FAMILY_CHANNELS = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
+
+    // ------------------------------------------------------------
+    // 사업자(①) ↔ 채널(②) 매핑, 사업자 ↔ 범위(지상파/종편/케이블) — File1엔 이 대응관계를 알려주는
+    // 컬럼이 없어(File2의 채널그룹/사업자대분류·중분류 같은 개념이 없음) 사람이 직접 확인해 하드코딩한다
+    // (2026-09-16, 사용자 제공·확인 — File1 metric_code='03'(채널시청률) 등 채널 단위 지표에 실제로 존재하는
+    // 15개 채널명을 Supabase로 확인해 대조함). 세부채널이 없는 사업자(지상파·종편 등 대부분)는 사업자명
+    // 자체가 유일한 채널이라 이 맵에 없는 사업자는 자기 이름 하나짜리 배열로 취급한다(metricsChannelsForOperator).
+    const METRICS_OPERATOR_CHANNEL_MAP = {
+      'KT ENA': ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY'],
+      'CJ ENM': ['tvN', 'tvN DRAMA', 'tvN SHOW', 'tvN STORY'],
+      'MBC Plus': ['MBC every1', 'MBC드라마넷'],
+      'SBS 계열': ['SBS Plus', 'SBS funE'],
+      'KBS N': ['KBS JOY', 'KBS드라마'],
+    };
+    function metricsChannelsForOperator(op) { return METRICS_OPERATOR_CHANNEL_MAP[op] || [op]; }
+    // 시청률·CPRP 같은 비율 지표는 사업자 내 여러 채널 값을 더하거나 평균낼 수 없다(레이트라 가산 불가) —
+    // "사업자 비교" 모드에서는 그 사업자의 대표채널(매핑의 첫 채널, 없으면 사업자명 자체) 하나로 근사한다.
+    function metricsRepresentativeChannel(op) {
+      const list = METRICS_OPERATOR_CHANNEL_MAP[op];
+      return list ? list[0] : op;
+    }
+    const METRICS_OPERATOR_SCOPE = {
+      'KBS': '지상파', 'MBC(전국)': '지상파', 'SBS(민방포함)': '지상파',
+      'JTBC': '종편', 'TV조선': '종편', '채널A': '종편', 'MBN': '종편',
+      'KT ENA': '케이블', 'CJ ENM': '케이블', 'MBC Plus': '케이블', 'SBS 계열': '케이블',
+      'KBS N': '케이블', '티캐스트': '케이블', 'iHQ': '케이블',
+    };
+    // 체크박스 표시용 이름 — File1 원본 표기가 딱딱하거나(예: "SBS(민방포함)") 다른 화면에서 익숙한
+    // 표기와 달라서(예: "SBS 계열"보다 "SBS미디어넷") 사업자 목록 렌더링에서만 바꿔치기한다. 데이터
+    // 조회 키(competitor_ratings.channel)는 항상 File1 원본 표기를 그대로 쓴다.
+    const METRICS_OPERATOR_DISPLAY_NAME = {
+      'SBS(민방포함)': 'SBS', 'MBC(전국)': 'MBC', 'SBS 계열': 'SBS미디어넷', 'KBS N': 'KBSN', 'MBC Plus': 'MBC PLUS',
+    };
+    function metricsOperatorDisplayName(op) { return METRICS_OPERATOR_DISPLAY_NAME[op] || op; }
 
     // ------------------------------------------------------------
     // 전역 상태 (data-loader.js의 rawData/filteredData와 같은 방식 — 평범한 top-level let)
     // ------------------------------------------------------------
-    let metricsRevenueDataOriginal = []; // File2 파싱 원본(long-format), 절대 손대지 않는다 — 캐시로만 유지
-    let metricsRevenueData = [];         // 취급고/회계 토글에 따라 KT ENA 부분을 내부값으로 치환한 파생 배열 — 렌더는 이것만 읽는다
-    let metricsRatingsData = [];         // File1 파싱 결과(long-format), 01/02.광고매출 행은 제외
+    let metricsRevenueData = [];         // File1 "01.방송사업자 광고매출"에서 뽑은 사업자별 월매출(KT ENA는 내부값으로 치환) — 렌더는 이것만 읽는다
+    let metricsRatingsData = [];         // File1 파싱 결과(long-format) 전체 — 01번(매출)도 포함, metricsRevenueData는 이 배열에서 파생
     let metricsDataLoaded = false;       // fetchMetricsDataHttp() 성공 여부
     let metricsDataFetchPromise = null;  // 진행 중이거나 완료된 fetch를 캐시 — 지연 로딩을 호출부가 여러 번 트리거해도 1회만 fetch
     // 취급고/회계(매출기준)는 이 탭 전용 상태(metricsBasisMode)를 따로 두지 않는다 — "취급고를
@@ -52,7 +86,6 @@
     // 보게 하기 위해서다(setMetricsRevenueBasis(), metrics-dashboard.js).
 
     const METRICS_RATINGS_URL = '/api/competitor-ratings';
-    const METRICS_REVENUE_URL = '/api/competitor-revenue';
 
     // ------------------------------------------------------------
     // fetchMetricsDataHttp() — 지연 로딩 진입점
@@ -78,20 +111,13 @@
 
       // Supabase 행은 snake_case(ETL이 그렇게 적재 — scripts/etl/load-competitor-data.mjs)라
       // 나머지 코드 전체가 기대하는 camelCase 필드명으로 변환한다. 필드명 매핑 외 가공 없음
-      // (정규화·치환·파싱은 ETL 쪽에서 이미 끝난 채로 들어온다).
-      metricsDataFetchPromise = Promise.all([
-        fetchJson(METRICS_RATINGS_URL),
-        fetchJson(METRICS_REVENUE_URL)
-      ]).then(([ratingsRows, revenueRows]) => {
+      // (정규화·치환·파싱은 ETL 쪽에서 이미 끝난 채로 들어온다). File2는 더 이상 fetch하지 않는다
+      // (위 파일 헤더 주석 참고 — 분석에서 완전히 제외, 2026-09-16).
+      metricsDataFetchPromise = fetchJson(METRICS_RATINGS_URL).then(ratingsRows => {
         metricsRatingsData = ratingsRows.map(r => ({
           year: r.year, indexMode: r.index_mode, metricCode: r.metric_code, metricLabel: r.metric_label,
           channel: r.channel, month: r.month, value: Number(r.value)
         }));
-        metricsRevenueDataOriginal = revenueRows.map(r => ({
-          channel: r.channel, operatorMajor: r.operator_major, operatorMid: r.operator_mid,
-          channelGroup: r.channel_group, year: r.year, month: r.month, revenue: Number(r.revenue)
-        }));
-        injectOperatorRevenueFromRatings();
         rebuildMetricsSubstitution();
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
@@ -116,136 +142,39 @@
       return revenueBasisMode === 'accounting' || r.revenueBasis === '실적';
     }
 
-    // channelFilter 생략 시 KT_ENA_FAMILY_CHANNELS 전체 합(= File2 "채널그룹=KT ENA" 치환용),
-    // channelFilter 지정 시(예: 'ENA') 그 단일 rawData.channel 값만 합산(= File2 대표채널 'ENA' 치환용).
-    function computeEnaMonthlyRevenue(year, month, channelFilter) {
+    // KT_ENA_FAMILY_CHANNELS(ENA 계열 전체) 합산 — File1의 KT ENA 사업자 행을 그대로 안 쓰고
+    // 이 값으로 치환한다(자세한 배경은 파일 헤더 주석 참고).
+    function computeEnaMonthlyRevenue(year, month) {
       if (!rawData || rawData.length === 0) return 0;
-      const channels = channelFilter ? [channelFilter] : KT_ENA_FAMILY_CHANNELS;
       return rawData
         .filter(r => r.bonbuRevenueStatus === '본부매출'
           && matchesMetricsBasis(r)
           && r.year === year && r.month === month
-          && channels.includes(r.channel))
+          && KT_ENA_FAMILY_CHANNELS.includes(r.channel))
         .reduce((sum, r) => sum + r.amount, 0);
     }
 
-    // File1 "01.방송사업자 광고매출" 채널명(사업자 단위) → File2 채널그룹명. 표기가 갈리는 5개만
-    // 적어둔다(실 샘플로 확인, 2026-09-15) — 나머지 9개(KBS/KT ENA/JTBC/TV조선/채널A/MBN/KBS N/
-    // 티캐스트/iHQ)는 두 파일에서 이름이 같다. 이건 File1 채널명→File2 그룹명 방향(매출 주입용)이고,
-    // metrics-dashboard.js의 CPRP/채널시청률/eq-GRPs용 대표채널 목록(METRICS_RATINGS_FIXED_CHANNELS)과는
-    // 용도가 다르다 — 그쪽은 사업자→채널 매핑이 아니라 고정된 대표채널 목록이다(2026-09-15 변경).
-    const RATINGS_OPERATOR_TO_REVENUE_GROUP = {
-      'CJ ENM': 'CJENM', 'MBC Plus': 'MBC PLUS', 'MBC(전국)': 'MBC', 'SBS 계열': 'SBS미디어넷', 'SBS(민방포함)': 'SBS'
-    };
-
     // ------------------------------------------------------------
-    // injectOperatorRevenueFromRatings() — "사업자 비교" 매출의 소스를 File2 채널그룹 합산에서
-    // File1 "01.방송사업자 광고매출"로 바꾼다(2026-09-15, 사용자 요청 — 세부 채널별 매출은 계속
-    // File2를 쓰고, 사업자 단위 총액만 File1이 직접 보고하는 값을 쓴다).
+    // rebuildMetricsSubstitution() — 취급고/회계 토글이 바뀔 때마다, 그리고 fetch 직후 UI가 호출
     // ------------------------------------------------------------
-    // metricsGroupRevenueMap()(metrics-dashboard.js)은 이미 "채널그룹 자기참조 행(channel===
-    // channelGroup)이 있으면 그 값을 그룹 합계로 우선한다"는 로직을 갖고 있다 — 그래서 그 자기참조
-    // 행 자체를 File1 값으로 만들어 두면, M/S·랭킹·트렌드·KPI 등 나머지 코드는 전혀 안 건드려도
-    // 자동으로 File1 기반 사업자 매출을 쓰게 된다. File1엔 사업자대분류/중분류(범위 토글용)가 없어
-    // File2 쪽 같은 채널그룹의 값을 이름으로 조인해서 그대로 가져온다 — 대응하는 File2 채널그룹이
-    // 없는 사업자(예: 이번 리포트에 새로 추가된 곳)는 조용히 건너뛰고 기존 File2 합산 폴백을 쓴다.
-    // KT ENA 자기참조 행도 여기서 File1 값으로 먼저 채워지지만, rebuildMetricsSubstitution()이
-    // 뒤이어 무조건 내부 실측치로 덮어쓰므로(어느 쪽이 원본이었든) 결과에 영향 없다.
-    function injectOperatorRevenueFromRatings() {
-      const scopeByGroup = {};
-      metricsRevenueDataOriginal.forEach(r => {
-        if (!scopeByGroup[r.channelGroup]) scopeByGroup[r.channelGroup] = { operatorMajor: r.operatorMajor, operatorMid: r.operatorMid };
-      });
-
-      const injected = [];
-      // File1은 미보고 미래월도 0으로 채워 내보낸다(다른 지표들과 동일한 placeholder — 이미
-      // metricsRatingsLatestPeriod()/renderMetricsMiniTrendChart()에서 value!==0으로 걸러낸 문제와 같은
-      // 원인). 여기서 걸러내지 않으면 그 0행이 채널그룹 자기참조 매출로 주입되어 metricsRevenueData에
-      // 실제 데이터 없는 미래월(예: 10~12월)이 "존재하는 월"처럼 섞여 들어간다(월별 매출/M-S 차트에
-      // 없는 달이 0으로 나타나는 원인이었다, 2026-09-15).
-      metricsRatingsData.filter(r => r.metricCode === '01' && r.value !== 0).forEach(r => {
-        const group = RATINGS_OPERATOR_TO_REVENUE_GROUP[r.channel] || r.channel;
-        const scope = scopeByGroup[group];
-        if (!scope) return; // File2에 대응 채널그룹 없음 — 기존 합산 폴백 유지
-        injected.push({
-          channel: group, channelGroup: group, operatorMajor: scope.operatorMajor, operatorMid: scope.operatorMid,
-          year: r.year, month: r.month, revenue: Math.round(r.value * 1000000) // File1도 백만원 단위(File2와 동일)
-        });
-      });
-      if (injected.length === 0) return;
-
-      const injectedKeys = new Set(injected.map(r => r.channelGroup + '|' + r.year + '|' + r.month));
-      metricsRevenueDataOriginal = metricsRevenueDataOriginal
-        .filter(r => !(r.channel === r.channelGroup && injectedKeys.has(r.channelGroup + '|' + r.year + '|' + r.month)))
-        .concat(injected);
-    }
-
-    // ------------------------------------------------------------
-    // rebuildMetricsSubstitution() — 취급고/회계 토글이 바뀔 때마다 UI가 호출
-    // ------------------------------------------------------------
-    // metricsRevenueDataOriginal(캐시, 불변)을 기준으로 KT ENA 관련 두 종류의 행만 내부 재계산값으로
-    // 덮어써 metricsRevenueData(파생본)를 새로 만든다. KT ENA 그룹이 아닌 나머지 경쟁사 행은 손대지 않는다.
-    //
-    // ① "채널그룹='KT ENA' 합계" 행 — File2 원본에 채널명이 자기 채널그룹명과 같은 자기참조 행
-    //    (channel === channelGroup)이 있다면 그 행을 그룹 합계로 간주해 덮어쓴다(사업자 비교용).
-    //    ⚠ 검증 불가 지점: 샘플 파일이 없어 File2가 실제로 이런 자기참조 합계 행을 포함하는지
-    //    확인하지 못했다. 만약 원본에 그런 행이 없다면(개별 세부채널 행만 있다면) 아래에서
-    //    월별로 부족분을 합성해 추가한다 — 어느 쪽이든 사업자 비교 모드가 항상 채널그룹 합계
-    //    행 하나를 찾을 수 있게 하기 위함.
-    // ② 개별 "채널='ENA'" 행 — 대표채널 비교용. computeEnaMonthlyRevenue(y, m, 'ENA')로 교체.
-    // KT ENA 그룹의 나머지 세부채널 행(ONCE/OLIFE/CHING/ONT/헬스메디TV/ENA SPORTS/기타광고매출 등)은
-    // 원본 그대로 둔다 — plan에 따르면 세부 채널별 대응은 불필요하고 그룹 단위 치환만 하면 된다.
-    // basisMode 인자 없음 — computeEnaMonthlyRevenue()가 전역 revenueBasisMode를 직접 읽으므로
-    // (위 "취급고/회계는 메인 대시보드를 그대로 따른다" 참고) 호출부가 값을 넘길 필요가 없다.
+    // metricsRatingsData(캐시, fetch 이후 불변)의 metric_code='01'(사업자별 광고매출) 행에서
+    // metricsRevenueData(파생본)를 매번 새로 만든다 — KT ENA 행만 내부 실측치로 덮어쓰고 나머지
+    // 사업자는 File1 값(백만원→원 환산)을 그대로 쓴다. File1은 사업자 단위 보고뿐이라(File2처럼
+    // 세부채널 분해가 없음) channel과 channelGroup이 항상 같다 — "그룹 자기참조 합계 행"을 합성해야
+    // 했던 File2 시절의 복잡한 폴백 로직이 통째로 필요 없어졌다.
     function rebuildMetricsSubstitution() {
-      if (!Array.isArray(metricsRevenueDataOriginal) || metricsRevenueDataOriginal.length === 0) {
-        metricsRevenueData = [];
-        return;
-      }
-
-      const ymKey = (y, m) => y + '-' + m;
-      const totalCache = {};   // ① 그룹 합계 캐시 (연-월 단위, 이번 호출 범위 내에서만 유효)
-      const channelCache = {}; // ② 대표채널 ENA 캐시
-
-      metricsRevenueData = metricsRevenueDataOriginal.map(row => {
-        if (row.channelGroup !== ENA_CHANNEL_GROUP) return row; // KT ENA 그룹이 아니면 원본 그대로
-
-        const key = ymKey(row.year, row.month);
-
-        if (row.channel === row.channelGroup) { // ① 그룹 자기참조 합계 행
-          if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(row.year, row.month);
-          return Object.assign({}, row, { revenue: totalCache[key] });
-        }
-
-        if (row.channel === ENA_REPRESENTATIVE_CHANNEL) { // ② 대표채널 ENA 개별 행
-          if (!(key in channelCache)) channelCache[key] = computeEnaMonthlyRevenue(row.year, row.month, ENA_REPRESENTATIVE_CHANNEL);
-          return Object.assign({}, row, { revenue: channelCache[key] });
-        }
-
-        return row; // KT ENA 그룹의 나머지 세부채널 — 원본 유지
-      });
-
-      // 원본에 ① 자기참조 합계 행이 아예 없었던 연-월은 합성해서 추가한다(위 주석의 검증 불가 지점 대응).
-      const presentTotalKeys = new Set(
-        metricsRevenueData
-          .filter(r => r.channelGroup === ENA_CHANNEL_GROUP && r.channel === r.channelGroup)
-          .map(r => ymKey(r.year, r.month))
-      );
-      const allKtEnaKeys = new Set();
-      const sampleByKey = {};
-      metricsRevenueDataOriginal.forEach(r => {
-        if (r.channelGroup !== ENA_CHANNEL_GROUP) return;
-        const key = ymKey(r.year, r.month);
-        allKtEnaKeys.add(key);
-        if (!sampleByKey[key]) sampleByKey[key] = r;
-      });
-      allKtEnaKeys.forEach(key => {
-        if (presentTotalKeys.has(key)) return;
-        const sample = sampleByKey[key];
-        if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(sample.year, sample.month);
-        metricsRevenueData.push({
-          channel: ENA_CHANNEL_GROUP, operatorMajor: sample.operatorMajor, operatorMid: sample.operatorMid,
-          channelGroup: ENA_CHANNEL_GROUP, year: sample.year, month: sample.month, revenue: totalCache[key]
+      const totalCache = {}; // 연-월 단위 KT ENA 합계 캐시(이번 호출 범위 내에서만 유효)
+      metricsRevenueData = metricsRatingsData
+        .filter(r => r.metricCode === '01' && r.value !== 0) // File1은 미보고 미래월도 0으로 채워 내보낸다 — 실제 데이터 없는 달을 걸러낸다
+        .map(r => {
+          let revenue;
+          if (r.channel === ENA_CHANNEL_GROUP) {
+            const key = r.year + '-' + r.month;
+            if (!(key in totalCache)) totalCache[key] = computeEnaMonthlyRevenue(r.year, r.month);
+            revenue = totalCache[key];
+          } else {
+            revenue = Math.round(r.value * 1000000); // File1 metric 01 단위는 백만원
+          }
+          return { channel: r.channel, channelGroup: r.channel, scope: METRICS_OPERATOR_SCOPE[r.channel] || null, year: r.year, month: r.month, revenue };
         });
-      });
     }

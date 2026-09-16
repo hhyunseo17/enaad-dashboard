@@ -13,13 +13,14 @@
     // 공용 소형 헬퍼 — 두 파일(metrics-dashboard.js/metrics-ratings.js)이 함께 쓴다.
     // ------------------------------------------------------------
 
-    // "범위" 토글이 가리키는 File2 행 매칭. 사업자대분류/사업자중분류는 이미 원본에 있는 컬럼이라
-    // 별도 재분류 없이 그대로 필터링한다(plan 확정사항).
+    // "범위" 토글이 가리키는 행 매칭. row.scope(지상파/종편/케이블)는 metrics-data-loader.js의
+    // METRICS_OPERATOR_SCOPE 하드코딩 맵에서 온다(File1엔 File2의 사업자대분류/중분류 같은 스코프
+    // 컬럼이 없어 사람이 직접 분류, 2026-09-16).
     function metricsScopeMatchRow(row, scopeMode) {
       const mode = scopeMode || metricsScopeMode;
       if (mode === 'all') return true;
-      if (mode === 'cable') return row.operatorMid === '케이블';
-      return row.operatorMajor === '유료방송'; // 'payTv' 기본값
+      if (mode === 'cable') return row.scope === '케이블';
+      return row.scope === '종편' || row.scope === '케이블'; // 'payTv' 기본값
     }
     function metricsScopeLabel(scopeMode) {
       const mode = scopeMode || metricsScopeMode;
@@ -97,21 +98,13 @@
     }
 
     // ------------------------------------------------------------
-    // File2(매체별 광고비 raw) 채널그룹 집계 — M/S·시장규모·매출 트렌드/랭킹이 공유
+    // File1(경쟁채널 지표 현황) 사업자별 매출 집계 — M/S·시장규모·매출 트렌드/랭킹이 공유
     // ------------------------------------------------------------
-    // 채널그룹별 월 매출 총합 맵. File2에 채널그룹 자기참조 총합 행(channel===channelGroup)이
-    // 있으면 그 값을 쓰고(KT ENA는 metrics-data-loader.js가 항상 보장), 없는 경쟁 그룹은 그
-    // 그룹에 속한 세부 채널 행을 직접 합산한다(데이터 agent가 File2 실제 스키마를 검증하지 못해
-    // 자기참조 행의 존재 여부가 그룹마다 다를 수 있다는 전제로 양쪽 다 대응 — docs 참고).
+    // 사업자(=채널그룹, File1은 세부채널 분해가 없어 항상 같은 값)별 월 매출 총합 맵.
     function metricsGroupRevenueMap(period, scopeMode) {
-      const periodRows = metricsRevenueData.filter(r => r.year === period.year && r.month === period.month && metricsScopeMatchRow(r, scopeMode));
-      const selfRef = {}; const seenSelfRef = new Set(); const summed = {};
-      periodRows.forEach(r => {
-        summed[r.channelGroup] = (summed[r.channelGroup] || 0) + r.revenue;
-        if (r.channel === r.channelGroup) { selfRef[r.channelGroup] = (selfRef[r.channelGroup] || 0) + r.revenue; seenSelfRef.add(r.channelGroup); }
-      });
-      const out = Object.assign({}, selfRef);
-      Object.keys(summed).forEach(g => { if (!seenSelfRef.has(g)) out[g] = summed[g]; });
+      const out = {};
+      metricsRevenueData.filter(r => r.year === period.year && r.month === period.month && metricsScopeMatchRow(r, scopeMode))
+        .forEach(r => { out[r.channelGroup] = (out[r.channelGroup] || 0) + r.revenue; });
       return out;
     }
 
@@ -125,37 +118,29 @@
     function metricsMarketAndShareAt(period, scopeMode) { return period ? computeEnaPayTvMarketShare(period.year, period.month, scopeMode) : null; }
 
     // ------------------------------------------------------------
-    // ① 사업자 / ② 채널 후보 목록 — File2에서 동적으로 뽑는다(실 채널그룹명을 하드코딩하지 않는다).
+    // ① 사업자 / ② 채널 후보 목록 — File1(경쟁채널 지표 현황) 하나로 통일(2026-09-16).
     // ------------------------------------------------------------
     function metricsAllOperatorGroups() {
       const set = new Set();
       metricsRevenueData.filter(r => metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => set.add(r.channelGroup));
       return [...set].sort((a, b) => (a === ENA_CHANNEL_GROUP ? -1 : b === ENA_CHANNEL_GROUP ? 1 : a.localeCompare(b, 'ko')));
     }
-    // 선택된 사업자(들)에 속한 개별 채널 후보. 세부 채널이 없고 자기참조 총합 행만 있는 사업자는
-    // 그 자기참조 채널명 자체를 유일한 "채널" 후보로 남긴다(예: 1채널짜리 지상파).
+    // 선택된 사업자(들)에 속한 개별 채널 후보 — metrics-data-loader.js의 METRICS_OPERATOR_CHANNEL_MAP
+    // 하드코딩 맵을 그대로 따른다(File1엔 사업자→채널 대응관계를 알려주는 컬럼이 없다).
     function metricsChannelsForOperators(ops) {
       const set = new Set();
-      metricsRevenueData.forEach(r => { if (ops.includes(r.channelGroup) && r.channel !== r.channelGroup) set.add(r.channel); });
-      ops.forEach(op => { if (!metricsRevenueData.some(r => r.channelGroup === op && r.channel !== r.channelGroup)) set.add(op); });
-      return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
+      ops.forEach(op => metricsChannelsForOperator(op).forEach(ch => set.add(ch)));
+      return [...set];
     }
-    // File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다(개별 채널명만 있다). 원래는 위 "① 사업자"
-    // 선택을 File1 채널명으로 매핑해 따라가려 했으나(사업자명↔채널명 별칭 매핑), CJENM처럼 사업자
-    // 단위 근사가 실제 방송 채널이 아닌 값(예: "CJ ENM"이라는 집계성 라벨)으로 잡혀 사용자가 보기에
-    // 낯선 값이 나왔다(2026-09-15, 사용자 지적) — 그래서 CPRP/채널시청률/eq-GRPs는 위쪽 사업자/채널
-    // 선택과 무관하게, 실제로 눈에 익은 대표채널 고정 목록만 보여주기로 한다(요청 시 목록 조정).
-    // ENA는 항상 대표채널 ENA로 고정.
-    const METRICS_RATINGS_FIXED_CHANNELS = [ENA_REPRESENTATIVE_CHANNEL, 'tvN', 'JTBC', 'SBS Plus', 'MBC every1', 'KBS Joy'];
-    // 위 고정 목록의 표기가 File1 원본과 대소문자만 다를 수 있어(예: "SBS PLUS"), 대소문자 무시하고
-    // 실제 존재하는 표기를 찾아 그걸 쓴다 — 안 그러면 완전일치 실패로 그 채널만 조용히 빠진다.
-    function metricsResolveRatingsChannelName(name) {
-      if (metricsRatingsData.some(r => r.channel === name)) return name;
-      const found = metricsRatingsData.find(r => r.channel && r.channel.toLowerCase() === name.toLowerCase());
-      return found ? found.channel : name;
-    }
+    // CPRP/채널시청률/eq-GRPs/광고주수/상세표가 쓰는 채널 목록 — 위 ①②선택을 그대로 공유한다
+    // (2026-09-16, 사용자 요청 — 예전엔 File1↔File2 별칭이 안 맞는 문제로 고정 목록을 썼으나, 이제
+    // 매출까지 전부 File1 하나뿐이라 그 문제 자체가 없어졌다). "대표채널 비교"(metricsCompareUnit
+    // ==='channel')면 실제로 선택된 개별 채널(②)을, "사업자 비교"면 각 사업자의 대표채널(①의 첫
+    // 번째 하위 채널, 없으면 사업자명 자체 — CPRP·시청률 같은 비율 지표는 사업자 내 여러 채널 값을
+    // 더하거나 평균낼 수 없어 하나로 근사한다)을 쓴다.
     function metricsRatingsChannelSelection() {
-      return METRICS_RATINGS_FIXED_CHANNELS.map(metricsResolveRatingsChannelName);
+      if (metricsCompareUnit === 'channel' && metricsSelectedChannels.length > 0) return metricsSelectedChannels;
+      return metricsSelectedOperators.map(metricsRepresentativeChannel);
     }
 
     // 첫 렌더에서만 기본값을 채운다(사용자가 이미 고른 선택은 건드리지 않는다).
@@ -268,7 +253,7 @@
     function renderMetricsOperatorCheckboxes() {
       const container = document.getElementById('listMetricsOperatorCheckboxes'); if (!container) return;
       const list = metricsAllOperatorGroups();
-      container.innerHTML = list.map(op => `<label class="checkbox-item"><input type="checkbox" value="${op}" onchange="onMetricsOperatorCheckboxChange()" ${metricsSelectedOperators.includes(op) ? 'checked' : ''}> ${op}</label>`).join('');
+      container.innerHTML = list.map(op => `<label class="checkbox-item"><input type="checkbox" value="${op}" onchange="onMetricsOperatorCheckboxChange()" ${metricsSelectedOperators.includes(op) ? 'checked' : ''}> ${metricsOperatorDisplayName(op)}</label>`).join('');
       const checkAll = document.getElementById('checkAllMetricsOperator');
       if (checkAll) { const all = list.length > 0 && list.every(op => metricsSelectedOperators.includes(op)); checkAll.checked = all; checkAll.indeterminate = !all && metricsSelectedOperators.length > 0; }
     }
@@ -299,7 +284,7 @@
     function updateMetricsDropdownLabel(type) {
       const label = document.getElementById(`labelMetrics${type}`); if (!label) return;
       if (type === 'Channel' && metricsCompareUnit !== 'channel') { label.innerText = '전체(사업자 총합)'; return; }
-      const sel = type === 'Operator' ? metricsSelectedOperators : metricsSelectedChannels;
+      const sel = type === 'Operator' ? metricsSelectedOperators.map(metricsOperatorDisplayName) : metricsSelectedChannels;
       if (sel.length === 0) label.innerText = '선택 없음';
       else if (sel.length <= 2) label.innerText = sel.join(', ');
       else label.innerText = `${sel.length}개 선택됨`;
@@ -324,7 +309,7 @@
       const momAll = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'all');
       const yoyAll = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'all');
       document.getElementById('metricsKpiMarketSizeAllValue').innerText = metricsFmtNum(currAll.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 지상파+유료방송`;
+      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${period.year}년 ${period.month}월 · 경쟁채널 지표 현황 파일 · 지상파+유료방송`;
       metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', metricsGrowthPct(currAll.market, momAll && momAll.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
 
@@ -332,7 +317,7 @@
       const momPay = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'payTv');
       const yoyPay = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'payTv');
       document.getElementById('metricsKpiMarketSizeValue').innerText = metricsFmtNum(currPay.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 매체별 광고비 raw 파일 · 종편+케이블`;
+      document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 경쟁채널 지표 현황 파일 · 종편+케이블`;
       metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(currPay.market, momPay && momPay.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
@@ -370,16 +355,16 @@
       if (!months.length) return;
       const labels = months.map(m => `${m}월`);
 
-      // 채널그룹 → operatorMid(지상파/종편/케이블) 조회용 — 그룹당 행 하나만 있으면 되므로 캐시.
-      const midByGroup = {};
-      metricsRevenueData.forEach(r => { if (!midByGroup[r.channelGroup]) midByGroup[r.channelGroup] = r.operatorMid; });
+      // 채널그룹 → scope(지상파/종편/케이블) 조회용 — 그룹당 행 하나만 있으면 되므로 캐시.
+      const scopeByGroup = {};
+      metricsRevenueData.forEach(r => { if (!scopeByGroup[r.channelGroup]) scopeByGroup[r.channelGroup] = r.scope; });
 
       const dataByCat = categories.map(() => []);
       months.forEach(m => {
         const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode); // 위 컨트롤바의 "범위" 토글 그대로 반영
         const catTotal = {}; categories.forEach(c => { catTotal[c] = 0; });
         Object.keys(groups).forEach(g => {
-          const cat = midByGroup[g];
+          const cat = scopeByGroup[g];
           if (cat && catTotal.hasOwnProperty(cat)) catTotal[cat] += groups[g];
         });
         const monthTotal = categories.reduce((s, c) => s + catTotal[c], 0);
@@ -462,23 +447,25 @@
       document.getElementById('btnMetricsRevenueTrendLog').classList.toggle('active', mode === 'log');
       renderMetricsRevenueTrendChart();
     }
+    // 매출(File1 "01.방송사업자 광고매출")은 사업자 단위로만 존재한다(세부채널 분해가 없음) — 그래서
+    // 트렌드/랭킹 두 차트는 "비교단위"(사업자/대표채널) 토글과 무관하게 항상 ①에서 선택된 사업자
+    // 기준으로 그린다. 그 토글은 CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드에만 영향을 준다
+    // (metricsRatingsChannelSelection() 참고, 2026-09-16).
     function renderMetricsRevenueTrendChart() {
       const canvas = document.getElementById('chartMetricsRevenueTrend'); if (!canvas) return;
       if (chartInstances.metricsRevTrend) { chartInstances.metricsRevTrend.destroy(); chartInstances.metricsRevTrend = null; }
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
       const labels = months.map(m => `${m}월`);
-      const isOperator = metricsCompareUnit === 'operator';
-      const names = isOperator ? metricsSelectedOperators : metricsSelectedChannels;
+      const names = metricsSelectedOperators;
       const isLog = metricsRevenueTrendScale === 'log';
 
       const datasets = names.map((name, idx) => {
         const data = months.map(m => {
-          const v = isOperator ? (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8
-            : metricsRevenueData.filter(r => r.year === metricsSelectedYear && r.month === m && r.channel === name).reduce((s, r) => s + r.revenue, 0) / 1e8;
+          const v = (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8;
           return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
         const color = metricsIsEnaName(name) ? RC('curr') : seriesColor(idx);
-        return { label: name, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
+        return { label: metricsOperatorDisplayName(name), data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
       });
 
       const ctx = canvas.getContext('2d');
@@ -513,26 +500,20 @@
       const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
       if (titleEl) titleEl.innerText = months.length ? `매출 랭킹 (${metricsPeriodRangeLabel(metricsSelectedYear, months)})` : '매출 랭킹';
       if (!months.length) return;
-      const isOperator = metricsCompareUnit === 'operator';
-      const selected = new Set(isOperator ? metricsSelectedOperators : metricsSelectedChannels);
+      // 매출은 사업자 단위로만 존재한다 — "비교단위" 토글과 무관하게 항상 ①선택 사업자 기준(위 트렌드
+      // 차트와 동일한 이유, 2026-09-16).
+      const selected = new Set(metricsSelectedOperators);
 
-      let entries;
-      if (isOperator) {
-        const sums = {};
-        months.forEach(m => {
-          const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode);
-          Object.keys(groups).forEach(g => { sums[g] = (sums[g] || 0) + groups[g]; });
-        });
-        entries = Object.entries(sums);
-      } else {
-        const map = {};
-        metricsRevenueData.filter(r => r.year === metricsSelectedYear && months.includes(r.month) && metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => { map[r.channel] = (map[r.channel] || 0) + r.revenue; });
-        entries = Object.entries(map);
-      }
-      entries = entries.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      const labels = entries.map(e => e[0]);
+      const sums = {};
+      months.forEach(m => {
+        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode);
+        Object.keys(groups).forEach(g => { sums[g] = (sums[g] || 0) + groups[g]; });
+      });
+      const entries = Object.entries(sums).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const names = entries.map(e => e[0]);
+      const labels = names.map(metricsOperatorDisplayName);
       const values = entries.map(e => e[1] / 1e8);
-      const colors = labels.map(name => (metricsIsEnaName(name) || selected.has(name)) ? RC('curr') : RC('ref'));
+      const colors = names.map(name => (metricsIsEnaName(name) || selected.has(name)) ? RC('curr') : RC('ref'));
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsRevRank = new Chart(ctx, {

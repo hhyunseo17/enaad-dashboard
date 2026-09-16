@@ -5,34 +5,29 @@
 ## 개요
 광고전략팀이 정기 수신하는 외부 리포트 2종을 KT ENA 내부 매출과 나란히 벤치마킹하는 화면. 기존 매출 대시보드(`main` 이하 15개 뷰)와 완전히 분리된 두 번째 데이터셋·컨트롤로 동작한다 — `selectedYears`/`selectedMonths`/`revenueBasisMode`(state.js)를 공유하지 않고, 이 탭 전용 상태(`metricsSelectedYear` 등, state.js 하단 별도 블록)를 쓴다.
 
-## 데이터 소스 — R2가 아니라 Supabase (2026-09-15 전환)
-원래 계획은 `addata.xlsx`와 같은 R2 고정 키+Pages Function 프록시+클라이언트 SheetJS 파싱이었다(당시 "지금은 R2 유지" 결정도 이 문서에 있었다). 그런데 **이 Cloudflare Pages 프로젝트에서 R2 버킷 바인딩이 원인 불명으로 전혀 붙지 않는 문제**가 있었다 — 대시보드에 바인딩을 정확히 추가하고, 삭제 후 재생성하고, 이름을 아예 새로 만들어도(`TEST_BUCKET`) `context.env`에 안 잡혔다(반면 `SUPABASE_URL` 같은 일반 텍스트/Secret 변수는 정상 작동 — R2 바인딩만의 계정/프로젝트 차원 문제로 보임). 원인을 못 찾아 R2 경로를 포기하고 Supabase로 옮겼다.
+## 데이터 소스 — File2는 분석에서 제외(2026-09-16), File1 하나로 통일
+원래 계획은 File1(경쟁채널 지표 현황)+File2(매체별 광고비 raw) 두 파일을 병행해 매출·M-S는 File2, 시청률·GRP·CPRP는 File1로 나눠 썼다. 그런데 File2는 마감 전 달(예: 9월)엔 KT ENA를 뺀 **전 채널그룹이 0원 플레이스홀더**라, 그 값을 기준으로 뽑는 기본 사업자 랭킹·①②캐스케이딩이 계속 어긋나는 버그의 근본 원인이었다(아래 로그 11·23번). 반면 File1의 "01.방송사업자 광고매출"은 14개 사업자 전원이 마감 전 달에도 실측/추정 값을 보고한다(0이 아님, Supabase로 직접 확인) — 그래서 **File2를 분석에서 완전히 제외하고 File1 하나로 매출·시장규모·M/S·CPRP·시청률·GRP·광고주수를 전부 구성**하기로 했다(사용자 요청, "그냥 파일2는 분석에서 제외하자").
 
-| 소스 | 테이블 | ETL | API |
-|---|---|---|---|
-| File1: 경쟁채널 지표 현황 | `competitor_ratings` | `scripts/etl/load-competitor-data.mjs` | `/api/competitor-ratings` |
-| File2: 매체별 광고비 raw | `competitor_revenue` | (같은 스크립트) | `/api/competitor-revenue` |
+| 소스 | 테이블 | ETL | API | 사용 여부 |
+|---|---|---|---|---|
+| File1: 경쟁채널 지표 현황 | `competitor_ratings` | `scripts/etl/load-competitor-data.mjs` | `/api/competitor-ratings` | 사용 — 지표 대시보드 전체의 유일한 소스 |
+| File2: 매체별 광고비 raw | `competitor_revenue` | (같은 스크립트) | `/api/competitor-revenue` | **미사용**(fetch 자체를 안 함) — 서빙 인프라·ETL·테이블은 롤백 여지로 그대로 둠 |
 
-- **적재**: `node scripts/etl/load-competitor-data.mjs <File1.xlsx> <File2.xlsx>` — File1/File2를 wide→long 변환·채널명 정규화까지 마친 뒤 두 테이블에 upsert(unique key: ratings=`year,index_mode,metric_code,channel,month`, revenue=`channel,year,month`). `sales_targets`(`load-targets.mjs`)와 같은 패턴 — 배치/컷오버 없음, 리포트 갱신 때마다 재실행. 파일에서 사라진 과거 행은 upsert만으로는 안 지워진다(수동 확인 필요, load-targets.mjs와 동일한 한계).
-- **API**: `functions/api/competitor-ratings.js`/`competitor-revenue.js` → `shared/supabase-proxy.mjs`의 `handleCompetitorRatingsRequest()`/`handleCompetitorRevenueRequest()` → `proxyView(env, 'competitor_ratings'|'competitor_revenue')`(다른 `/api/*`와 같은 PostgREST 프록시 함수, 페이지네이션 포함). `requireAuth`가 아니라 `requireMetricsAccess`를 쓴다(로그인만으로 부족 — 이메일 허용목록, 아래 "접근 제한" 절).
-- **테이블은 작아서**(2만/8천행대, `v_bonbu_sales`의 26,000행과 비교해도 비슷한 규모지만 컬럼 수가 훨씬 적다) 별도 뷰나 컬럼 별칭 단축 없이 `select=*` 그대로 쓴다.
-- Supabase 행은 snake_case(`operator_major` 등)로 오므로 `js/core/metrics-data-loader.js`의 `fetchMetricsDataHttp()`가 camelCase(`operatorMajor` 등)로 필드명만 바꿔준다 — 그 외 가공(정규화·번호 제거·wide→long)은 전부 ETL 쪽에서 이미 끝난 채로 들어온다. 클라이언트에는 이제 SheetJS 파싱이 없다.
-- R2 기반 구버전 코드(`functions/competitor-ratings.js`/`competitor-revenue.js`, `parseCompetitorRatingsWorkbook()`/`parseCompetitorRevenueWorkbook()`)는 삭제했다 — R2 바인딩 문제가 이 프로젝트 자체의 문제라 "안전망"으로 남겨둘 이유가 없었다(작동한 적이 없는 경로).
+- **적재**: `node scripts/etl/load-competitor-data.mjs <File1.xlsx> <File2.xlsx>` — 여전히 두 파일을 다 받아 두 테이블에 upsert한다(ETL 스크립트는 안 바꿈, `competitor_revenue` 테이블도 계속 채워짐). 프론트가 `/api/competitor-revenue`를 더 이상 호출하지 않을 뿐이다.
+- **API**: `functions/api/competitor-ratings.js` → `shared/supabase-proxy.mjs`의 `handleCompetitorRatingsRequest()` → `proxyView(env, 'competitor_ratings')`(다른 `/api/*`와 같은 PostgREST 프록시 함수, 페이지네이션 포함). `requireAuth`가 아니라 `requireMetricsAccess`를 쓴다(로그인만으로 부족 — 이메일 허용목록, 아래 "접근 제한" 절). `functions/api/competitor-revenue.js`도 코드는 남아있지만 호출하는 곳이 없다.
+- Supabase 행은 snake_case로 오므로 `js/core/metrics-data-loader.js`의 `fetchMetricsDataHttp()`가 camelCase로 필드명만 바꿔준다 — 그 외 가공(정규화·번호 제거·wide→long)은 전부 ETL 쪽에서 이미 끝난 채로 들어온다. 클라이언트에는 SheetJS 파싱이 없다.
+- (참고: R2 직접 서빙을 시도했다가 이 Cloudflare Pages 프로젝트에서 버킷 바인딩이 원인 불명으로 전혀 붙지 않아 Supabase로 옮긴 이력은 2026-09-15 결정이고 File2 제외와는 무관하다.)
 
 **지연 로딩**: 부팅 시(`init.js`)가 아니라 "지표 대시보드" 탭을 처음 열 때 `fetchMetricsDataHttp()`가 1회 호출된다(`renderMetricsDashboard()`가 매번 부르지만 진행 중/완료된 fetch가 있으면 그 프라미스를 그대로 돌려주므로 idempotent). `rawData`(메인 매출)가 아직 없는 극단적인 경우엔 "매출 데이터 로딩 중" 메시지를 띄우고 1.5초 후 재시도한다.
 
 ## ENA 자사매출 치환 — "왜 파싱 시점에 하는가"
-File2·File1 어느 쪽도 ENA 자신의 수치는 외부 조사기관 추정치라 내부 매출보다 정확도가 떨어진다. 그래서 **파싱 직후, 렌더 이전에** `rebuildMetricsSubstitution()`가 File2의 KT ENA 관련 행만 `computeEnaMonthlyRevenue()` 결과로 덮어쓴다:
-- `metricsRevenueDataOriginal` — 파싱 원본. 절대 손대지 않는다(캐시).
-- `metricsRevenueData` — 파생본. KPI·차트·피벗이 전부 **이 배열 하나만** 읽는다(소스가 하나로 통일).
+File1도 ENA 자신의 수치는 외부 조사기관 추정치라 내부 매출보다 정확도가 떨어진다. 그래서 **파싱 직후, 렌더 이전에** `rebuildMetricsSubstitution()`가 `metricsRatingsData`의 `metric_code==='01'`(사업자별 광고매출) 행에서 `metricsRevenueData`를 매번 새로 만들면서, KT ENA 행만 `computeEnaMonthlyRevenue()` 결과로 덮어쓴다:
+- `metricsRatingsData` — File1 파싱 원본 전체(01번도 포함). 절대 손대지 않는다(캐시).
+- `metricsRevenueData` — 파생본. KPI·차트·피벗이 전부 **이 배열 하나만** 읽는다.
 
-치환 대상은 두 종류:
-1. **채널그룹 `KT ENA` 자기참조 총합 행**(`channel === channelGroup`) — 사업자 비교용. `computeEnaMonthlyRevenue(y, m)`(채널필터 없음, `KT_ENA_FAMILY_CHANNELS` 10개 전체 합).
-2. **개별 채널 `ENA` 행** — 대표채널 비교용. `computeEnaMonthlyRevenue(y, m, 'ENA')`.
+File1은 사업자 단위로만 보고하고(File2 같은 세부채널 분해가 없음) `channel`과 `channelGroup`이 항상 같은 값이라, 치환 대상은 **KT ENA 사업자 행 하나뿐**이다 — `computeEnaMonthlyRevenue(y, m)`(`KT_ENA_FAMILY_CHANNELS` 10개 전체 합, 채널필터 인자 자체가 없어짐). File2 시절에 있던 "② 개별 채널 ENA 행"(대표채널 비교용 별도 치환) 개념은 사라졌다 — 매출은 애초에 사업자 단위로만 존재하기 때문(아래 "비교단위" 절 참고).
 
 렌더 시점에 치환하지 않는 이유: 취급고/회계 토글마다, 또는 KPI·5개 차트·상세표마다 매번 다시 계산하면 (a) 토글 타이밍에 따라 화면 조각마다 다른 값을 잠깐 보여줄 수 있고 (b) 계산 로직이 여러 곳에 흩어져 한쪽만 고치는 버그가 나기 쉽다. 토글이 바뀔 때 한 번만 `metricsRevenueData`를 다시 만들면 그 뒤로는 전부 단순 읽기다.
-
-**⚠ 검증 불가 지점**: File2 `변환용` 시트가 실제로 채널그룹 자기참조 총합 행을 포함하는지 샘플 파일이 없어 확인하지 못했다. `rebuildMetricsSubstitution()`은 그런 행이 없으면 월별로 합성해서 추가하므로 KT ENA는 항상 안전하지만, **경쟁사 채널그룹은 이 보장이 없다** — `metricsGroupRevenueMap()`(metrics-dashboard.js)이 자기참조 행이 있으면 그것을, 없으면 그 그룹의 세부 채널 합을 쓰는 폴백을 갖고 있다(더블카운트 방지). 실 파일로 반드시 교차검증할 것.
 
 ## 자사 매출기준 — 버튼은 이 탭에도 있지만 메인 대시보드와 전역 상태를 공유 (2026-09-15 변경)
 원래 plan은 이 탭 전용 `metricsBasisMode` 토글(메인의 전역 `revenueBasisMode`와 완전 분리)이었다. 처음엔 토글 자체를 없앴었으나(버튼을 지우고 항상 전역값만 읽게 함), **사용자가 다시 정정**: "취급고를 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와야 한다" — 버튼 자체는 이 탭에도 있어야 하고, 눌렀을 때 숫자가 바뀌어야 한다는 것. "KT ENA/ENA 채널 매출은 매출 대시보드에 있는 숫자를 그대로 가져와 타사와 더하는 개념"이라는 원래 취지는 유지하되, **버튼은 이 탭에 두고 그 버튼이 전역 상태를 직접 바꾸는 방식**으로 최종 확정:
@@ -45,18 +40,24 @@ File2·File1 어느 쪽도 ENA 자신의 수치는 외부 조사기관 추정치
 ```
 M/S(%) = KT ENA 사업자 총합(치환값) ÷ "범위" 토글이 가리키는 시장 총매출 × 100
 ```
-- **범위**: 지상파+유료방송(전체) / 유료방송(기본, `사업자대분류 === '유료방송'`) / 케이블(`사업자중분류 === '케이블'`). `metricsScopeMatchRow()`(metrics-dashboard.js)가 File2 원본 컬럼을 그대로 필터링 — 별도 재분류 없음.
+- **범위**: 지상파+유료방송(전체) / 유료방송(기본, 종편+케이블) / 케이블. File1엔 File2의 사업자대분류/사업자중분류 같은 스코프 컬럼이 없어, `METRICS_OPERATOR_SCOPE`(metrics-data-loader.js)라는 사업자→범위 하드코딩 맵으로 직접 분류한다(2026-09-16, 사용자 확인) — 지상파: KBS/MBC(전국)/SBS(민방포함), 종편: JTBC/TV조선/채널A/MBN, 케이블: KT ENA/CJ ENM/MBC Plus/SBS 계열/KBS N/티캐스트/iHQ. `metricsScopeMatchRow()`(metrics-dashboard.js)가 각 매출 행의 `scope` 필드(치환 시점에 이 맵으로 채워짐)를 그대로 필터링.
 - 분모도 그 범위 안 KT ENA 항목은 치환값으로 넣은 뒤 합산한다(`computeEnaPayTvMarketShare()`가 `metricsGroupRevenueMap()` 결과를 그대로 합산).
 - M/S 트렌드차트는 %선이 아니라 **누적(stacked) 막대**다 — 월별 막대 하나 = 범위 시장 총매출, "KT ENA"(강조색)+"기타"(중립색) 두 구간, % 라벨은 ENA 구간 위에 직접 표기.
 
-## 사업자 매출의 진짜 출처 — File2 합산이 아니라 File1 "01.방송사업자 광고매출" (2026-09-15)
-"사업자 비교" 모드(M/S·시장규모·매출 트렌드/랭킹)의 매출은 **File2 채널그룹 합산이 아니라 File1의 "01.방송사업자 광고매출" 값을 직접 쓴다** — File1이 사업자 단위로 이미 집계해 보고하는 수치가 있는데 File2 세부 채널을 다시 합산하는 건 이중작업이고 값도 미세하게 어긋날 수 있어서(사용자 요청으로 전환). **"대표채널 비교" 모드(개별 채널 단위)는 계속 File2를 쓴다** — File1엔 채널 단위 세부 매출이 없다(02.채널별 광고매출은 여전히 안 쓴다).
+## 사업자(①) ↔ 채널(②) 매핑, 표시 이름 — 전부 하드코딩 (2026-09-16)
+File1엔 File2의 "채널그룹→세부채널" 같은 대응관계를 알려주는 컬럼이 전혀 없다. 그래서 세 개의 하드코딩 맵(`metrics-data-loader.js`)이 이 파일 전체의 사업자/채널 개념을 떠받친다 — 전부 사람이 Supabase에 직접 질의해 실제 데이터를 대조하며 만들었다(2026-09-16):
 
-- **적재**: ETL(`load-competitor-data.mjs`)이 이제 metric_code `01`도 `competitor_ratings`에 적재한다(`02`만 계속 제외). 단위는 다른 지표와 동일하게 변환 없이 원본(백만원) 그대로 저장 — CPRP의 ×1,000 관례와 같은 이유.
-- **주입 지점**: `js/core/metrics-data-loader.js`의 `injectOperatorRevenueFromRatings()` — fetch 직후, `rebuildMetricsSubstitution()` 이전에 1회 호출. File1의 사업자별 매출 행을, File2 쪽 **채널그룹 자기참조 행(channel===channelGroup)**으로 만들어 `metricsRevenueDataOriginal`에 주입(있으면 교체, 없으면 추가)한다. `metricsGroupRevenueMap()`(metrics-dashboard.js)이 원래 "자기참조 행 우선" 로직을 갖고 있어서, 이 주입 하나만으로 M/S·랭킹·트렌드·KPI 전부가 자동으로 File1 기반 값을 쓰게 된다(다른 코드 변경 없음).
-- **이름 조인**: File1 사업자명이 File2 채널그룹명과 5곳 갈린다(`RATINGS_OPERATOR_TO_REVENUE_GROUP`, metrics-data-loader.js) — CJ ENM→CJENM, MBC Plus→MBC PLUS, MBC(전국)→MBC, SBS 계열→SBS미디어넷, SBS(민방포함)→SBS. File1엔 사업자대분류/중분류(범위 토글용)가 없어서 이 조인으로 File2 쪽 분류를 그대로 가져온다 — 대응하는 File2 그룹이 없는 사업자는 조용히 건너뛰고 기존 File2 합산 폴백을 쓴다.
-- **KT ENA는 영향 없음**: 여기서 주입된 KT ENA 행도 `rebuildMetricsSubstitution()`이 곧바로 내부 실측치로 덮어쓴다 — 원본이 File1이든 File2든 결과는 항상 `computeEnaMonthlyRevenue()` 값.
-- **CPRP·채널시청률·eq-GRPs는 이 변경과 무관** — 고정 대표채널 목록(아래 "비교단위" 절 참고)만 쓴다. 사업자 매출 소스 변경은 오직 **매출/M-S 계산**에만 영향을 준다.
+- **`METRICS_OPERATOR_CHANNEL_MAP`** — ①사업자 → ②채널(들). File1의 03/09 등 채널 단위 지표에 실제로 존재하는 채널만 매핑된다:
+  - `KT ENA` → ENA, ENA DRAMA, ENA PLAY, ENA STORY
+  - `CJ ENM` → tvN, tvN DRAMA, tvN SHOW, tvN STORY
+  - `MBC Plus` → MBC every1, MBC드라마넷
+  - `SBS 계열` → SBS Plus, SBS funE
+  - `KBS N` → KBS JOY, KBS드라마
+  - 나머지 8개 사업자(JTBC/채널A/MBN/TV조선/SBS(민방포함)/KBS/MBC(전국)/티캐스트/iHQ)는 이 맵에 없다 — `metricsChannelsForOperator(op)`가 매핑이 없으면 사업자명 자기 자신을 유일한 채널로 반환한다(`|| [op]`).
+- **`METRICS_OPERATOR_SCOPE`** — ①사업자 → 지상파/종편/케이블(위 "M/S 공식" 절의 범위 매핑과 동일 맵).
+- **`METRICS_OPERATOR_DISPLAY_NAME`** — File1 원본 표기가 딱딱하거나(`SBS(민방포함)`) 다른 화면에서 익숙한 표기와 달라서(`SBS 계열`보다 `SBS미디어넷`) 체크박스·범례·랭킹차트 라벨에서만 바꿔치기한다: `SBS(민방포함)→SBS`, `MBC(전국)→MBC`, `SBS 계열→SBS미디어넷`, `KBS N→KBSN`, `MBC Plus→MBC PLUS`. 데이터 조회 키는 항상 File1 원본 표기를 그대로 쓴다.
+
+**⚠ 채널 단위 지표의 커버리지 한계**: File1의 03(채널시청률)~15번 지표는 실제로 **15개 채널만** 존재한다(위 매핑에 나온 KT ENA 4개+CJ ENM 4개+MBC Plus 2개+SBS 계열 2개+KBS N 2개+JTBC 1개). 즉 **TV조선/채널A/MBN/KBS/MBC(전국)/SBS(민방포함)/티캐스트/iHQ는 CPRP·채널시청률·eq-GRPs·광고주수에 개별 채널 데이터가 아예 없다** — 이 8개 사업자를 ①에서 선택하면(대표채널이 자기 자신으로 폴백) 매출 트렌드/랭킹에는 정상적으로 나오지만 CPRP/시청률/GRP 미니차트에는 빈 줄로 나온다(에러 아님, File1 자체의 커버리지 한계 — 이 리포트가 애초에 ENA와 직접 비교되는 PP/종편 드라마·예능 채널 위주로 시청률을 추적하기 때문으로 추정). `metricsDetail` 전체 상세표(16개 지표 전부)는 이 한계와 무관하게 각 지표가 실제로 갖고 있는 채널만 보여준다.
 
 ## CPRP·시청률·eq-GRPs — File1 원본을 그대로 쓰는 이유
 `11.시청률 1%당 매출(억원)`은 File1이 자체 계산해 둔 값을 그대로 쓴다(내부 매출로 재계산하지 않는다). 분자(매출 추정치)만 내부값으로 바꾸면 분모(채널시청률, ENA 단일 채널 기준)와 스코프가 안 맞아 오히려 왜곡된다. CPRP·GRP·시청률도 동일하게 "File1 원본" 취급.
@@ -70,11 +71,16 @@ M/S(%) = KT ENA 사업자 총합(치환값) ÷ "범위" 토글이 가리키는 �
 ## 대표채널 ENA 단일값을 쓰는 이유
 File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널만 있고 "KT ENA 합계" 행이 없다. DRAMA/PLAY/STORY는 보조 채널이라 경쟁사와 비교하는 의미가 약해, CPRP·채널시청률·eq-GRPs·시청률1%당매출은 **대표채널 "ENA" 값만** 쓴다(`ENA_REPRESENTATIVE_CHANNEL`, metrics-data-loader.js).
 
-## 비교단위 — 사업자 비교 / 대표채널 비교
-- **사업자 비교(기본)**: File2 `채널그룹` 기준 총합. ENA는 위 ① 치환값.
-- **대표채널 비교**: File2 `채널` 기준 개별 브랜드. ENA는 위 ② 치환값.
+## 비교단위 — 사업자 비교 / 대표채널 비교 (2026-09-16 재설계: 매출과 CPRP/시청률/GRP이 범위가 다르다)
+File1로 통일하면서 두 가지가 동시에 참이 된다: (a) 매출(01번 지표)은 **사업자 단위로만** 존재한다(세부채널 분해가 없음) (b) CPRP/시청률/GRP(03~15번 지표)은 **채널 단위**로 존재하지만 그중 15개 채널만(위 "사업자↔채널 매핑" 절 참고). 그래서 "비교단위" 토글의 영향 범위가 차트마다 다르다:
+
+- **매출 트렌드 / 매출 랭킹 / M/S 트렌드 / KPI 카드**: 항상 ①사업자(`metricsSelectedOperators`) 기준 — 이 토글과 **무관**. 매출이 애초에 사업자 단위로만 존재해서 "대표채널 비교"를 적용할 데이터 자체가 없다.
+- **CPRP / 채널시청률 / eq-GRPs / 광고주수 미니차트, `metricsDetail` 상세표 티저**: 이 토글이 적용된다 —
+  - **사업자 비교(기본)**: 각 ①선택 사업자의 **대표채널**(`metricsRepresentativeChannel()`: `METRICS_OPERATOR_CHANNEL_MAP`의 첫 채널, 없으면 사업자명 자체) 하나로 근사한다. CPRP·시청률 같은 비율 지표는 사업자 내 여러 채널 값을 더하거나 평균낼 수 없어서(레이트라 가산 불가) 대표 하나를 쓴다 — File2 시절 고정 목록의 "ENA 대표채널" 관례를 사업자 전체로 일반화한 것.
+  - **대표채널 비교**: ②에서 실제로 체크한 개별 채널(`metricsSelectedChannels`) 그대로.
+  - `metricsRatingsChannelSelection()`(metrics-dashboard.js)이 이 분기를 전담한다 — CPRP/시청률/GRP/광고주수 4개 미니차트 전부와 상세표 티저가 이 함수 하나만 호출한다.
 - 선택 UI는 "① 사업자" → "② 채널" 2단 캐스케이딩 체크박스 팝오버(`.multi-dropdown` 패턴 재사용, `toggleMultiDropdown()`은 `data-loader.js`의 기존 범용 함수를 그대로 쓴다). ②는 ①에서 캐스케이딩되며, 사업자 비교 모드에서는 비활성화되고 "전체(사업자 총합)"로 표시된다.
-- **File1(경쟁채널 지표 현황)은 채널그룹 개념이 없다** — 그래서 CPRP/채널시청률/eq-GRPs 미니차트·상세표 티저는 위쪽 ①사업자/②채널 선택과 완전히 무관하게, `METRICS_RATINGS_FIXED_CHANNELS`(metrics-dashboard.js)라는 고정 목록만 보여준다: `ENA, tvN, JTBC, SBS Plus, MBC every1, KBS Joy` — ENA는 항상 대표채널. (**2026-09-15 변경**: 원래는 ①사업자 선택을 `OPERATOR_TO_RATINGS_CHANNEL_ALIAS` 매핑으로 따라가게 했었으나, CJENM 사업자가 File1에서 "CJ ENM"이라는 집계성 채널로 잡혀 tvN 같은 실제 채널명이 아니라 사용자에게 낯설어 보였다 — 그래서 사업자 선택을 아예 안 따르고 눈에 익은 대표채널 고정 목록으로 바꿨다. 목록 조정은 그 상수만 고치면 된다.) `metricsResolveRatingsChannelName()`이 대소문자 차이(예: "SBS PLUS" vs "SBS Plus")를 흡수해 실제 File1 표기를 찾아준다. (참고: `metricsDetail` 전체 상세표는 이 제한과 무관하게 File1의 모든 채널을 그대로 보여준다 — "상세" 드릴다운의 의도된 동작.)
+- **왜 File2 시절엔 고정 목록을 썼었는지(2026-09-15~16 사이의 경과)**: 원래는 ①사업자 선택을 `OPERATOR_TO_RATINGS_CHANNEL_ALIAS` 매핑으로 따라가게 했었으나, CJENM 사업자가 File1에서 "CJ ENM"이라는 집계성 채널로 잡혀 tvN 같은 실제 채널명이 아니라 사용자에게 낯설어 보였다 — 그래서 한동안 사업자 선택과 무관하게 `METRICS_RATINGS_FIXED_CHANNELS`(ENA/tvN/JTBC/SBS Plus/MBC every1/KBS Joy) 고정 목록을 썼다. File2를 완전히 걷어낸 지금은 매출까지 전부 File1 하나뿐이라 애초에 "File1↔File2 별칭이 안 맞는" 문제 자체가 없어졌고, 사용자가 "미니트렌드 차트에도 적용하자"고 요청해 다시 ①②선택을 그대로 따르도록 되돌렸다 — 대신 대표채널을 "1개 고정 별칭"이 아니라 실제 File1 채널 목록의 첫 항목으로 뽑아서 CJENM→tvN처럼 진짜 존재하는 채널명이 나온다.
 
 ## 상세표(`metricsDetail`) — 왜 `renderPresetPivot()`을 그대로 안 쓰는가
 `js/features/pivot-builder.js`의 `PIVOT_PRESETS.metricsDetail`에 등록은 돼 있지만(`togglePvRowNode`/`togglePvColNode`/`pvConfigFor` 같은 공용 상호작용을 물려받기 위해), 실제 렌더는 `renderMetricsDetailPivot()`(metrics-ratings.js)이라는 자체 함수가 맡는다.
@@ -88,18 +94,19 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 ## 핵심 함수 지도
 | 함수 | 파일 | 역할 |
 |---|---|---|
-| `fetchMetricsDataHttp()` | metrics-data-loader.js | `/api/competitor-ratings`·`/api/competitor-revenue` 병렬 fetch(idempotent 캐시) + snake_case→camelCase 매핑 |
-| `parseCompetitorRatingsWorkbook()` / `parseCompetitorRevenueWorkbook()` | scripts/etl/load-competitor-data.mjs | SheetJS 세부사항이 갇힌 단일 지점, wide→long 변환(ETL 쪽으로 이전, 클라이언트엔 더 이상 없음) |
-| `computeEnaMonthlyRevenue(y, m, channelFilter?)` | metrics-data-loader.js | rawData에서 ENA 계열 월매출 재계산(전역 revenueBasisMode 직접 읽음) |
-| `rebuildMetricsSubstitution()` | metrics-data-loader.js | `metricsRevenueDataOriginal` → `metricsRevenueData` 파생(KT ENA만 치환), 매 렌더마다 재호출 |
-| `metricsGroupRevenueMap(period, scopeMode)` | metrics-dashboard.js | 채널그룹별 월 매출 총합(자기참조 행 우선, 없으면 세부채널 합) |
+| `fetchMetricsDataHttp()` | metrics-data-loader.js | `/api/competitor-ratings` fetch(idempotent 캐시) + snake_case→camelCase 매핑(File2 fetch는 제거됨, 2026-09-16) |
+| `computeEnaMonthlyRevenue(y, m)` | metrics-data-loader.js | rawData에서 ENA 계열 월매출 재계산(전역 revenueBasisMode 직접 읽음, channelFilter 인자는 제거됨 — 매출이 사업자 단위뿐이라 필요 없어짐) |
+| `rebuildMetricsSubstitution()` | metrics-data-loader.js | `metricsRatingsData`의 metric_code='01' 행 → `metricsRevenueData` 파생(KT ENA만 치환), 매 렌더마다 재호출 |
+| `metricsChannelsForOperator(op)` / `metricsRepresentativeChannel(op)` / `metricsOperatorDisplayName(op)` | metrics-data-loader.js | ①사업자→②채널/대표채널/표시이름 하드코딩 맵 접근자(위 "사업자↔채널 매핑" 절) |
+| `metricsGroupRevenueMap(period, scopeMode)` | metrics-dashboard.js | 사업자별 월 매출 총합(File1은 세부채널 분해가 없어 자기참조 폴백 로직 자체가 필요 없어짐) |
 | `computeEnaPayTvMarketShare(y, m, scopeMode)` | metrics-dashboard.js | M/S 공식 그대로(plan에 명시된 함수명) |
-| `metricsEnsureDefaultSelections()` | metrics-dashboard.js | 최초 렌더 시 연도/①사업자 기본값 채움(사용자가 고른 뒤로는 건드리지 않음) |
+| `metricsEnsureDefaultSelections()` | metrics-dashboard.js | 최초 렌더 시 연도/①사업자 기본값 채움(연중 누적 합산으로 랭킹, 2026-09-16 — 사용자가 고른 뒤로는 건드리지 않음) |
 | `renderMetricsDashboard()` | metrics-dashboard.js | `VIEW_CONFIG.metricsMain.render()` — 지연 fetch, 로딩/에러 상태, 컨트롤·KPI·차트 전부 오케스트레이션 |
 | `renderMetricsRevenueKpis()` | metrics-dashboard.js | KPI① 시장규모, KPI② M/S |
 | `renderMetricsRatingsKpis()` | metrics-ratings.js | KPI③ CPRP, KPI④ 채널시청률, KPI⑤ 시청률1%당매출 |
 | `renderMetricsMarketShareChart()` | metrics-dashboard.js | M/S 트렌드(누적 막대) |
-| `renderMetricsRevenueTrendChart()` / `renderMetricsRevenueRankingChart()` | metrics-dashboard.js | 매출 트렌드(라인) / 랭킹(가로막대) |
+| `renderMetricsRevenueTrendChart()` / `renderMetricsRevenueRankingChart()` | metrics-dashboard.js | 매출 트렌드(라인) / 랭킹(가로막대) — 항상 ①사업자 기준(비교단위 토글 무관, 2026-09-16) |
+| `metricsRatingsChannelSelection()` | metrics-dashboard.js | CPRP/채널시청률/eq-GRPs/광고주수/상세표 티저가 쓰는 채널 목록 — 비교단위 토글에 따라 대표채널(사업자 비교) 또는 ②선택 채널(대표채널 비교) 반환(2026-09-16, 예전 고정 목록 대체) |
 | `renderMetricsMiniTrendChart()`(+4개 래퍼) | metrics-ratings.js | CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드(2026-09-15: `indexMode`를 인자로 받도록 변경 — 광고주수는 File1에 '전체'뿐이라 토글과 무관하게 고정 조회해야 해서) |
 | `renderMetricsDetailPivot()` | metrics-ratings.js | `metricsDetail` 상세표 |
 
@@ -153,6 +160,7 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 21. **자사 매출기준(취급고/회계) 전용 토글을 폐지 — 메인 대시보드를 그대로 따르게 함(2026-09-15, 사용자 요청)** — 컨트롤바 Row1("매출 기준" 토글) 통째로 삭제, `metricsBasisMode`/`setMetricsBasisMode()` 제거, `computeEnaMonthlyRevenue()`/`matchesMetricsBasis()`/`rebuildMetricsSubstitution()`이 인자 대신 전역 `revenueBasisMode`를 직접 읽도록 변경, `renderMetricsDashboard()`가 매 렌더마다 `rebuildMetricsSubstitution()`을 재호출해 메인 대시보드에서 바뀐 값과 항상 동기화되게 함.
 22. **[21번 정정] 버튼 자체는 이 탭에도 있어야 했다** — 21번에서 버튼까지 지웠더니 사용자가 바로 정정: "회계기준/취급고 기준 토글을 없애면 안 되지, 그거에 따라 숫자가 바뀌어야 되는데" + "취급고를 누르면 매출 대시보드에 있는 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와야 한다"(2026-09-15). 즉 없애야 했던 건 **버튼**이 아니라 **이 탭만의 독립된 별도 상태**였다 — 버튼은 다시 넣고(`#btnMetricsBasisPerformance`/`#btnMetricsBasisAccounting`, `onclick="setMetricsRevenueBasis(mode)"`), 그 버튼이 이 탭 전용 값이 아니라 **전역 `revenueBasisMode`를 직접** 바꾸게 했다(`setMetricsRevenueBasis()`가 `data-loader.js`의 `setRevenueBasis()`를 그대로 호출 — 메인 대시보드 버튼/필터까지 같이 갱신됨). 위 "자사 매출기준" 절 최신 버전 참고 — 21번 설명 중 "토글 자체가 없다"는 이제 틀린 서술이다(버튼은 있다, 상태만 공유).
 23. **[치명적, 수정됨] 기본 선택된 "①사업자" 목록이 실제 매출 순위와 무관해 보였다 — ②채널 목록도 같이 이상해짐** — 사용자가 드롭다운을 열어 "5개 선택됨"인데 체크된 항목이 눈에 안 띄는 걸 이상하다고 지적, 이어서 "옆에 채널도 이상해"라고 지적(2026-09-16). 원인: `metricsEnsureDefaultSelections()`가 `metricsLatestPeriod()`(최근 단일 월)로 top4 사업자를 뽑았는데, File2가 아직 마감 전인 9월엔 KT ENA(File1 치환값)를 뺀 **전 채널그룹이 0원 플레이스홀더**라(11번 항목의 File2판 — 9월 File2 raw 자체가 전부 0, KT ENA만 File1로 주입돼 채워짐) 나머지 4자리가 "동률 0원" 임의 순서로(Object.entries 순회 순서) 뽑혔다 — 실제로는 CJENM·JTBC·기타·TV조선(1~8월 유료방송 누적 기준 1~4위, Supabase 실측)이 뽑혀야 하는데 순서가 보장되지 않았다. `renderMetricsRevenueRankingChart()`에 이미 있던 "연중 누적 합산" 패턴을 그대로 재사용해 `metricsEnsureDefaultSelections()`도 `metricsMonthsInYear()`가 반환하는 모든 달을 합산한 뒤(0원인 달은 자동으로 영향 없음) `v > 0` 필터까지 걸어 랭킹을 매기도록 수정. ②채널 캐스케이딩 목록(`metricsChannelsForOperators()`)은 ①사업자 선택을 그대로 입력받는 구조라 이 수정 하나로 같이 정상화된다.
+24. **[대규모 재설계] File2를 분석에서 완전히 제외 — File1 하나로 통일 (2026-09-16)** — 23번 조사 도중 사용자가 근본 해결을 요청: "그냥 파일2는 분석에서 제외하자". File2는 마감 전 달마다 KT ENA 제외 전원이 0원 플레이스홀더인 게 반복되는 버그의 근본 원인이었다(11·23번 모두 이 문제의 다른 증상). Supabase로 File1의 "01.방송사업자 광고매출"을 직접 확인한 결과 14개 사업자 전원이 마감 전 달에도 실측/추정 값을 보고하고 있어(9월 CJ ENM 204억 등 전부 nonzero) 이 문제 자체가 사라짐을 확인 — File2 fetch(`METRICS_REVENUE_URL`)와 `injectOperatorRevenueFromRatings()`(File1→File2 조인 주입 로직), `metricsRevenueDataOriginal` 캐시, "자기참조 합계 행 합성" 폴백을 전부 제거하고 `rebuildMetricsSubstitution()`이 File1 metric_code='01' 행에서 직접 `metricsRevenueData`를 만들도록 재작성. 이어서 사용자가 "사업자-채널도 파일1에 있는 채널만 대상으로 하고, M/S도 죄다 파일1에 있는 걸로 해" + 직접 제공한 사업자→범위(지상파/종편/케이블) 매핑을 받아 `METRICS_OPERATOR_SCOPE`로 하드코딩(위 "M/S 공식" 절 참고). 처음엔 "File1 metric 01은 사업자 단위뿐이니 ①→②채널 캐스케이딩 자체가 불필요해지는 것 아니냐"고 되물었으나, 사용자가 "아니 채널 필요해" + 직접 사업자→채널 매핑(KT ENA/CJ ENM/MBC PLUS/SBS미디어넷/KBSN 5개 + 나머지는 자기 자신)을 제공 — `METRICS_OPERATOR_CHANNEL_MAP`으로 하드코딩하고, 매출 트렌드/랭킹은 매출이 사업자 단위로만 존재해 이 토글과 무관하게 항상 ①기준으로 고정. 마지막으로 "미니트렌드 차트에도 적용하자"는 요청에 따라 CPRP/채널시청률/eq-GRPs/광고주수와 상세표 티저가 쓰던 고정 6채널 목록(`METRICS_RATINGS_FIXED_CHANNELS`)을 폐지하고 `metricsRatingsChannelSelection()`이 ①②선택을 그대로 따르도록 재설계(사업자 비교 모드는 대표채널로 근사). 부작용: File1의 채널 단위 지표(03~15번)는 실제로 15개 채널만 있어(위 "사업자↔채널 매핑" 절 참고) TV조선/채널A/MBN/KBS/MBC(전국)/SBS(민방포함)/티캐스트/iHQ 8개 사업자는 CPRP/시청률/GRP 미니차트에서 빈 줄로 나온다 — File1 자체의 데이터 커버리지 한계이며 버그가 아니다. File2 서빙 인프라(`functions/api/competitor-revenue.js`, ETL, `competitor_revenue` 테이블)는 롤백 여지를 남겨 삭제하지 않고 그대로 뒀다.
 
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.

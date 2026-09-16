@@ -1232,8 +1232,7 @@
            화면 맨 위에서 한 번 밝힌다. -->
       <section class="metrics-source-legend">
         <span class="metrics-legend-chip"><span class="metrics-legend-dot ena"></span>자사(ENA) — 내부 매출 데이터로 대체</span>
-        <span class="metrics-legend-chip"><span class="metrics-legend-dot revenue"></span>매출·시장규모·M/S — 매체별 광고비 raw 파일</span>
-        <span class="metrics-legend-chip"><span class="metrics-legend-dot ratings"></span>시청률·GRP·CPRP 등 — 경쟁채널 지표 현황 파일</span>
+        <span class="metrics-legend-chip"><span class="metrics-legend-dot revenue"></span>매출·시장규모·M/S·시청률·GRP·CPRP 등 — 경쟁채널 지표 현황 파일(File2는 분석에서 제외, 2026-09-16)</span>
       </section>
 
       <!-- 지표 대시보드 전용 컨트롤바. 메인 매출 대시보드의 filter-bar와 독립 — 자기만의
@@ -1302,6 +1301,7 @@
               <button class="pill-btn active" id="btnMetricsCompareOperator" onclick="setMetricsCompareUnit('operator')">사업자 비교</button>
               <button class="pill-btn" id="btnMetricsCompareChannel" onclick="setMetricsCompareUnit('channel')">대표채널 비교</button>
             </div>
+            <span class="filter-hint">CPRP·채널시청률·eq-GRPs·광고주수·상세표에만 반영(매출은 항상 사업자 단위)</span>
           </div>
           <div class="filter-group">
             <span class="filter-label">① 사업자</span>

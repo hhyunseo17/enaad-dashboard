@@ -85,12 +85,15 @@
       const channels = metricsRatingsChannelSelection();
 
       const datasets = channels.map((ch, idx) => {
-        const color = ch === ENA_REPRESENTATIVE_CHANNEL ? RC('curr') : seriesColor(idx);
+        // ENA_CHANNELS.includes() — 대표채널 비교 모드에서 ENA DRAMA/PLAY/STORY를 골라도 강조색을
+        // 받는다(예전엔 대표채널 "ENA" 단일값만 있어 정확히 일치 비교로 충분했다).
+        const isEna = ENA_CHANNELS.includes(ch);
+        const color = isEna ? RC('curr') : seriesColor(idx);
         const data = months.map(m => {
           const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
           return row ? row.value * valueMultiplier : null;
         });
-        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: ch === ENA_REPRESENTATIVE_CHANNEL ? 3 : 2, pointRadius: 2.5, spanGaps: true };
+        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, spanGaps: true };
       });
 
       // suggestedMax는 "적어도 이만큼은 돼야 한다"는 하한 힌트일 뿐 상한을 막지 못한다 — grace를
