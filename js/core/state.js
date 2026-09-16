@@ -283,19 +283,11 @@
     let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태
     let expandedMetricsDetailYearColumns = {}; // metricsDetail 상세표: 연도 열 펼침 상태
 
-    // 매출 4개 차트(시장규모 추이/M-S 트렌드/매출 트렌드/매출 랭킹) 아래 "피벗으로 보기" 섹션 —
-    // js/features/pivot-builder.js의 metricsMarketByScopePivot 등 4개 프리셋이 참조한다. 접힘 상태는
+    // 매출 4개 차트(시장규모 추이/M-S 트렌드/매출 트렌드/매출 랭킹) 각각의 전용 피벗 화면 —
+    // 매출 대시보드의 openCategoryPivotView() 등과 같은 관례로 카드 클릭 → switchView()(2026-09-16,
+    // 사용자 요청 — 차트 카드 아래 인라인 섹션 방식은 currentView 기반 빌더 컨텍스트 가정이 깨져서
+    // (reviewer 에이전트가 발견) 폐기, 전용 화면으로 재구성하며 그 문제도 함께 해소됨). 접힘 상태는
     // 채널·항목별 피벗과 같은 키 형식(`l1`, `l1||l2`)을 그대로 쓴다(pivot-builder.js가 이미 그렇게 관리).
-    let metricsPivotSectionOpen = { metricsMarketByScopePivot: false, metricsMsTrendPivot: false, metricsRevenueTrendPivot: false, metricsRevenueRankingPivot: false }; // 카드별 펼침 여부 — 기본은 전부 접힘
-    // 다른 10개 피벗은 각자 자기만의 화면(switchView()로 전환하는 currentView)에 살아서, 빌더 패널
-    // 상호작용(pvBuilderCtx(), pivot-builder.js)이 "지금 보고 있는 화면 = 편집 대상 프리셋"이라고
-    // 가정해도 안전했다. 이 4개는 metricsMain이라는 한 화면 안에 나란히 얹혀서 그 가정이 깨진다 —
-    // currentView는 계속 'metricsMain'인데 편집 대상은 4개 중 하나다. pvToggleBuilder()/
-    // toggleMetricsPivotSection()이 사용자가 지금 만지고 있는 프리셋 키를 여기에 적어두면
-    // pvBuilderCtx()가 currentView 대신 이 값을 봐서 올바른 프리셋을 가리킨다(2026-09-16, reviewer
-    // 에이전트가 발견 — currentView 기반 ddCtx()가 4개 전부에서 null을 반환해 드래그앤드롭이 엉뚱한
-    // "세부데이터" 화면 상태를 건드리거나 반영되지 않던 버그).
-    let pvActiveMetricsPresetKey = null;
     let expandedMetricsMarketByScopePivot = {}, expandedMetricsMarketByScopeYearColumns = {};
     let expandedMetricsMsTrendPivot = {}, expandedMetricsMsTrendYearColumns = {};
     let expandedMetricsRevenueTrendPivot = {}, expandedMetricsRevenueTrendYearColumns = {};

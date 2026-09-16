@@ -55,7 +55,15 @@
       // --- 지표 대시보드(경쟁채널 벤치마크) ---------------------------------------
       // parentView를 명시하지 않는 위 15개는 returnToParentView()가 'main'으로 기본 처리한다(동작 그대로 유지).
       metricsMain: { containerId: 'metricsMainView', title: '지표 대시보드 (경쟁채널 벤치마크)', showBreadcrumb: false, family: 'metrics', render: () => renderMetricsDashboard() },
-      metricsDetail: { containerId: 'metricsDetailView', title: '경쟁채널 지표 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsDetailPivot() }
+      metricsDetail: { containerId: 'metricsDetailView', title: '경쟁채널 지표 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsDetailPivot() },
+      // 매출 4개 차트(시장규모 추이/M-S 트렌드/매출 트렌드/매출 랭킹)의 "카드 클릭 → 전용 피벗 화면"
+      // (2026-09-16, 사용자 요청 — 매출 대시보드의 openCategoryPivotView() 등과 같은 관례). 각 프리셋은
+      // js/features/pivot-builder.js의 PIVOT_PRESETS에 등록돼 있다 — render()는 그 엔진(renderPresetPivot)을
+      // 그대로 호출한다.
+      metricsMarketByScopePivot: { containerId: 'metricsMarketByScopePivotView', title: '방송광고시장 규모 추이 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsMarketByScopePivot') },
+      metricsMsTrendPivot: { containerId: 'metricsMsTrendPivotView', title: 'KT ENA M/S 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsMsTrendPivot') },
+      metricsRevenueTrendPivot: { containerId: 'metricsRevenueTrendPivotView', title: '매출 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsRevenueTrendPivot') },
+      metricsRevenueRankingPivot: { containerId: 'metricsRevenueRankingPivotView', title: '매출 랭킹 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsRevenueRankingPivot') },
     };
 
     function switchView(viewKey, pushHistory) {
@@ -113,6 +121,10 @@
     function openDetailDataView() { switchView('detailData'); }
     function openGoalTrendPivotView() { switchView('goalTrendPivot'); }
     function openGoalDeptPivotView() { switchView('goalDeptPivot'); }
+    function openMetricsMarketByScopePivotView() { switchView('metricsMarketByScopePivot'); }
+    function openMetricsMsTrendPivotView() { switchView('metricsMsTrendPivot'); }
+    function openMetricsRevenueTrendPivotView() { switchView('metricsRevenueTrendPivot'); }
+    function openMetricsRevenueRankingPivotView() { switchView('metricsRevenueRankingPivot'); }
 
     function toggleYearColumn(viewType, yr) {
       if (viewType === 'channel') { expandedYearColumns[yr] = !expandedYearColumns[yr]; renderChannelPivotTable(); }

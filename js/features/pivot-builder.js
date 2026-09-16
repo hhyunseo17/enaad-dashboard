@@ -1080,14 +1080,7 @@
         dataSource: p.dataSource || null,
       };
     }
-    // 다른 10개 피벗은 자기만의 화면이라 currentView가 곧 편집 대상이지만, metricsMain엔 4개 프리셋이
-    // 나란히 얹혀 있어 currentView 하나로는 어떤 걸 만지는지 알 수 없다 — pvToggleBuilder()/
-    // toggleMetricsPivotSection()이 적어둔 pvActiveMetricsPresetKey(state.js)를 대신 본다
-    // (2026-09-16, reviewer 에이전트가 발견한 버그 수정 — 자세한 배경은 그 변수 주석 참고).
-    function pvBuilderCtx() {
-      const key = (currentView === 'metricsMain' && pvActiveMetricsPresetKey && PIVOT_PRESETS[pvActiveMetricsPresetKey]) ? pvActiveMetricsPresetKey : currentView;
-      return pvBuilderCtxFor(key);
-    }
+    function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }
     function renderPvBuilderPanel(viewKey) {
       const ctx = pvBuilderCtxFor(viewKey);
       if (ctx) renderDetailDataBuilderPanels(ctx);
@@ -1113,9 +1106,6 @@
     function pvToggleBuilder(viewKey) {
       const preset = PIVOT_PRESETS[viewKey]; if (!preset || !preset.layoutId) return;
       const el = document.getElementById(preset.layoutId); if (!el) return;
-      // metricsMain에 얹힌 4개 프리셋은 currentView만으로 자신을 특정할 수 없다 — 지금 만지는
-      // 프리셋을 명시적으로 적어둔다(pvBuilderCtx()가 읽는다, 위 pvActiveMetricsPresetKey 주석 참고).
-      if (currentView === 'metricsMain') pvActiveMetricsPresetKey = viewKey;
       const open = el.classList.toggle('dd-layout-collapsed') === false;
       const btn = preset.builderBtn && document.getElementById(preset.builderBtn);
       // 이름('표 편집')은 그대로 두고 **눌린 상태와 화살표 방향**으로만 알린다 — 버튼 폭이 흔들리지
@@ -1221,25 +1211,4 @@
       document.getElementById(preset.dom.total).innerText = (primary.agg === 'count' || primary.agg === 'distinct')
         ? `${(grand || 0).toLocaleString()} 건`
         : `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
-    }
-
-    // ==========================================================================
-    // 지표 대시보드 매출 4개 차트의 "피벗으로 보기" 접기/펼치기
-    // ==========================================================================
-    // 차트 카드 바로 아래 섹션을 기본 접힘으로 두고, 처음 펼칠 때만 그린다(다른 6개 피벗은 화면
-    // 자체가 별도 탭이라 처음부터 렌더링됐지만, 이건 차트 카드에 얹는 부가 UI라 접힌 동안은
-    // 대상 DOM이 없거나 비어 있을 수 있어 굳이 미리 그릴 이유가 없다).
-    function toggleMetricsPivotSection(viewKey) {
-      const preset = PIVOT_PRESETS[viewKey]; if (!preset) return;
-      const open = !metricsPivotSectionOpen[viewKey];
-      metricsPivotSectionOpen[viewKey] = open;
-      // 이 섹션을 지금 만지고 있다는 표시(위 pvActiveMetricsPresetKey 주석 참고) — 닫을 땐 자신이
-      // 활성 상태였을 때만 지운다(다른 섹션이 이미 활성으로 덮어썼다면 그걸 지우면 안 된다).
-      if (open) pvActiveMetricsPresetKey = viewKey;
-      else if (pvActiveMetricsPresetKey === viewKey) pvActiveMetricsPresetKey = null;
-      const section = document.getElementById(viewKey + 'Section');
-      if (section) section.hidden = !open;
-      const btn = document.getElementById(viewKey + 'ToggleBtn');
-      if (btn) btn.textContent = open ? '피벗 접기 ▴' : '피벗으로 보기 ▾';
-      if (open) preset.render();
     }
