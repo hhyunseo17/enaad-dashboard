@@ -714,22 +714,22 @@
             // 성격이 달라 분기를 완전히 나눴다.
             datalabels: isShare ? {
               display: (dctx) => (dctx.dataset.data[dctx.dataIndex] || 0) >= 5,
-              anchor: 'center', align: 'center', color: '#fff', font: { size: 11, weight: FW() },
+              anchor: 'center', align: 'center', color: '#fff', font: { size: 12, weight: FW() },
               formatter: (value) => value.toFixed(0) + '%'
             } : {
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
               display: (ctx) => i === series.length - 1,
-              anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
+              anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 13, weight: FW() },
               formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? metricsFmtNum(total, 1) + '억' : ''; }
             }
           }))
         },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 14, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => isShare ? `${c.dataset.label}: ${c.raw.toFixed(1)}%` : `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
-          scales: { x: { stacked: true, offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => isShare ? v + '%' : metricsFmtNum(v, 0) + '억' } }) }
+          scales: { x: { stacked: true, offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 14, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ stacked: true, max: isShare ? 100 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 14, weight: FW() }, callback: v => isShare ? v + '%' : metricsFmtNum(v, 0) + '억' } }) }
         }
       });
     }
@@ -741,7 +741,7 @@
     function renderMetricsMarketShareChart() {
       const canvas = document.getElementById('chartMetricsMarketShare'); if (!canvas) return;
       if (chartInstances.metricsMs) { chartInstances.metricsMs.destroy(); chartInstances.metricsMs = null; }
-      document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S 트렌드 (선택 사업자 ${metricsSelectedOperators.length}개 기준)`;
+      document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S (선택 사업자 ${metricsSelectedOperators.length}개 기준)`;
 
       const periods = metricsSelectedPeriods(metricsRevenueData);
       if (!periods.length) return;
@@ -753,7 +753,7 @@
         type: 'line',
         data: { labels, datasets: [
           { label: 'M/S', data: shareVals, borderColor: RC('curr'), backgroundColor: RC('curr'), fill: false, tension: 0.3, borderWidth: 3, pointRadius: 3,
-            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v.toFixed(1) + '%' } }
+            datalabels: { display: 'auto', anchor: 'end', align: 'top', color: dataLabelTextColor(), font: { size: 13, weight: FW() }, formatter: (v) => v.toFixed(1) + '%' } }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
@@ -761,8 +761,8 @@
             tooltip: { callbacks: { label: (c) => `M/S: ${c.raw.toFixed(2)}%` } } },
           // offset:true — 선 그래프는 기본이 false라 첫/끝 점이 y축·플롯 경계에 딱 붙어 보인다(사용자
           // 지적, 2026-09-15). 막대 그래프의 기본 여백처럼 양쪽에 카테고리 반 칸만큼 띄운다.
-          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => v + '%' } }) }
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 14, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 14, weight: FW() }, callback: v => v + '%' } }) }
         }
       });
     }
@@ -847,15 +847,15 @@
         type: 'line', data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
           // grace:0 — 매출은 음수가 될 수 없는데 ddValueAxis() 기본값(grace:15%)이 데이터 최솟값(0
           // 근처) 아래로도 15% 여유를 대칭으로 붙여, Chart.js가 "예쁜 간격"을 고르는 과정에서 축이
           // -100억부터 시작해버렸다(사용자 지적, 2026-09-16: "얘는 -100억부터 있는 이유가 뭐야") —
           // 매출 랭킹 차트(아래 renderMetricsRevenueRankingChart)가 이미 같은 이유로 grace:0을 쓰고
           // 있었다. 로그축은 애초에 0 이하를 그릴 수 없어 이 문제가 없으므로 기본값을 그대로 둔다.
-          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ type: isLog ? 'logarithmic' : 'linear', grace: isLog ? '15%' : 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: isLog ? 8 : 5, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }) }
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ type: isLog ? 'logarithmic' : 'linear', grace: isLog ? '15%' : 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: isLog ? 8 : 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => metricsFmtNum(v, 0) + '억' } }) }
         }
       });
     }
@@ -894,11 +894,11 @@
         type: 'bar',
         data: { labels, datasets: [{ label: metricsPeriodRangeLabel(periods) + ' 매출', data: values,
           backgroundColor: (c) => ddBarFill(colors[c.dataIndex], true)(c), borderRadius: 4,
-          datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? metricsFmtNum(v, 1) + '억' : '' } }] },
+          datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 13, weight: FW() }, formatter: (v) => v > 0 ? metricsFmtNum(v, 1) + '억' : '' } }] },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24, right: 44 } },
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
-          scales: { x: ddValueAxis({ grace: 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: 7, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }), y: { ticks: { color: CH('#F2F4F6'), font: { weight: FW() } }, grid: { display: false } } }
+          scales: { x: ddValueAxis({ grace: 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: 7, padding: 6, font: { size: 13, weight: FW() }, callback: v => metricsFmtNum(v, 0) + '억' } }), y: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } } }
         }
       });
     }

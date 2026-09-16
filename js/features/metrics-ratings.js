@@ -139,10 +139,10 @@
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           // 범례·축 폰트 크기는 "매출 트렌드"(renderMetricsRevenueTrendChart)와 같은 수준으로 맞춘다
           // (2026-09-15, 사용자 요청 — 카드 크기를 이미 매출 트렌드와 맞췄으니 글자 크기도 맞아야 함).
-          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
-          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
         }
       });
     }

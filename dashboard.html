@@ -1437,7 +1437,7 @@
           </div>
           <div class="card-box clickable" onclick="openMetricsMsTrendPivotView()">
             <div class="card-box-header">
-              <div class="card-box-title"><h2 id="metricsMsChartTitle">KT ENA M/S 트렌드 (유료방송)</h2></div>
+              <div class="card-box-title"><h2 id="metricsMsChartTitle">KT ENA M/S (유료방송)</h2></div>
             </div>
             <div class="chart-container" style="height: 400px;">
               <canvas id="chartMetricsMarketShare"></canvas>
@@ -1449,7 +1449,7 @@
         <section class="grid-2col grid-zone5">
           <div class="card-box clickable" onclick="openMetricsRevenueTrendPivotView()">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>매출 트렌드</h2></div>
+              <div class="card-box-title"><h2>매출</h2></div>
               <div class="pills-group" onclick="event.stopPropagation()">
                 <button id="btnMetricsRevenueTrendLinear" class="pill-btn active" onclick="setMetricsRevenueTrendScale('linear')">선형</button>
                 <button id="btnMetricsRevenueTrendLog" class="pill-btn" onclick="setMetricsRevenueTrendScale('log')">로그</button>
@@ -1474,19 +1474,19 @@
              연결해줘"). 이 카드들엔 헤더 토글 버튼이 없어(제목만) event.stopPropagation()이 필요 없다. -->
         <section class="metrics-mini-grid">
           <div class="card-box clickable" onclick="openMetricsCprpTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>CPRP 트렌드</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>CPRP</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
             <div class="chart-container"><canvas id="chartMetricsCprpTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsRatingTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>채널시청률 트렌드</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>채널시청률</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
             <div class="chart-container"><canvas id="chartMetricsRatingTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsGrpTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>eq-GRPs 트렌드 (월누적)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>eq-GRPs (월누적)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
             <div class="chart-container"><canvas id="chartMetricsGrpTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsAdvCountTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>광고주수 트렌드</h2></div></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>광고주수</h2></div></div>
             <div class="chart-container"><canvas id="chartMetricsAdvCountTrend"></canvas></div>
           </div>
         </section>
@@ -1650,7 +1650,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">KT ENA M/S 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">KT ENA M/S — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">선택 사업자 전체 평균 점유율 (%)</div>
@@ -1743,7 +1743,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">매출 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">매출 — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">합계 : 매출 (백만원)</div>
@@ -1929,7 +1929,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">CPRP 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">CPRP — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 CPRP (원) · 수도권 개인 2049 기준</div>
@@ -2022,7 +2022,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">채널시청률 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">채널시청률 — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 채널시청률 (%) · 수도권 개인 2049 기준</div>
@@ -2115,7 +2115,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">eq-GRPs 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">eq-GRPs — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 eq-GRPs · 수도권 개인 2049 기준</div>
@@ -2208,7 +2208,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
-            <h2 class="hero-title">광고주수 트렌드 — 피벗 상세</h2>
+            <h2 class="hero-title">광고주수 — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 광고주수</div>
