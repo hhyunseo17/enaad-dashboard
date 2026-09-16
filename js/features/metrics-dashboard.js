@@ -473,7 +473,9 @@
     function toggleAllMetricsCheckboxes(type, master) {
       const container = document.getElementById(`listMetrics${type}Checkboxes`);
       container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = master.checked);
-      if (type === 'Operator') onMetricsOperatorCheckboxChange(); else onMetricsChannelCheckboxChange();
+      if (type === 'Operator') onMetricsOperatorCheckboxChange();
+      else if (type === 'Channel') onMetricsChannelCheckboxChange();
+      else if (type === 'DetailMetric') onMetricsDetailMetricCheckboxChange(); // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)
     }
     function updateMetricsDropdownLabel(type) {
       const label = document.getElementById(`labelMetrics${type}`); if (!label) return;

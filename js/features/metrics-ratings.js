@@ -198,12 +198,46 @@
     // pvRenderRows/pvFormatCell은 모든 값을 금액(÷1,000,000)으로 가정해 그대로 쓸 수 없다
     // (js/features/pivot-builder.js의 PIVOT_PRESETS.metricsDetail 주석 참고).
     // ------------------------------------------------------------
+    // File1 원본의 지표 번호(01./03./09.…) 순서 — metricLabel은 번호를 뗀 텍스트라(파일 헤더 주석
+    // 참고) metricCode로 다시 정렬해야 한다. 모든 지표가 metricsRatingsData에 최소 1행은 있다는
+    // 전제로 첫 등장 행의 metricCode를 그대로 쓴다(2026-09-16, 사용자 요청: "순서는 원본 파일에
+    // 있는 순서대로 놓자").
+    function metricsDetailMetricOrder() {
+      const order = {};
+      metricsRatingsData.forEach(r => { if (!(r.metricLabel in order)) order[r.metricLabel] = r.metricCode; });
+      return order;
+    }
+    // "③ 지표 선택" 체크박스 — ①사업자/②채널과 같은 멀티선택 패턴(metrics-dashboard.js 참고),
+    // 비어있으면 전체(2026-09-16, 사용자 요청: "각 항목(열제목) 선택할 수 있게 해주고"). 목록도
+    // File1 원본 순서(위 metricsDetailMetricOrder())로 보여준다.
+    function renderMetricsDetailMetricCheckboxes() {
+      const container = document.getElementById('listMetricsDetailMetricCheckboxes'); if (!container) return;
+      const order = metricsDetailMetricOrder();
+      const list = Object.keys(order).sort((a, b) => (parseInt(order[a], 10) || 0) - (parseInt(order[b], 10) || 0));
+      container.innerHTML = list.map(label => `<label class="checkbox-item"><input type="checkbox" value="${label}" onchange="onMetricsDetailMetricCheckboxChange()" ${metricsDetailSelectedMetrics.includes(label) ? 'checked' : ''}> ${label}</label>`).join('');
+      const checkAll = document.getElementById('checkAllMetricsDetailMetric');
+      if (checkAll) { const all = list.length > 0 && list.every(l => metricsDetailSelectedMetrics.includes(l)); checkAll.checked = all; checkAll.indeterminate = !all && metricsDetailSelectedMetrics.length > 0; }
+      const label = document.getElementById('labelMetricsDetailMetric');
+      if (label) {
+        if (metricsDetailSelectedMetrics.length === 0) label.innerText = '전체 지표';
+        else if (metricsDetailSelectedMetrics.length <= 2) label.innerText = metricsDetailSelectedMetrics.join(', ');
+        else label.innerText = `${metricsDetailSelectedMetrics.length}개 선택됨`;
+      }
+    }
+    function onMetricsDetailMetricCheckboxChange() {
+      const container = document.getElementById('listMetricsDetailMetricCheckboxes');
+      metricsDetailSelectedMetrics = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+      renderMetricsDetailPivot();
+    }
+
     function renderMetricsDetailPivot() {
       const preset = PIVOT_PRESETS.metricsDetail;
       preset.key = 'metricsDetail';
+      renderMetricsDetailMetricCheckboxes();
       const cfg = pvConfigFor('metricsDetail');
       const rowFields = cfg.rows, colFields = cfg.columns;
-      const rows = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode);
+      let rows = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode);
+      if (metricsDetailSelectedMetrics.length > 0) rows = rows.filter(r => metricsDetailSelectedMetrics.includes(r.metricLabel));
 
       const { root, colCombos } = pvBuildTree(rows, rowFields, colFields, cfg.values, ['(미지정)', '(미지정)'], cfg);
 
@@ -220,22 +254,29 @@
         return;
       }
       const out = [];
-      metricsRenderDetailRows(root, 0, [], visibleColumns, rowFields, preset.expandedRows(), out);
+      metricsRenderDetailRows(root, 0, [], visibleColumns, rowFields, preset.expandedRows(), !!preset.rowDefaultExpanded, metricsDetailMetricOrder(), out);
       document.getElementById('metricsDetailTableBody').innerHTML = mapPivotHtml(out.join(''));
     }
 
     // pvRenderRows와 같은 트리 재귀 구조이지만, 셀 포맷이 1단계 행 값(지표명)에 따라 달라진다는
     // 점만 다르다 — 그래서 그 하나를 위해 엔진 함수를 그대로 못 쓰고 이 얇은 사본을 둔다.
-    function metricsRenderDetailRows(node, depth, ancestorPath, visibleColumns, rowFields, expandedRows, out) {
+    function metricsRenderDetailRows(node, depth, ancestorPath, visibleColumns, rowFields, expandedRows, rowDefaultExpanded, metricOrder, out) {
       const hasMore = depth + 1 < rowFields.length;
-      const keys = Object.keys(node.children).sort((a, b) => pvCompareNames(a, b));
+      // depth 0(지표)은 File1 원본 번호 순서, 그 아래(채널 등)는 기존처럼 가나다순(2026-09-16,
+      // 사용자 요청: "순서는 원본 파일에 있는 순서대로 놓자" — metricLabel엔 번호가 없어(파일 헤더
+      // 주석 참고) metricCode로 정렬해야 한다).
+      const keys = depth === 0
+        ? Object.keys(node.children).sort((a, b) => (parseInt(metricOrder[a], 10) || 0) - (parseInt(metricOrder[b], 10) || 0))
+        : Object.keys(node.children).sort((a, b) => pvCompareNames(a, b));
       const rowMetricLabel = depth === 0 ? null : ancestorPath[0]; // 채널(depth1) 행의 포맷 기준은 부모(지표) 라벨
 
       keys.forEach(k => {
         const child = node.children[k];
         const path = ancestorPath.concat(k);
         const pathKey = path.join('||');
-        const isExpanded = !!expandedRows[pathKey];
+        // rowDefaultExpanded — pivot-builder.js togglePvRowNode()와 같은 원칙: 명시적으로 false가
+        // 아닌 한 펼침으로 읽는다(2026-09-16, 사용자 요청: "기본적으로 펼쳐놔야될 거 같은데").
+        const isExpanded = rowDefaultExpanded ? (expandedRows[pathKey] !== false) : !!expandedRows[pathKey];
         const thisMetricLabel = depth === 0 ? k : rowMetricLabel;
         const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('metricsDetail','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
         const st = depth === 0 ? 'background:#1E293B; color:#F8FAFC; font-weight:700;' : 'background:#151C2C; color:#CBD5E1;';
@@ -247,6 +288,6 @@
         });
         html += `</tr>`;
         out.push(html);
-        if (hasMore && isExpanded) metricsRenderDetailRows(child, depth + 1, path, visibleColumns, rowFields, expandedRows, out);
+        if (hasMore && isExpanded) metricsRenderDetailRows(child, depth + 1, path, visibleColumns, rowFields, expandedRows, rowDefaultExpanded, metricOrder, out);
       });
     }

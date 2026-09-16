@@ -1514,6 +1514,20 @@
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 style="font-size: 16px; font-weight: 600;">지표별 / 채널별 월간 상세</h2>
           </div>
+          <div class="filter-group">
+            <span class="filter-label">③ 지표</span>
+            <div class="multi-dropdown" id="dropdownMetricsDetailMetric">
+              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsDetailMetric')">
+                <span id="labelMetricsDetailMetric">전체 지표</span> ▾
+              </button>
+              <div class="multi-dropdown-panel" id="panelMetricsDetailMetric">
+                <label class="checkbox-item checkbox-item-all">
+                  <input type="checkbox" id="checkAllMetricsDetailMetric" onchange="toggleAllMetricsCheckboxes('DetailMetric', this)">전체선택
+                </label>
+                <div id="listMetricsDetailMetricCheckboxes" class="checkbox-list"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="table-wrapper" style="max-height: 700px;">
           <table class="data-table pivot-tree-table" id="metricsDetailTable">

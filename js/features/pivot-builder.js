@@ -635,6 +635,12 @@
         sourceFilter: null,
         dataSource: () => metricsRatingsData, // filteredData(매출)가 아니라 File1 파싱 결과
         columnDefaultExpanded: true,
+        // 대부분의 지표(CPRP·시청률 등)는 채널을 합친 "지표 전체 합계"가 무의미한 비율값이라, 접힌
+        // 채로 두면 그 의미 없는 합계 한 줄만 보인다 — 기본을 펼침으로 바꾼다(2026-09-16, 사용자
+        // 요청: "기본적으로 펼쳐놔야될 거 같은데. 합계가 의미 없는 거라 대부분"). columnDefaultExpanded와
+        // 같은 원칙 — togglePvRowNode()/metricsRenderDetailRows()가 이 값을 보고 "명시적으로 false가
+        // 아닌 한 펼침"으로 읽는다.
+        rowDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,
         header: PV_HEADER_TREE,
@@ -944,7 +950,9 @@
     function togglePvRowNode(presetKey, pathKey) {
       const preset = PIVOT_PRESETS[presetKey]; if (!preset) return;
       const map = preset.expandedRows();
-      map[pathKey] = !map[pathKey];
+      // rowDefaultExpanded(metricsDetail만 true) — columnDefaultExpanded와 같은 원칙: undefined는
+      // '펼침'으로 읽고, 접는 방향으로만 뒤집는다. 나머지 프리셋은 기존처럼 단순 토글.
+      map[pathKey] = preset.rowDefaultExpanded ? (map[pathKey] === false) : !map[pathKey];
       preset.render();
     }
     function togglePvColNode(presetKey, value) {

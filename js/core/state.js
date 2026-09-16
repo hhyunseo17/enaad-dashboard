@@ -291,8 +291,13 @@
     let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(①과 독립 — 후보 목록만 "범위" 안 전체 사업자 기준으로
                                             // 좁혀지고, ①에서 실제로 체크한 사업자와는 무관하다). 비어 있으면 CPRP/시청률/GRP
                                             // 등은 ①사업자별 대표채널로 자동 대체한다(metricsRatingsChannelSelection()).
-    let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태
+    let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태 — 기본 펼침(preset.rowDefaultExpanded)
+                                            // 이라 여기 명시적으로 false가 없는 한 전부 펼쳐진 것으로 읽는다(pivot-builder.js
+                                            // togglePvRowNode() 참고, 2026-09-16 — "기본적으로 펼쳐놔야될 거 같은데").
     let expandedMetricsDetailYearColumns = {}; // metricsDetail 상세표: 연도 열 펼침 상태
+    let metricsDetailSelectedMetrics = []; // metricsDetail 상세표: ③ 지표(metricLabel) 선택(복수, 비어있으면 전체) —
+                                            // ①사업자/②채널과 같은 체크박스 멀티선택 패턴(2026-09-16, 사용자 요청: "각
+                                            // 항목(열제목) 선택할 수 있게 해주고").
 
     // 매출 4개 차트(시장규모 추이/M-S 트렌드/매출 트렌드/매출 랭킹) 각각의 전용 피벗 화면 —
     // 매출 대시보드의 openCategoryPivotView() 등과 같은 관례로 카드 클릭 → switchView()(2026-09-16,
