@@ -481,19 +481,23 @@
     // 매출 트렌드(라인, 비교단위별) / 매출 랭킹(가로막대, 선택 항목 강조)
     // ------------------------------------------------------------
     function metricsIsEnaName(name) { return name === ENA_CHANNEL_GROUP || name === ENA_REPRESENTATIVE_CHANNEL; }
-    // KT ENA는 항상 RC('curr')(theme-system.js SERIES_ROLES.curr — 파랑)를 쓰는데, 서수 팔레트
-    // (seriesColor(), SERIES_PALETTE_*)의 0번이 정확히 같은 계열의 파랑이라 다른 계열이 이 0번을
-    // 배정받으면 ENA와 색이 겹친다 — 특히 비ENA 계열이 10개(팔레트 길이)를 넘어가면 나머지가
-    // 팔레트를 한 바퀴 돌아 다시 0번(파랑)을 받는 경우가 실제로 있었다(2026-09-16, 사용자 지적 —
-    // "KT ENA랑 SBS미디어넷 색이 너무 비슷해", "파란색은 KT ENA 하나만 쓰자"). ENA가 아닌 계열
-    // (사업자·채널·지상파/종편/케이블 구분 전부)에 색을 줄 땐 이 헬퍼로 0번(파랑)을 아예 건너뛰고
-    // 1~9번 9색만 순환한다.
-    // ⚠ 호출부 주의: i는 반드시 "ENA를 뺀 목록"에서 0부터 매긴 인덱스여야 한다 — 원래 배열의
-    // 위치(ENA 포함)를 그대로 넘기면 (i%9)+1 순환 특성상 9씩 차이나는 두 인덱스(예: 1과 10)가
-    // 같은 나머지를 내 서로 다른 두 계열이 같은 색을 받는 충돌이 생긴다(2026-09-16, 실제로
-    // 발생 — "채널A랑 SBS미디어넷 거의 같은 색인데"). `list.filter(x => !isEna(x)).indexOf(x)`
-    // 패턴으로 다시 매긴 인덱스를 넘길 것.
-    function metricsCompetitorColor(i) { return seriesColor((i % 9) + 1); }
+    // KT ENA 전용 경쟁사 팔레트 — 왜 theme-system.js의 서수 팔레트(seriesColor(), 10색)를 그대로 못
+    // 쓰는지: 그 팔레트의 0번이 KT ENA 전용 강조색 RC('curr')과 같은 계열의 파랑이라 빼야 했는데,
+    // 그러면 9색밖에 안 남는다 — File1 사업자는 최대 14개(ENA 포함, "지상파+유료방송" 범위 선택
+    // 시)라 ENA를 뺀 비ENA가 최대 13개까지 나올 수 있고, 9색으로는 부족해 몇 번째와 아홉 번째
+    // 뒤 항목이 반드시 겹친다(2026-09-16, 실제로 발생 — "채널A랑 SBS미디어넷 거의 같은 색인데,
+    // 파란색은 KT ENA 하나만 쓰자"는 요구와 "9개 넘으면 색이 부족하다"는 두 요구를 함께 만족하려면
+    // 이 화면 전용으로 최소 13색이 필요하다). 그래서 서수 팔레트를 재활용하는 대신 파랑(180~245°)을
+    // 통째로 비워 둔 13색 전용 팔레트를 새로 둔다 — 색상환을 고르게 나눠 서로 최소 20°+ 떨어뜨렸다.
+    const METRICS_COMPETITOR_PALETTE_LIGHT = ['#E78B74','#FFB347','#FFDC52','#B9D85A','#76CF59','#59CF6D','#6AD7AA','#68C8D9','#8B8AE5','#B88AE5','#E378CE','#FF758F','#B2B5B8'];
+    const METRICS_COMPETITOR_PALETTE_DARK  = ['#E76240','#FFA629','#FFD429','#AED831','#58CF30','#30CF4B','#43D698','#41C1D8','#5D5AE2','#9E5AE2','#E147C2','#FF5271','#93999F'];
+    // ⚠ 호출부 주의: i는 반드시 "ENA를 뺀 목록"에서 0부터 매긴 인덱스여야 한다(원래 배열 위치를
+    // 그대로 넘기면 안 됨 — ENA가 차지한 자리만큼 인덱스가 밀려 있어 다른 계열끼리 겹칠 수 있다).
+    // `list.filter(x => !isEna(x)).indexOf(x)` 패턴으로 다시 매긴 인덱스를 넘길 것.
+    function metricsCompetitorColor(i) {
+      const pal = currentTheme === 'light' ? METRICS_COMPETITOR_PALETTE_LIGHT : METRICS_COMPETITOR_PALETTE_DARK;
+      return pal[i % pal.length];
+    }
 
     // 선형/로그 축 토글 — CJ ENM처럼 압도적으로 큰 사업자가 하나 섞이면 선형축에서 나머지가 전부
     // 바닥에 뭉개져 보인다(사용자 지적, 2026-09-15). "로그"는 값 자체(억원)는 그대로 두고 축 간격만
