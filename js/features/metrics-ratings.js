@@ -82,7 +82,15 @@
       let months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.value !== 0).map(r => r.month))].sort((a, b) => a - b);
       if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
       const labels = months.map(m => `${m}월`);
-      const channels = metricsRatingsChannelSelection();
+      // File1의 채널 단위 지표(03~15번)는 실제로 15개 채널만 있다(위 "①②선택" 관련 주석 참고) —
+      // MBN/TV조선/채널A/iHQ/티캐스트처럼 그 15개에 없는 사업자를 대표채널로 골라도 이 지표엔 값
+      // 자체가 없어 빈 줄만 그려졌다. 범례에 있는데 선이 안 보이는 게 혼란스럽다는 지적(2026-09-16,
+      // "여기는 다 안 나오는 거 같은데? 5개만 보여") — "데이터가 아예 없는 채널은 범례에서 제외"로
+      // 확정. ①②선택 자체(metricsSelectedOperators/Channels)는 안 건드리고, 이 4개 미니차트가
+      // 그리는 시점에만 "이 metricCode+indexMode로 File1에 단 한 행이라도 있는 채널"만 남긴다
+      // (연도 제한 없이 확인 — 구조적으로 없는 채널과 "이 연도만 마침 없는" 채널을 구분하기 위해서다).
+      const channels = metricsRatingsChannelSelection()
+        .filter(ch => metricsRatingsData.some(r => r.metricCode === metricCode && r.indexMode === indexMode && r.channel === ch));
       const nonEnaChannels = channels.filter(ch => !ENA_CHANNELS.includes(ch)); // metricsCompetitorColor() 색 충돌 방지(metrics-dashboard.js 참고)
 
       const datasets = channels.map((ch) => {
