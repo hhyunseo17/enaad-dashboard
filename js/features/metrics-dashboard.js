@@ -147,10 +147,19 @@
     // ------------------------------------------------------------
     // ① 사업자 / ② 채널 후보 목록 — File1(경쟁채널 지표 현황) 하나로 통일(2026-09-16).
     // ------------------------------------------------------------
+    // 정렬: KT ENA 항상 맨 앞 → 지상파/종편/케이블 그룹별로 묶어서 → 그룹 안에서는 가나다순
+    // (2026-09-16, 사용자 요청 — "케이블은 케이블끼리, 종편은 종편끼리 붙여놔줘". METRICS_OPERATOR_SCOPE는
+    // metrics-data-loader.js의 사업자→범위 하드코딩 맵을 그대로 재사용).
+    const METRICS_SCOPE_ORDER = { '지상파': 0, '종편': 1, '케이블': 2 };
     function metricsAllOperatorGroups() {
       const set = new Set();
       metricsRevenueData.filter(r => metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => set.add(r.channelGroup));
-      return [...set].sort((a, b) => (a === ENA_CHANNEL_GROUP ? -1 : b === ENA_CHANNEL_GROUP ? 1 : a.localeCompare(b, 'ko')));
+      return [...set].sort((a, b) => {
+        if (a === ENA_CHANNEL_GROUP) return -1;
+        if (b === ENA_CHANNEL_GROUP) return 1;
+        const rankDiff = (METRICS_SCOPE_ORDER[METRICS_OPERATOR_SCOPE[a]] ?? 99) - (METRICS_SCOPE_ORDER[METRICS_OPERATOR_SCOPE[b]] ?? 99);
+        return rankDiff !== 0 ? rankDiff : a.localeCompare(b, 'ko');
+      });
     }
     // 선택된 사업자(들)에 속한 개별 채널 후보 — metrics-data-loader.js의 METRICS_OPERATOR_CHANNEL_MAP
     // 하드코딩 맵을 그대로 따른다(File1엔 사업자→채널 대응관계를 알려주는 컬럼이 없다).
