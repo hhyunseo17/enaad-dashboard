@@ -903,9 +903,10 @@
       const errorEl = document.getElementById('metricsErrorMessage');
       const bodyEl = document.getElementById('metricsContentBody');
 
+      const loadingTextEl = document.getElementById('metricsLoadingMessageText');
       if (!metricsDataLoaded) {
-        loadingEl.innerText = '경쟁채널 지표 데이터를 불러오는 중입니다…';
-        loadingEl.style.display = ''; errorEl.style.display = 'none'; bodyEl.style.display = 'none';
+        loadingTextEl.innerText = '경쟁채널 지표 데이터를 불러오는 중입니다…';
+        loadingEl.style.display = 'flex'; errorEl.style.display = 'none'; bodyEl.style.display = 'none';
         fetchMetricsDataHttp()
           .then(() => { if (currentView === 'metricsMain') renderMetricsDashboard(); })
           .catch(err => {
@@ -917,7 +918,7 @@
       if (!rawData || rawData.length === 0) {
         // 자사(ENA) 매출 치환에 rawData(메인 매출 데이터셋)가 필요하다 — 정상 흐름이면 부팅 시 이미
         // 로드돼 있지만(plan 확정사항), 극단적으로 먼저 열린 경우를 위해 짧게 대기 후 재시도한다.
-        loadingEl.innerText = '매출 데이터 로딩 중…'; loadingEl.style.display = ''; bodyEl.style.display = 'none';
+        loadingTextEl.innerText = '매출 데이터 로딩 중…'; loadingEl.style.display = 'flex'; bodyEl.style.display = 'none';
         setTimeout(() => { if (currentView === 'metricsMain') renderMetricsDashboard(); }, 1500);
         return;
       }

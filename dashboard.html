@@ -1337,7 +1337,10 @@
         </div>
       </section>
 
-      <div id="metricsLoadingMessage" style="display:none; padding: 60px 20px; text-align:center; color: var(--text-secondary); font-size: 14px;">경쟁채널 지표 데이터를 불러오는 중입니다…</div>
+      <div id="metricsLoadingMessage" style="display:none; padding: 60px 20px; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
+        <div class="spinner"></div>
+        <div id="metricsLoadingMessageText" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">경쟁채널 지표 데이터를 불러오는 중입니다…</div>
+      </div>
       <div id="metricsErrorMessage" style="display:none; padding: 20px; text-align:center; color: var(--accent-red); font-size: 13px;"></div>
 
       <div id="metricsContentBody" style="display:none; flex-direction: column; gap: 20px;">
