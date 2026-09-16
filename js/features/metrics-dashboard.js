@@ -708,7 +708,15 @@
         data: {
           labels, datasets: series.map((ser, i) => ({
             label: ser.label, data: dataBySeries[i], backgroundColor: ddBarFill(ser.color), borderRadius: 0, _isEna: !!ser.isEna, ...ddStackSeparator(),
-            datalabels: isShare ? { display: false } : {
+            // "비중" 모드는 각 스택 구간 안에 그 구간의 %를 직접 라벨로 넣는다(2026-09-16, 사용자 요청:
+            // "비중에는 차트 내부에 몇 %인지 데이터레이블 넣어줄래?"). 구간이 너무 얇으면(5% 미만) 글자가
+            // 삐져나오거나 겹쳐서 아예 생략 — "금액" 모드의 합계 라벨(스택 맨 위에만, 막대 밖 표시)과는
+            // 성격이 달라 분기를 완전히 나눴다.
+            datalabels: isShare ? {
+              display: (dctx) => (dctx.dataset.data[dctx.dataIndex] || 0) >= 5,
+              anchor: 'center', align: 'center', color: '#fff', font: { size: 11, weight: FW() },
+              formatter: (value) => value.toFixed(0) + '%'
+            } : {
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
               display: (ctx) => i === series.length - 1,
               anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
