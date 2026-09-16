@@ -40,13 +40,57 @@
     }
     function metricsPrevYearPeriod(p) { return p ? { year: p.year - 1, month: p.month } : null; }
 
+    // 연도 선택(복수) 스코프 — 비어있으면(="전체" pill을 명시적으로 고른 상태) 데이터에 있는 연도
+    // 전부를, 아니면 선택된 연도만 오름차순으로 돌려준다. 매출 대시보드의 selectedYears와 같은
+    // 원칙(2026-09-16, "지표 대시보드 전체로 확장" 확정) — 아래 metricsSelectedPeriods()가 이
+    // 목록으로 연도×월을 순회한다.
+    function metricsYearsInScope() {
+      if (metricsSelectedYears.length > 0) return [...metricsSelectedYears].sort((a, b) => a - b);
+      return [...new Set(metricsRevenueData.map(r => r.year))].sort((a, b) => a - b);
+    }
+    // 단일-연도 전제 기능(YoY 등 — filters.js의 "단일 앵커" 관례와 같은 원칙, 2026-09-16)이 기준으로
+    // 삼는 "대표 연도" — 연도 스코프 중 최신.
+    function metricsPrimaryYear() {
+      const years = metricsYearsInScope();
+      return years.length ? years[years.length - 1] : new Date().getFullYear();
+    }
+    // rows(데이터 배열) 안에서 연도 스코프 × 월 선택(비어있으면 그 연도의 전체 월)을 모두 펼친
+    // {year,month} 목록 — 연도→월 오름차순. "선택 연도 하나"를 전제로 짠 단일-루프 대신 차트/KPI가
+    // 전부 이 목록 하나로 순회하도록 통일한다.
+    function metricsSelectedPeriods(rows) {
+      const periods = [];
+      metricsYearsInScope().forEach(year => { metricsMonthsInYear(rows, year).forEach(month => periods.push({ year, month })); });
+      return periods;
+    }
+    // 차트 x축 라벨 — 연도가 스코프에 하나뿐이면 기존과 동일하게 "9월", 여러 연도가 섞이면 어느
+    // 해인지 구분이 안 되므로 "25.9"(연도 뒤 2자리+점+월) 형식을 쓴다.
+    function metricsPeriodLabel(p) {
+      return metricsYearsInScope().length > 1 ? `${String(p.year).slice(2)}.${p.month}` : `${p.month}월`;
+    }
+    // "조회조건"(연도/월 선택) 전체를 사람이 읽는 한 줄로 — KPI 서브라벨·랭킹차트 제목이 쓴다.
+    // 단일 기간이면 "2026년 9월", 한 연도 안 여러 달이면 기존과 동일한 "~월 누적", 여러 연도가
+    // 섞이면 "2025~2026년 누적(N개월)"로 뭉뚱그린다(연도별로 선택된 달이 다를 수 있어 월 목록을
+    // 그대로 나열하면 너무 길어진다).
+    function metricsPeriodRangeLabel(periods) {
+      if (!periods.length) return '';
+      if (periods.length === 1) return `${periods[0].year}년 ${periods[0].month}월`;
+      const years = [...new Set(periods.map(p => p.year))];
+      if (years.length === 1) {
+        const months = periods.map(p => p.month);
+        const isContiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
+        return isContiguous ? `${years[0]}년 ${months[0]}~${months[months.length - 1]}월 누적` : `${years[0]}년 ${months.join(',')}월 누적`;
+      }
+      return `${years[0]}~${years[years.length - 1]}년 누적(${periods.length}개월)`;
+    }
+
     // 매출 4개 차트 피벗(pivot-builder.js PIVOT_PRESETS)의 dataSource — 위쪽 "조회조건"(연도/월 선택)
     // 으로 미리 좁힌 파생 배열. 매출 대시보드의 filteredData(top filter-bar로 이미 좁혀진 뒤 피벗에
     // 들어감)와 구조를 맞춘다(2026-09-16, 사용자 지적: "기본값은 26년 전체인데 피벗도 그래야지 —
     // 조회조건 위에 그대로 걸려있는 게 매출대시보드랑 구조적으로 같다"). metricsRevenueData 원본을
     // 그대로 넘기면 File1이 갖고 있는 2021~2026년 전체가 다 보여 위쪽 조회조건과 안 맞았다.
     function metricsRevenueDataForPivot() {
-      return metricsRevenueData.filter(r => r.year === metricsSelectedYear && (metricsSelectedMonths.length === 0 || metricsSelectedMonths.includes(r.month)));
+      const years = metricsYearsInScope();
+      return metricsRevenueData.filter(r => years.includes(r.year) && (metricsSelectedMonths.length === 0 || metricsSelectedMonths.includes(r.month)));
     }
 
     // 전월비/전년비 배지 공용 계산. curr/prev 어느 한쪽이라도 없으면(연-월 데이터 없음) null —
@@ -137,15 +181,16 @@
       return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
     }
     function metricsMarketAndShareAt(period, scopeMode) { return period ? computeEnaPayTvMarketShare(period.year, period.month, scopeMode) : null; }
-    // 선택된 달들(월 선택 pill — 비어있으면 "전체")을 누적 합산한 버전. KPI1·2가 "월선택 전체"인데도
-    // 최신 1개월(9월)만 보여줘 매출 랭킹/트렌드와 기준이 안 맞아 보인다는 지적(2026-09-16, 사용자:
-    // "월선택 전체인데 1~9월로 안 나오지? 9월만 같은데")을 받아 신설 — renderMetricsRevenueKpis()가
-    // 단일 월 선택 땐 여전히 위 단일-기간 버전을 쓰고, 여러 달(또는 전체)이 선택되면 이걸 쓴다.
-    function metricsMarketAndShareOverMonths(months, year, scopeMode) {
-      if (!months.length) return null;
+    // 선택된 기간들(연도 복수선택 × 월 선택 pill — metricsSelectedPeriods())을 누적 합산한 버전.
+    // KPI1·2가 "월선택 전체"인데도 최신 1개월(9월)만 보여줘 매출 랭킹/트렌드와 기준이 안 맞아
+    // 보인다는 지적(2026-09-16, 사용자: "월선택 전체인데 1~9월로 안 나오지? 9월만 같은데")을 받아
+    // 신설 — renderMetricsRevenueKpis()가 단일 기간 선택 땐 여전히 위 단일-기간 버전을 쓰고, 여러
+    // 기간(달 또는 연도, 또는 둘 다)이 선택되면 이걸 쓴다.
+    function metricsMarketAndShareOverPeriods(periods, scopeMode) {
+      if (!periods.length) return null;
       let market = 0, ena = 0;
-      months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year, month: m }, scopeMode);
+      periods.forEach(p => {
+        const groups = metricsGroupRevenueMap(p, scopeMode);
         market += Object.values(groups).reduce((s, v) => s + v, 0);
         ena += groups[ENA_CHANNEL_GROUP] || 0;
       });
@@ -166,13 +211,13 @@
       return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
     }
     function metricsSelectionMarketAndShareAt(period) { return period ? computeEnaSelectionMarketShare(period.year, period.month) : null; }
-    // 위 metricsMarketAndShareOverMonths()의 선택 사업자 기준 버전 — KPI3(M/S)가 쓴다.
-    function metricsSelectionMarketAndShareOverMonths(months, year) {
-      if (!months.length) return null;
+    // 위 metricsMarketAndShareOverPeriods()의 선택 사업자 기준 버전 — KPI3(M/S)가 쓴다.
+    function metricsSelectionMarketAndShareOverPeriods(periods) {
+      if (!periods.length) return null;
       const ops = metricsSelectedOperators.length ? metricsSelectedOperators : [ENA_CHANNEL_GROUP];
       let market = 0, ena = 0;
-      months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year, month: m }, 'all');
+      periods.forEach(p => {
+        const groups = metricsGroupRevenueMap(p, 'all');
         ops.forEach(op => { market += (groups[op] || 0); });
         ena += groups[ENA_CHANNEL_GROUP] || 0;
       });
@@ -232,9 +277,10 @@
 
     // 첫 렌더에서만 기본값을 채운다(사용자가 이미 고른 선택은 건드리지 않는다).
     function metricsEnsureDefaultSelections() {
-      if (metricsSelectedYear === null) {
+      if (!metricsYearsInitialized) {
         const years = [...new Set(metricsRevenueData.map(r => r.year))];
-        metricsSelectedYear = years.length ? Math.max(...years) : new Date().getFullYear();
+        metricsSelectedYears = years.length ? [Math.max(...years)] : [new Date().getFullYear()];
+        metricsYearsInitialized = true;
       }
       if (!metricsOperatorsInitialized) {
         // 기본값은 "범위"(기본 유료방송) 안에 있는 사업자 전부다(2026-09-16, 사용자 요청: "유료방송에
@@ -276,10 +322,15 @@
       document.getElementById('btnMetricsScopeAll').classList.toggle('active', mode === 'all');
       document.getElementById('btnMetricsScopePayTv').classList.toggle('active', mode === 'payTv');
       document.getElementById('btnMetricsScopeCable').classList.toggle('active', mode === 'cable');
-      // "지상파+유료방송"으로 넓히면 새로 후보에 들어온 지상파 3사가 기본으로 체크돼 있어야
-      // 자연스럽다는 지적(2026-09-16, 사용자: "지상파+유료방송 선택하면 기본적으로 지상파 3사
-      // 채널사업자가 선택되어 있어야할 듯") — 이미 선택된 것들은 그대로 두고 지상파만 추가한다
-      // (반대로 다른 범위로 좁힐 때 지상파를 도로 빼지는 않는다 — 사용자가 직접 고른 선택은 건드리지 않는다).
+      // 범위 토글에 따라 ①선택도 자동으로 들어오고 나가야 한다(2026-09-16, 사용자 요청: "지상파+
+      // 유료방송 일때는 지상파 3개 채널이 추가로 찍혔다가 유료방송을 클릭하면 그 3개 채널이 빠져야지,
+      // 케이블 찍었을 때는 또 종편 채널들이 빠져야될 거고" + "토글에 따라 각 채널그룹들이 자동으로
+      // 들어왔다 나갔다 해야되는데"). 매번 먼저 "새 범위 밖으로 나간 선택"을 걸러내고(metricsScopeMatchRow —
+      // KT ENA는 scope가 '케이블'이라 세 모드 전부에서 항상 살아남는다), 그 다음 'all'로 넓힐 때만
+      // 지상파 3사를 추가한다 — 좁힐 때 지상파/종편이 자동으로 빠지고, 다시 넓히면 지상파가 자동으로
+      // 돌아오는 왕복 토글이 된다(이전엔 좁힐 때 선택을 그대로 뒀었는데, 그러면 "유료방송"으로 좁혀도
+      // 지상파 3사가 여전히 체크된 채 남아 범위와 선택이 어긋났다).
+      metricsSelectedOperators = metricsSelectedOperators.filter(op => metricsScopeMatchRow({ scope: METRICS_OPERATOR_SCOPE[op] }, mode));
       if (mode === 'all') {
         Object.keys(METRICS_OPERATOR_SCOPE).filter(op => METRICS_OPERATOR_SCOPE[op] === '지상파').forEach(op => {
           if (!metricsSelectedOperators.includes(op)) metricsSelectedOperators.push(op);
@@ -304,14 +355,38 @@
     // 지적 — "조회조건이 위에 보여야지", 매출 대시보드의 filter-bar가 모든 피벗 화면에서 계속
     // 보이고 조작 가능한 것과 구조를 맞춘다). containerId/onChange를 인자로 받는 범용 버전을 만들고,
     // metricsMain 전용 함수들은 그 버전을 자기 컨테이너로 호출하는 얇은 래퍼로 남긴다 — 전역 상태
-    // (metricsSelectedYear/Months)는 하나뿐이라 어느 화면에서 바꾸든 나머지 화면에도 그대로 이어진다.
+    // (metricsSelectedYears/Months)는 하나뿐이라 어느 화면에서 바꾸든 나머지 화면에도 그대로 이어진다.
+    // 연도 pill도 월 pill과 같은 복수선택 규칙(클릭=교체, 재클릭=해제, Ctrl/⌘/Shift=가감)을 쓴다 —
+    // 매출 대시보드의 setupYearPills()(js/core/filters.js)와 정확히 같은 패턴, nextPillSelection/
+    // isAdditiveClick도 그대로 재사용(2026-09-16, 사용자 요청: "조회조건에 연도가 복수선택이 안
+    // 되네" → "지표 대시보드 전체로 확장"하기로 확정). "전체" 버튼(빈 배열)도 매출 대시보드와 같은
+    // 의미 — 데이터에 있는 모든 연도를 합산해서 본다는 뜻이지, "아직 안 골랐음"이 아니다.
     function metricsSetupYearPills(containerId, onChange) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      const years = [...new Set(metricsRevenueData.map(r => r.year))].sort((a, b) => b - a);
-      container.innerHTML = years.map(y => `<button class="pill-btn${y === metricsSelectedYear ? ' active' : ''}" data-year="${y}">${y}년</button>`).join('');
+      if (!container.dataset.wired) {
+        const years = [...new Set(metricsRevenueData.map(r => r.year))].sort((a, b) => b - a);
+        container.innerHTML = `<button class="pill-btn" data-year="all">전체</button>` +
+          years.map(y => `<button class="pill-btn" data-year="${y}">${y}년</button>`).join('');
+        container.dataset.wired = '1';
+        container.querySelectorAll('.pill-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const val = btn.getAttribute('data-year');
+            if (val === 'all') metricsSelectedYears = [];
+            else metricsSelectedYears = nextPillSelection(metricsSelectedYears, parseInt(val, 10), isAdditiveClick(e));
+            metricsSyncYearPillActive(containerId);
+            onChange();
+          });
+        });
+      }
+      metricsSyncYearPillActive(containerId); // 다른 화면에서 바뀐 값과 동기화(월 pill과 동일 원칙)
+    }
+    function metricsSyncYearPillActive(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
       container.querySelectorAll('.pill-btn').forEach(btn => {
-        btn.addEventListener('click', () => { metricsSelectedYear = parseInt(btn.getAttribute('data-year'), 10); onChange(); });
+        const val = btn.getAttribute('data-year');
+        btn.classList.toggle('active', val === 'all' ? metricsSelectedYears.length === 0 : metricsSelectedYears.includes(parseInt(val, 10)));
       });
     }
     function metricsSyncMonthPillActive(containerId) {
@@ -416,29 +491,36 @@
     // 전년비(YoY)는 누적 상태에서도 "같은 개월수의 전년 동기"와 비교하면 되므로 그대로 유지한다.
     // ------------------------------------------------------------
     function renderMetricsRevenueKpis() {
-      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
-      if (!months.length) {
+      const periods = metricsSelectedPeriods(metricsRevenueData);
+      if (!periods.length) {
         ['MarketSizeAll', 'MarketSize', 'Share'].forEach(k => {
           document.getElementById(`metricsKpi${k}Value`).innerText = k === 'Share' ? '- %' : '- 억원';
           metricsRenderBadge(`metricsKpi${k}MomBadge`, '', null); metricsRenderBadge(`metricsKpi${k}YoyBadge`, '', null);
         });
         return;
       }
-      const isRange = months.length > 1;
-      const periodLabel = metricsPeriodRangeLabel(metricsSelectedYear, months);
-      const latestPeriod = { year: metricsSelectedYear, month: months[months.length - 1] };
+      const isRange = periods.length > 1;
+      // 전년비(YoY)는 "선택 연도 하나"가 전제인 단일-앵커 기능이다(js/core/filters.js의 selectedYears
+      // 단일-앵커 관례와 같은 원칙, 2026-09-16 "지표 대시보드 전체로 확장" 확정) — 여러 연도를 같이
+      // 선택하면 "그 전년"이 어느 해를 가리키는지 모호해져 배지를 숨긴다. 전월비(MoM)는 원래도 여러
+      // 기간(달) 선택 시 숨겼는데, 그 기준이 이제 "여러 달" 뿐 아니라 "여러 연도"도 포함한다(periods.length가
+      // 그 둘을 이미 합쳐서 센다).
+      const isMultiYear = metricsYearsInScope().length > 1;
+      const periodLabel = metricsPeriodRangeLabel(periods);
+      const latestPeriod = periods[periods.length - 1];
+      const yoyPeriods = isMultiYear ? [] : periods.map(p => ({ year: p.year - 1, month: p.month }));
 
-      const currAll = metricsMarketAndShareOverMonths(months, metricsSelectedYear, 'all');
+      const currAll = metricsMarketAndShareOverPeriods(periods, 'all');
       const momAll = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'all');
-      const yoyAll = metricsMarketAndShareOverMonths(months, metricsSelectedYear - 1, 'all');
+      const yoyAll = isMultiYear ? null : metricsMarketAndShareOverPeriods(yoyPeriods, 'all');
       document.getElementById('metricsKpiMarketSizeAllValue').innerText = metricsFmtNum(currAll.market / 1e8, 2) + ' 억원';
       document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 지상파+유료방송`;
       metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', momAll && metricsGrowthPct(currAll.market, momAll.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
 
-      const currPay = metricsMarketAndShareOverMonths(months, metricsSelectedYear, 'payTv');
+      const currPay = metricsMarketAndShareOverPeriods(periods, 'payTv');
       const momPay = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'payTv');
-      const yoyPay = metricsMarketAndShareOverMonths(months, metricsSelectedYear - 1, 'payTv');
+      const yoyPay = isMultiYear ? null : metricsMarketAndShareOverPeriods(yoyPeriods, 'payTv');
       document.getElementById('metricsKpiMarketSizeValue').innerText = metricsFmtNum(currPay.market / 1e8, 2) + ' 억원';
       document.getElementById('metricsKpiMarketSizeSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 종편+케이블`;
       metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', momPay && metricsGrowthPct(currPay.market, momPay.market), '%');
@@ -446,9 +528,9 @@
 
       // M/S는 KPI1·2와 달리 ①선택 사업자 합 기준(2026-09-16) — "시장"이 전체가 아니라 지금 고른
       // 사업자들의 합(ENA 포함)이라, 어떤 경쟁사를 고르느냐에 따라 값이 달라진다.
-      const currSel = metricsSelectionMarketAndShareOverMonths(months, metricsSelectedYear);
+      const currSel = metricsSelectionMarketAndShareOverPeriods(periods);
       const momSel = isRange ? null : metricsSelectionMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod));
-      const yoySel = metricsSelectionMarketAndShareOverMonths(months, metricsSelectedYear - 1);
+      const yoySel = isMultiYear ? null : metricsSelectionMarketAndShareOverPeriods(yoyPeriods);
       document.getElementById('metricsKpiShareValue').innerText = currSel.share.toFixed(1) + ' %';
       document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 ÷ 선택 사업자 ${metricsSelectedOperators.length}개 합 ${metricsFmtNum(currSel.market / 1e8, 2)}억원 · ${periodLabel}`;
       metricsRenderBadge('metricsKpiShareMomBadge', '전월', momSel && metricsPointDiff(currSel.share, momSel.share), '%p');
@@ -468,12 +550,12 @@
       const canvas = document.getElementById('chartMetricsMarketByScope'); if (!canvas) return;
       if (chartInstances.metricsMarketByScope) { chartInstances.metricsMarketByScope.destroy(); chartInstances.metricsMarketByScope = null; }
 
-      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      const periods = metricsSelectedPeriods(metricsRevenueData);
       const ops = metricsSelectedOperators;
       const isShare = metricsMarketByScopeMode === 'share';
       const byCategory = metricsMarketByScopeGrouping === 'category';
-      if (!months.length || !ops.length) { document.getElementById('metricsMarketByScopeChartTitle').innerText = '방송광고시장 규모 추이'; return; }
-      const labels = months.map(m => `${m}월`);
+      if (!periods.length || !ops.length) { document.getElementById('metricsMarketByScopeChartTitle').innerText = '방송광고시장 규모 추이'; return; }
+      const labels = periods.map(metricsPeriodLabel);
 
       // series: byCategory면 ①선택 사업자들이 실제로 속한 지상파/종편/케이블만(있는 것만) 지상파→
       // 종편→케이블 순서로(케이블이 배열 맨 끝 = 스택 맨 위, KT ENA가 속한 구분이라 이미 맨 위에 옴),
@@ -499,8 +581,8 @@
       }
 
       const dataBySeries = series.map(() => []);
-      months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, 'all'); // 선택 자체가 이미 범위 안에서 고른 것 — 이중 필터링 안 함
+      periods.forEach(p => {
+        const groups = metricsGroupRevenueMap(p, 'all'); // 선택 자체가 이미 범위 안에서 고른 것 — 이중 필터링 안 함
         const valueByKey = {};
         if (byCategory) {
           series.forEach(s => { valueByKey[s.key] = 0; });
@@ -548,10 +630,10 @@
       if (chartInstances.metricsMs) { chartInstances.metricsMs.destroy(); chartInstances.metricsMs = null; }
       document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S 트렌드 (선택 사업자 ${metricsSelectedOperators.length}개 기준)`;
 
-      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
-      if (!months.length) return;
-      const labels = months.map(m => `${m}월`);
-      const shareVals = months.map(m => computeEnaSelectionMarketShare(metricsSelectedYear, m).share);
+      const periods = metricsSelectedPeriods(metricsRevenueData);
+      if (!periods.length) return;
+      const labels = periods.map(metricsPeriodLabel);
+      const shareVals = periods.map(p => computeEnaSelectionMarketShare(p.year, p.month).share);
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsMs = new Chart(ctx, {
@@ -618,15 +700,15 @@
     function renderMetricsRevenueTrendChart() {
       const canvas = document.getElementById('chartMetricsRevenueTrend'); if (!canvas) return;
       if (chartInstances.metricsRevTrend) { chartInstances.metricsRevTrend.destroy(); chartInstances.metricsRevTrend = null; }
-      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
-      const labels = months.map(m => `${m}월`);
+      const periods = metricsSelectedPeriods(metricsRevenueData);
+      const labels = periods.map(metricsPeriodLabel);
       const names = metricsSelectedOperators;
       const isLog = metricsRevenueTrendScale === 'log';
       const nonEnaNames = names.filter(n => !metricsIsEnaName(n)); // metricsCompetitorColor() 색 충돌 방지(아래 참고)
 
       const datasets = names.map((name) => {
-        const data = months.map(m => {
-          const v = (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8;
+        const data = periods.map(p => {
+          const v = (metricsGroupRevenueMap(p, metricsScopeMode)[name] || 0) / 1e8;
           return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
         const color = metricsIsEnaName(name) ? RC('curr') : metricsCompetitorColor(nonEnaNames.indexOf(name));
@@ -640,38 +722,38 @@
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 12, weight: FW() } } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${metricsFmtNum(c.raw, 2)} 억원` } } },
+          // grace:0 — 매출은 음수가 될 수 없는데 ddValueAxis() 기본값(grace:15%)이 데이터 최솟값(0
+          // 근처) 아래로도 15% 여유를 대칭으로 붙여, Chart.js가 "예쁜 간격"을 고르는 과정에서 축이
+          // -100억부터 시작해버렸다(사용자 지적, 2026-09-16: "얘는 -100억부터 있는 이유가 뭐야") —
+          // 매출 랭킹 차트(아래 renderMetricsRevenueRankingChart)가 이미 같은 이유로 grace:0을 쓰고
+          // 있었다. 로그축은 애초에 0 이하를 그릴 수 없어 이 문제가 없으므로 기본값을 그대로 둔다.
           scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 12, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ type: isLog ? 'logarithmic' : 'linear', ticks: { color: CH('#8B95A1'), maxTicksLimit: isLog ? 8 : 5, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }) }
+            y: ddValueAxis({ type: isLog ? 'logarithmic' : 'linear', grace: isLog ? '15%' : 0, ticks: { color: CH('#8B95A1'), maxTicksLimit: isLog ? 8 : 5, padding: 6, callback: v => metricsFmtNum(v, 0) + '억' } }) }
         }
       });
     }
 
-    // "조회조건"(위 연도/월 선택)이 여러 달을 가리키면(예: "전체" = 1~9월) 랭킹도 그 기간 누적
-    // 합계로 집계한다 — 예전엔 항상 "최신 1개월"만 봤는데, 월 선택이 "전체"인데 랭킹은 9월 한 달만
-    // 나오는 게 조회조건과 안 맞아 보인다는 지적(2026-09-15)을 받아 수정. 단일 월만 선택했을 땐
-    // 이전과 동일하게 그 한 달만 보여준다(합계=그 달 값과 같음).
-    function metricsPeriodRangeLabel(year, months) {
-      if (months.length === 0) return '';
-      if (months.length === 1) return `${year}년 ${months[0]}월`;
-      const isContiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
-      return isContiguous ? `${year}년 ${months[0]}~${months[months.length - 1]}월 누적` : `${year}년 ${months.join(',')}월 누적`;
-    }
+    // "조회조건"(위 연도/월 선택)이 여러 기간을 가리키면(예: "전체" = 1~9월, 또는 여러 연도) 랭킹도
+    // 그 기간 누적 합계로 집계한다 — 예전엔 항상 "최신 1개월"만 봤는데, 월 선택이 "전체"인데 랭킹은
+    // 9월 한 달만 나오는 게 조회조건과 안 맞아 보인다는 지적(2026-09-15)을 받아 수정. 단일 월만
+    // 선택했을 땐 이전과 동일하게 그 한 달만 보여준다(합계=그 달 값과 같음). 제목 포맷은
+    // metricsPeriodRangeLabel(periods)(위 공용 헬퍼 절)로 통일.
     function renderMetricsRevenueRankingChart() {
       const canvas = document.getElementById('chartMetricsRevenueRanking'); if (!canvas) return;
       if (chartInstances.metricsRevRank) { chartInstances.metricsRevRank.destroy(); chartInstances.metricsRevRank = null; }
-      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      const periods = metricsSelectedPeriods(metricsRevenueData);
       // 어느 기간을 보고 있는지 화면에 안 보이면(범례도 꺼져 있다) 조회조건(위쪽 연도/월 선택)과
       // 맞는지 확인할 방법이 없다 — 제목에 실제 기준 기간을 박아 넣는다(사용자 지적, 2026-09-15).
       const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
-      if (titleEl) titleEl.innerText = months.length ? `매출 랭킹 (${metricsPeriodRangeLabel(metricsSelectedYear, months)})` : '매출 랭킹';
-      if (!months.length) return;
+      if (titleEl) titleEl.innerText = periods.length ? `매출 랭킹 (${metricsPeriodRangeLabel(periods)})` : '매출 랭킹';
+      if (!periods.length) return;
       // 매출은 사업자 단위로만 존재한다 — "비교단위" 토글과 무관하게 항상 ①선택 사업자 기준(위 트렌드
       // 차트와 동일한 이유, 2026-09-16).
       const selected = new Set(metricsSelectedOperators);
 
       const sums = {};
-      months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode);
+      periods.forEach(p => {
+        const groups = metricsGroupRevenueMap(p, metricsScopeMode);
         Object.keys(groups).forEach(g => { sums[g] = (sums[g] || 0) + groups[g]; });
       });
       const entries = Object.entries(sums).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -683,7 +765,7 @@
       const ctx = canvas.getContext('2d');
       chartInstances.metricsRevRank = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: metricsPeriodRangeLabel(metricsSelectedYear, months) + ' 매출', data: values,
+        data: { labels, datasets: [{ label: metricsPeriodRangeLabel(periods) + ' 매출', data: values,
           backgroundColor: (c) => ddBarFill(colors[c.dataIndex], true)(c), borderRadius: 4,
           datalabels: { display: 'auto', anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? metricsFmtNum(v, 1) + '억' : '' } }] },
         options: {

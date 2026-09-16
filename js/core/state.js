@@ -263,7 +263,18 @@
     // 더하는" 개념이라(2026-09-15, 사용자 요청), 이 탭에도 취급고/회계 버튼이 있지만 별도 basisMode를
     // 두지 않고 전역 revenueBasisMode를 직접 바꾼다(setMetricsRevenueBasis(), metrics-dashboard.js).
     // ============================================================
-    let metricsSelectedYear = null;        // 단일 연도 선택. null이면 첫 렌더에서 데이터의 최신 연도로 채운다.
+    // 연도 선택(복수 가능, 비어있으면 첫 렌더에서 데이터의 최신 연도 하나로 채운다) — 매출
+    // 대시보드의 selectedYears와 같은 원칙으로 2026-09-16에 단일 선택에서 복수 선택으로 바꿨다
+    // (사용자 요청: "조회조건에 연도가 복수선택이 안 되네", 이어서 "지표 대시보드 전체(KPI·차트
+    // 포함)로 확장"하기로 확정). 차트/KPI는 이제 `metricsSelectedPeriods()`(metrics-dashboard.js)가
+    // 반환하는 {year,month} 목록 하나를 순회한다 — "선택 연도 하나"를 전제로 짠 코드가 남아있지
+    // 않도록 이 배열 하나로 전부 통일했다.
+    let metricsSelectedYears = [];
+    // 연도 pill의 "전체"(빈 배열)는 매출 대시보드 selectedYears와 같은 의미다 — 모든 연도 합산이라는
+    // 사용자의 명시적 선택이지, "아직 안 골랐음"이 아니다. 그래서 `.length===0`만으로는 최초 기본값
+    // 채우기와 사용자가 직접 누른 "전체"를 구분할 수 없다 — metricsOperatorsInitialized와 같은 이유로
+    // 별도 플래그를 둔다(2026-09-16).
+    let metricsYearsInitialized = false;
     let metricsSelectedMonths = [];        // 월 선택(복수, 비어있으면 전체) — 매출 대시보드 selectedMonths와 같은 원칙, 별개 상태.
     let metricsIndexMode = '전체';          // File1 INDEX 컬럼: '전체'(일평균) | '프라임타임'
     let metricsScopeMode = 'payTv';        // '전체'(지상파+유료방송) | 'payTv'(유료방송, 기본) | 'cable'(케이블)

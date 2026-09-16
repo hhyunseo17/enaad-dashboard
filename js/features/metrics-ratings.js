@@ -30,9 +30,12 @@
       const channel = ENA_REPRESENTATIVE_CHANNEL;
       const idx = metricsIndexMode;
 
-      // CPRP — File1 원본은 "천원" 단위라 ×1,000 해서 원 단위로 표기한다(plan 확정사항 3).
+      // CPRP·채널시청률·시청률1%당매출은 "최신 스냅샷"(구간 합산이 아니다) — 여러 연도가 선택돼도
+      // 어느 한 시점 값을 보여줘야 하므로, filters.js의 단일-앵커 관례와 같은 원칙으로 선택된 연도
+      // 중 최신(metricsPrimaryYear())을 기준 삼는다(2026-09-16, "지표 대시보드 전체로 확장" 확정).
+      // File1 원본은 "천원" 단위라 ×1,000 해서 원 단위로 표기한다(plan 확정사항 3).
       const cprpCode = metricsFindMetricCode(METRICS_LABEL.cprp, idx);
-      const cprpPeriod = metricsRatingsLatestPeriod(cprpCode, channel, idx, metricsSelectedYear);
+      const cprpPeriod = metricsRatingsLatestPeriod(cprpCode, channel, idx, metricsPrimaryYear());
       const cprpNow = metricsRatingsValueAt(cprpCode, channel, idx, cprpPeriod);
       const cprpMom = metricsRatingsValueAt(cprpCode, channel, idx, metricsPrevMonthPeriod(cprpPeriod));
       const cprpYoy = metricsRatingsValueAt(cprpCode, channel, idx, metricsPrevYearPeriod(cprpPeriod));
@@ -43,7 +46,7 @@
 
       // ENA 채널시청률 — 소수점 셋째 자리까지(plan 확정사항 3, File1 원본 정밀도를 살린다).
       const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx, true); // exact — "채널시청률 1%당 eq-GRPs"(08)와 접두어 충돌 방지
-      const ratingPeriod = metricsRatingsLatestPeriod(ratingCode, channel, idx, metricsSelectedYear);
+      const ratingPeriod = metricsRatingsLatestPeriod(ratingCode, channel, idx, metricsPrimaryYear());
       const ratingNow = metricsRatingsValueAt(ratingCode, channel, idx, ratingPeriod);
       const ratingMom = metricsRatingsValueAt(ratingCode, channel, idx, metricsPrevMonthPeriod(ratingPeriod));
       const ratingYoy = metricsRatingsValueAt(ratingCode, channel, idx, metricsPrevYearPeriod(ratingPeriod));
@@ -55,7 +58,7 @@
       // 시청률 1%당 매출 — File1 원본값 그대로(재계산 안 함), 일평균/프라임타임 토글과 무관하게
       // 항상 '전체' 기준으로 고정한다(plan 확정사항 4 — M/S와 마찬가지로 이 토글의 영향을 받지 않는다).
       const rprCode = metricsFindMetricCode(METRICS_LABEL.revPerRating, '전체');
-      const rprPeriod = metricsRatingsLatestPeriod(rprCode, channel, '전체', metricsSelectedYear);
+      const rprPeriod = metricsRatingsLatestPeriod(rprCode, channel, '전체', metricsPrimaryYear());
       const rprNow = metricsRatingsValueAt(rprCode, channel, '전체', rprPeriod);
       const rprMom = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevMonthPeriod(rprPeriod));
       const rprYoy = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevYearPeriod(rprPeriod));
@@ -78,10 +81,13 @@
       if (!metricCode) return; // 해당 라벨의 지표를 File1에서 찾지 못함 — 빈 캔버스로 둔다.
 
       // value===0인 달은 제외한다 — File1의 미보고 미래 달 placeholder(위 metricsRatingsLatestPeriod
-      // 주석 참고). 안 걸러내면 트렌드 끝부분이 0으로 뚝 떨어져 보인다.
-      let months = [...new Set(metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.value !== 0).map(r => r.month))].sort((a, b) => a - b);
-      if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
-      const labels = months.map(m => `${m}월`);
+      // 주석 참고). 안 걸러내면 트렌드 끝부분이 0으로 뚝 떨어져 보인다. metricsSelectedPeriods()에
+      // 이 metricCode+indexMode로 미리 좁힌 배열을 넘겨 연도 복수선택까지 그대로 반영한다
+      // (2026-09-16, "지표 대시보드 전체로 확장" 확정 — metricsMonthsInYear()가 이미 월 선택 pill도
+      // 걸러주므로 그 로직은 그대로 재사용).
+      const scopedRows = metricsRatingsData.filter(r => r.metricCode === metricCode && r.indexMode === indexMode && r.value !== 0);
+      const periods = metricsSelectedPeriods(scopedRows);
+      const labels = periods.map(metricsPeriodLabel);
       // File1의 채널 단위 지표(03~15번)는 실제로 15개 채널만 있다(위 "①②선택" 관련 주석 참고) —
       // MBN/TV조선/채널A/iHQ/티캐스트처럼 그 15개에 없는 사업자를 대표채널로 골라도 이 지표엔 값
       // 자체가 없어 빈 줄만 그려졌다. 범례에 있는데 선이 안 보이는 게 혼란스럽다는 지적(2026-09-16,
@@ -98,8 +104,8 @@
         // 받는다(예전엔 대표채널 "ENA" 단일값만 있어 정확히 일치 비교로 충분했다).
         const isEna = ENA_CHANNELS.includes(ch);
         const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch)); // 0번(파랑)은 ENA 전용
-        const data = months.map(m => {
-          const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
+        const data = periods.map(p => {
+          const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === p.year && r.month === p.month && r.channel === ch);
           return row ? row.value * valueMultiplier : null;
         });
         return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, spanGaps: true };
@@ -158,7 +164,9 @@
       if (!head || !body) return;
       const channels = metricsRatingsChannelSelection();
       const scoped = metricsRatingsData.filter(r => r.indexMode === metricsIndexMode);
-      const period = metricsLatestPeriod(scoped, metricsSelectedYear);
+      // 티저는 "최신 스냅샷" 한 시점만 보여준다(구간 합산 아님) — 여러 연도가 선택돼도 그 중 최신
+      // 연도를 기준으로 삼는다(단일-앵커 관례, 2026-09-16).
+      const period = metricsLatestPeriod(scoped, metricsPrimaryYear());
 
       head.innerHTML = `<th style="text-align:left;">지표</th>` + channels.map(c => `<th style="text-align:right;">${c}</th>`).join('');
       if (!period) { body.innerHTML = `<tr><td colspan="${channels.length + 1}" style="text-align:center; color:var(--text-tertiary); padding:16px;">선택 연도에 데이터가 없습니다</td></tr>`; return; }
