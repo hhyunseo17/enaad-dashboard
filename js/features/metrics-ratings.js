@@ -88,7 +88,7 @@
         // ENA_CHANNELS.includes() — 대표채널 비교 모드에서 ENA DRAMA/PLAY/STORY를 골라도 강조색을
         // 받는다(예전엔 대표채널 "ENA" 단일값만 있어 정확히 일치 비교로 충분했다).
         const isEna = ENA_CHANNELS.includes(ch);
-        const color = isEna ? RC('curr') : seriesColor(idx);
+        const color = isEna ? RC('curr') : metricsCompetitorColor(idx); // 0번(파랑)은 ENA 전용 — metrics-dashboard.js 참고
         const data = months.map(m => {
           const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
           return row ? row.value * valueMultiplier : null;

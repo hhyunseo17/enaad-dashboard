@@ -390,10 +390,10 @@
       if (byCategory) {
         const presentCats = [...new Set(ops.map(op => METRICS_OPERATOR_SCOPE[op]).filter(Boolean))]
           .sort((a, b) => METRICS_SCOPE_ORDER[a] - METRICS_SCOPE_ORDER[b]);
-        series = presentCats.map(cat => ({ key: cat, label: cat, color: seriesColor(METRICS_SCOPE_ORDER[cat]) }));
+        series = presentCats.map(cat => ({ key: cat, label: cat, color: metricsCompetitorColor(METRICS_SCOPE_ORDER[cat]) }));
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${presentCats.join('/')}, 선택 사업자 기준)`;
       } else {
-        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : seriesColor(i), isEna: metricsIsEnaName(op) }));
+        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : metricsCompetitorColor(i), isEna: metricsIsEnaName(op) }));
         series.sort((a, b) => (a.isEna === b.isEna) ? 0 : (a.isEna ? 1 : -1)); // stable — ENA만 맨 끝으로, 나머지 상대 순서 유지
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
       }
@@ -476,6 +476,14 @@
     // 매출 트렌드(라인, 비교단위별) / 매출 랭킹(가로막대, 선택 항목 강조)
     // ------------------------------------------------------------
     function metricsIsEnaName(name) { return name === ENA_CHANNEL_GROUP || name === ENA_REPRESENTATIVE_CHANNEL; }
+    // KT ENA는 항상 RC('curr')(theme-system.js SERIES_ROLES.curr — 파랑)를 쓰는데, 서수 팔레트
+    // (seriesColor(), SERIES_PALETTE_*)의 0번이 정확히 같은 계열의 파랑이라 다른 계열이 이 0번을
+    // 배정받으면 ENA와 색이 겹친다 — 특히 비ENA 계열이 10개(팔레트 길이)를 넘어가면 나머지가
+    // 팔레트를 한 바퀴 돌아 다시 0번(파랑)을 받는 경우가 실제로 있었다(2026-09-16, 사용자 지적 —
+    // "KT ENA랑 SBS미디어넷 색이 너무 비슷해", "파란색은 KT ENA 하나만 쓰자"). ENA가 아닌 계열
+    // (사업자·채널·지상파/종편/케이블 구분 전부)에 색을 줄 땐 이 헬퍼로 0번(파랑)을 아예 건너뛰고
+    // 1~9번 9색만 순환한다.
+    function metricsCompetitorColor(i) { return seriesColor((i % 9) + 1); }
 
     // 선형/로그 축 토글 — CJ ENM처럼 압도적으로 큰 사업자가 하나 섞이면 선형축에서 나머지가 전부
     // 바닥에 뭉개져 보인다(사용자 지적, 2026-09-15). "로그"는 값 자체(억원)는 그대로 두고 축 간격만
@@ -505,7 +513,7 @@
           const v = (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8;
           return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
-        const color = metricsIsEnaName(name) ? RC('curr') : seriesColor(idx);
+        const color = metricsIsEnaName(name) ? RC('curr') : metricsCompetitorColor(idx);
         return { label: metricsOperatorDisplayName(name), data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
       });
 
