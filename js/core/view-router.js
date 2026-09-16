@@ -122,6 +122,11 @@
       const metricsTab = document.getElementById('dashboardTabMetrics');
       if (salesTab) salesTab.classList.toggle('active', family !== 'metrics');
       if (metricsTab) metricsTab.classList.toggle('active', family === 'metrics');
+      // 헤더 "세부데이터" 버튼은 매출/지표 두 탭에서 서로 다른 화면(detailData/metricsDetail)을
+      // 여는데 라벨이 같아 헷갈렸다(2026-09-16, 사용자 요청: "세부데이터 표기를 매출 세부데이터 /
+      // 지표 세부데이터 이렇게 바꾸자") — 지금 보고 있는 탭에 맞춰 라벨을 바꾼다.
+      const detailDataBtn = document.getElementById('detailDataBtn');
+      if (detailDataBtn) detailDataBtn.textContent = family === 'metrics' ? '🔍 지표 세부데이터' : '🔍 매출 세부데이터';
     }
     function openMetricsMainView() { switchView('metricsMain'); }
     function openMetricsDetailView() { switchView('metricsDetail'); }
