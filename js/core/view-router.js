@@ -54,7 +54,7 @@
       detailData: { containerId: 'detailDataView', title: '세부데이터 탐색', showBreadcrumb: true, family: 'sales', render: () => renderDetailDataPivot() },
       // --- 지표 대시보드(경쟁채널 벤치마크) ---------------------------------------
       // parentView를 명시하지 않는 위 15개는 returnToParentView()가 'main'으로 기본 처리한다(동작 그대로 유지).
-      metricsMain: { containerId: 'metricsMainView', title: '지표 대시보드 (경쟁채널 벤치마크)', showBreadcrumb: false, family: 'metrics', render: () => renderMetricsDashboard() },
+      metricsMain: { containerId: 'metricsMainView', title: '경쟁채널 지표 대시보드', showBreadcrumb: false, family: 'metrics', render: () => renderMetricsDashboard() },
       metricsDetail: { containerId: 'metricsDetailView', title: '경쟁채널 지표 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsDetailView() },
       // 매출 4개 차트(시장규모 추이/M-S 트렌드/매출 트렌드/매출 랭킹)의 "카드 클릭 → 전용 피벗 화면"
       // (2026-09-16, 사용자 요청 — 매출 대시보드의 openCategoryPivotView() 등과 같은 관례). 각 프리셋은
