@@ -165,9 +165,18 @@
         metricsSelectedYear = years.length ? Math.max(...years) : new Date().getFullYear();
       }
       if (metricsSelectedOperators.length === 0) {
-        const period = metricsLatestPeriod(metricsRevenueData, metricsSelectedYear);
-        const groups = period ? metricsGroupRevenueMap(period, metricsScopeMode) : {};
-        const ranked = Object.entries(groups).filter(([g]) => g !== ENA_CHANNEL_GROUP).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
+        // 최근 단일 월(metricsLatestPeriod) 스냅샷으로 랭킹을 매기면 File2가 아직 마감 전인 달(예:
+        // 9월)엔 KT ENA를 제외한 전 채널그룹이 0원 플레이스홀더라 "동률 0원" 임의 순서로 top4가
+        // 뽑히는 버그가 있었다(2026-09-16, 사용자 지적 — 기본 선택된 사업자가 실제 매출 순위와
+        // 무관해 보이고, 거기서 캐스케이딩되는 ②채널 목록도 같이 이상해짐). renderMetricsRevenueRankingChart()와
+        // 동일하게 연중 누적 합산으로 랭킹을 매겨 마감 전 0원 달의 영향을 없앤다.
+        const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+        const sums = {};
+        months.forEach(m => {
+          const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode);
+          Object.keys(groups).forEach(g => { sums[g] = (sums[g] || 0) + groups[g]; });
+        });
+        const ranked = Object.entries(sums).filter(([g, v]) => g !== ENA_CHANNEL_GROUP && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
         metricsSelectedOperators = [ENA_CHANNEL_GROUP, ...ranked];
       }
       if (metricsCompareUnit === 'channel' && metricsSelectedChannels.length === 0) {
