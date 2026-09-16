@@ -681,16 +681,17 @@
       },
 
       // M/S는 매출 원본을 그대로 보여주면 안 된다(2026-09-16, 사용자 지적: "M/S 트렌드 눌렀을 때는
-      // M/S 숫자가 나와야지 이거 왜 매출이 나오지?") — M/S는 ENA 매출을 그대로 합산한 값이 아니라
-      // "ENA ÷ ①선택 사업자 합"이라는 비율이라, revenue 필드를 sum해서는 절대 나올 수 없다.
-      // metricsMsTrendDataForPivot()(metrics-dashboard.js)이 조회조건 안 각 (연,월)마다
-      // computeEnaSelectionMarketShare()로 미리 계산한 share(%) 값을 행으로 만들어 준다 — rows는
-      // 사업자/구분(scope) 분해가 의미 없어(M/S는 이미 "선택 사업자 합" 기준 하나뿐) 'channelGroup'
-      // 하나만 두고(값은 항상 'KT ENA M/S' 한 줄), format:'percent'로 pvFormatCell이 금액(÷100만)
-      // 대신 %로 찍게 한다.
+      // M/S 숫자가 나와야지 이거 왜 매출이 나오지?") — M/S는 매출을 그대로 합산한 값이 아니라
+      // "그 사업자 매출 ÷ ①선택 사업자 합"이라는 비율이라, revenue 필드를 sum해서는 절대 나올 수 없다.
+      // 이어서 "M/S 테이블에서는 KT ENA만 나오지 말고 사업자별로 다 나와야지"라는 요청으로 KT ENA
+      // 한 줄만 보여주던 첫 버전을 ①선택 사업자 전원의 share(%)로 확장 — metricsMsTrendDataForPivot()
+      // (metrics-dashboard.js)이 조회조건 안 각 (연,월) × ①선택 사업자마다 "그 사업자 매출 ÷ 선택
+      // 사업자 합"을 미리 계산해 행으로 만들어 준다. rows는 'channelGroup'(사업자명) 하나 — format:
+      // 'percent'로 pvFormatCell이 금액(÷100만) 대신 %로 찍게 한다.
       metricsMsTrendPivot: {
         rows: ['channelGroup'],
         rowFallbacks: ['(미지정)'],
+        fieldSorters: { channelGroup: 'valueDesc' }, // 시장규모 추이 피벗과 같은 원칙 — 점유율 큰 사업자가 위로
         columns: ['year', 'month'],
         values: [{ field: 'share', agg: 'avg', format: 'percent' }],
         sourceFilter: null,
@@ -761,6 +762,113 @@
         builderDom: { fieldList:'metricsRevenueRankingDdFieldList', filterBar:'metricsRevenueRankingDdFilterBar', filters:'metricsRevenueRankingDdWellFilterBody', columns:'metricsRevenueRankingDdWellColumnsBody', rows:'metricsRevenueRankingDdWellRowsBody', values:'metricsRevenueRankingDdWellValuesBody' },
         dom: { head1: 'metricsRevenueRankingPivotHeaderRow1', head2: 'metricsRevenueRankingPivotHeaderRow2', body: 'metricsRevenueRankingPivotTableBody', total: 'metricsRevenueRankingPivotTotalAmount' },
       },
+
+      // CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종의 "피벗으로 보기"(2026-09-16, 사용자 요청:
+      // "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘") — metrics-ratings.js의
+      // metricsXxxDataForPivot()이 metricCode+indexMode+채널선택+조회조건으로 이미 좁힌 원본
+      // metricsRatingsData 행(channel/year/month/value)을 그대로 pivot 엔진에 넘긴다. rows는
+      // 'channel' 하나(사업자가 아니라 개별 채널 단위 — File1 채널시청률 등은 애초에 채널 단위 지표라
+      // 사업자 합산이 의미 없다, metricsRatingsChannelSelection() 참고). format은 지표마다 단위가
+      // 달라 pvFormatCell의 {multiplier,decimals,suffix} 범용 경로(M/S percent 다음으로 신설)를 쓴다.
+      metricsCprpTrendPivot: {
+        rows: ['channel'],
+        rowFallbacks: ['(미지정)'],
+        columns: ['year', 'month'],
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1000, decimals: 0, suffix: ' 원' } }], // File1 원본 단위는 천원
+        sourceFilter: null,
+        dataSource: () => metricsCprpDataForPivot(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsCprpTrendPivot,
+        expandedCols: () => expandedMetricsCprpTrendYearColumns,
+        render: () => renderPresetPivot('metricsCprpTrendPivot'),
+        resetBtn: 'metricsCprpTrendPivotResetBtn',
+        layoutId: 'metricsCprpTrendPivotSection', builderBtn: 'metricsCprpTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsCprpTrendDdFieldList', filterBar:'metricsCprpTrendDdFilterBar', filters:'metricsCprpTrendDdWellFilterBody', columns:'metricsCprpTrendDdWellColumnsBody', rows:'metricsCprpTrendDdWellRowsBody', values:'metricsCprpTrendDdWellValuesBody' },
+        dom: { head1: 'metricsCprpTrendPivotHeaderRow1', head2: 'metricsCprpTrendPivotHeaderRow2', body: 'metricsCprpTrendPivotTableBody', total: 'metricsCprpTrendPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
+
+      metricsRatingTrendPivot: {
+        rows: ['channel'],
+        rowFallbacks: ['(미지정)'],
+        columns: ['year', 'month'],
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 3, suffix: '%' } }], // 소수 3자리 — plan 확정사항, File1 원본 정밀도
+        sourceFilter: null,
+        dataSource: () => metricsRatingDataForPivot(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsRatingTrendPivot,
+        expandedCols: () => expandedMetricsRatingTrendYearColumns,
+        render: () => renderPresetPivot('metricsRatingTrendPivot'),
+        resetBtn: 'metricsRatingTrendPivotResetBtn',
+        layoutId: 'metricsRatingTrendPivotSection', builderBtn: 'metricsRatingTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsRatingTrendDdFieldList', filterBar:'metricsRatingTrendDdFilterBar', filters:'metricsRatingTrendDdWellFilterBody', columns:'metricsRatingTrendDdWellColumnsBody', rows:'metricsRatingTrendDdWellRowsBody', values:'metricsRatingTrendDdWellValuesBody' },
+        dom: { head1: 'metricsRatingTrendPivotHeaderRow1', head2: 'metricsRatingTrendPivotHeaderRow2', body: 'metricsRatingTrendPivotTableBody', total: 'metricsRatingTrendPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
+
+      metricsGrpTrendPivot: {
+        rows: ['channel'],
+        rowFallbacks: ['(미지정)'],
+        columns: ['year', 'month'],
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 1, suffix: '' } }],
+        sourceFilter: null,
+        dataSource: () => metricsGrpDataForPivot(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsGrpTrendPivot,
+        expandedCols: () => expandedMetricsGrpTrendYearColumns,
+        render: () => renderPresetPivot('metricsGrpTrendPivot'),
+        resetBtn: 'metricsGrpTrendPivotResetBtn',
+        layoutId: 'metricsGrpTrendPivotSection', builderBtn: 'metricsGrpTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsGrpTrendDdFieldList', filterBar:'metricsGrpTrendDdFilterBar', filters:'metricsGrpTrendDdWellFilterBody', columns:'metricsGrpTrendDdWellColumnsBody', rows:'metricsGrpTrendDdWellRowsBody', values:'metricsGrpTrendDdWellValuesBody' },
+        dom: { head1: 'metricsGrpTrendPivotHeaderRow1', head2: 'metricsGrpTrendPivotHeaderRow2', body: 'metricsGrpTrendPivotTableBody', total: 'metricsGrpTrendPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
+
+      metricsAdvCountTrendPivot: {
+        rows: ['channel'],
+        rowFallbacks: ['(미지정)'],
+        columns: ['year', 'month'],
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 0, suffix: '개사' } }],
+        sourceFilter: null,
+        dataSource: () => metricsAdvCountDataForPivot(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsAdvCountTrendPivot,
+        expandedCols: () => expandedMetricsAdvCountTrendYearColumns,
+        render: () => renderPresetPivot('metricsAdvCountTrendPivot'),
+        resetBtn: 'metricsAdvCountTrendPivotResetBtn',
+        layoutId: 'metricsAdvCountTrendPivotSection', builderBtn: 'metricsAdvCountTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsAdvCountTrendDdFieldList', filterBar:'metricsAdvCountTrendDdFilterBar', filters:'metricsAdvCountTrendDdWellFilterBody', columns:'metricsAdvCountTrendDdWellColumnsBody', rows:'metricsAdvCountTrendDdWellRowsBody', values:'metricsAdvCountTrendDdWellValuesBody' },
+        dom: { head1: 'metricsAdvCountTrendPivotHeaderRow1', head2: 'metricsAdvCountTrendPivotHeaderRow2', body: 'metricsAdvCountTrendPivotTableBody', total: 'metricsAdvCountTrendPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -785,6 +893,10 @@
     // 이거 왜 매출이 나오지?" — 원인은 필드 자체가 아니라 revenue 값을 그대로 보여준 것이었지만,
     // 화이트리스트도 이 데이터셋 실제 필드에 맞게 새로 만든다).
     const PV_METRICS_MS_FIELDS = ['channelGroup', 'year', 'month', 'share'];
+    // CPRP/채널시청률/eq-GRPs/광고주수 피벗 4종 전용(2026-09-16) — metricsRatingsData 원본 필드 그대로
+    // (channel/year/month/value), metrics-ratings.js의 metricsXxxDataForPivot()이 이미 metricCode+
+    // indexMode+채널선택+조회조건으로 좁혀서 넘겨준다.
+    const PV_METRICS_RATINGS_FIELDS = ['channel', 'year', 'month', 'value'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
@@ -792,6 +904,8 @@
       agencyCompPivot: PV_AC_FIELDS, upfrontPivot: PV_UP_FIELDS,
       metricsMarketByScopePivot: PV_METRICS_REVENUE_FIELDS, metricsMsTrendPivot: PV_METRICS_MS_FIELDS,
       metricsRevenueTrendPivot: PV_METRICS_REVENUE_FIELDS, metricsRevenueRankingPivot: PV_METRICS_REVENUE_FIELDS,
+      metricsCprpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsRatingTrendPivot: PV_METRICS_RATINGS_FIELDS,
+      metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
@@ -982,12 +1096,21 @@
     // 금액은 원 단위로 누적해 두고 표시 직전에만 백만원으로 줄인다(원본과 동일하게 반올림 정수).
     // 합계/평균은 백만원 반올림 정수(원본 렌더러와 동일), 개수/고유개수는 건수 그대로.
     // 집계 방식을 안 보고 무조건 1e6으로 나누면 '개수 : 광고주' 같은 값이 통째로 0이 된다.
-    // format(선택) — 지정 없으면 기존과 동일(금액, ÷100만). 'percent'는 M/S 같은 비율 전용
-    // (metricsMsTrendPivot, 2026-09-16 — 사용자 지적: "M/S 눌렀을 때는 M/S 숫자가 나와야지 이거 왜
-    // 매출이 나오지?") — 금액 가정(÷1,000,000)을 그대로 타면 8.5%가 0으로 사라진다.
+    // format(선택) — 지정 없으면 기존과 동일(금액, ÷100만).
+    // - 'percent': M/S 같은 비율 전용(metricsMsTrendPivot, 2026-09-16 — 사용자 지적: "M/S 눌렀을 때는
+    //   M/S 숫자가 나와야지 이거 왜 매출이 나오지?") — 금액 가정(÷1,000,000)을 그대로 타면 8.5%가
+    //   0으로 사라진다.
+    // - {multiplier, decimals, suffix}: CPRP·채널시청률·eq-GRPs·광고주수 피벗(metricsCprpTrendPivot 등,
+    //   2026-09-16 — 사용자 요청: "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘")처럼
+    //   지표마다 단위·소수자리·환산배율이 다 달라 metricsFormatRatingValue()와 같은 원칙을 pvFormatCell에도
+    //   여는 범용 경로 — value * multiplier를 decimals 자리로 반올림해 toLocaleString() + suffix.
     function pvFormatCell(value, agg, format) {
       if (agg === 'count' || agg === 'distinct') return value ? value.toLocaleString() : '-';
       if (format === 'percent') return (value === null || value === undefined || !isFinite(value)) ? '-' : value.toFixed(1) + '%';
+      if (format && typeof format === 'object') {
+        if (value === null || value === undefined || !isFinite(value)) return '-';
+        return (value * format.multiplier).toLocaleString(undefined, { minimumFractionDigits: format.decimals, maximumFractionDigits: format.decimals }) + (format.suffix || '');
+      }
       // 값이 없을 때만 대시. **음수를 대시로 감추지 않는다** — 회계조정은 음수인 경우가 많아서,
       // `m > 0`으로 거르던 원래 조건에서는 회계 기준으로 보면 그 행이 통째로 '-'였다.
       // -0.4백만이 Math.round로 -0이 되는 것만 0으로 되돌린다(그대로 두면 "-0"으로 찍힌다).
@@ -1183,7 +1306,7 @@
         document.getElementById(preset.dom.head2).innerHTML = '';
         document.getElementById(preset.dom.body).innerHTML =
           `<tr><td style="text-align:center; color:var(--text-tertiary); padding:16px;">${rowFields.length ? '열' : '행'} 영역에 필드를 놓으세요</td></tr>`;
-        document.getElementById(preset.dom.total).innerText = (valueDefs[0] && valueDefs[0].format === 'percent') ? '0%' : '0 백만';
+        document.getElementById(preset.dom.total).innerText = (valueDefs[0] && valueDefs[0].format) ? pvFormatCell(0, valueDefs[0].agg, valueDefs[0].format) : '0 백만';
         return;
       }
 
@@ -1235,6 +1358,6 @@
 
       document.getElementById(preset.dom.total).innerText = (primary.agg === 'count' || primary.agg === 'distinct')
         ? `${(grand || 0).toLocaleString()} 건`
-        : primary.format === 'percent' ? `${(grand || 0).toFixed(1)}%`
+        : primary.format ? pvFormatCell(grand, primary.agg, primary.format)
         : `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
     }

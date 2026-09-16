@@ -150,6 +150,26 @@
     function renderMetricsAdvCountTrendChart() { renderMetricsMiniTrendChart('chartMetricsAdvCountTrend', 'metricsAdvCountTrend', metricsFindMetricCode(METRICS_LABEL.advCount, '전체', true), 1, '개사', 0, '전체'); }
 
     // ------------------------------------------------------------
+    // CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종의 피벗 dataSource(2026-09-16, 사용자 요청:
+    // "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘") — renderMetricsMiniTrendChart()와
+    // 같은 필터링 원칙(metricCode+indexMode로 좁히고, value===0 미보고 placeholder 제외, 이 지표에
+    // 실제 데이터가 있는 채널만, 조회조건 연도/월로 제한)을 그대로 따라 차트와 피벗이 항상 같은
+    // 채널·기간을 보여주게 맞춘다.
+    // ------------------------------------------------------------
+    function metricsRatingsDataForPivot(labelKey, indexMode, exact) {
+      const code = metricsFindMetricCode(labelKey, indexMode, exact);
+      if (!code) return [];
+      const scoped = metricsRatingsData.filter(r => r.metricCode === code && r.indexMode === indexMode && r.value !== 0);
+      const channels = metricsRatingsChannelSelection().filter(ch => scoped.some(r => r.channel === ch));
+      const periodSet = new Set(metricsSelectedPeriods(scoped).map(p => p.year + '-' + p.month));
+      return scoped.filter(r => channels.includes(r.channel) && periodSet.has(r.year + '-' + r.month));
+    }
+    function metricsCprpDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.cprp, metricsIndexMode, false); }
+    function metricsRatingDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.rating, metricsIndexMode, true); } // exact — 08번과 접두어 충돌 방지(위 METRICS_LABEL 주석 참고)
+    function metricsGrpDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.grp, metricsIndexMode, false); }
+    function metricsAdvCountDataForPivot() { return metricsRatingsDataForPivot(METRICS_LABEL.advCount, '전체', true); } // 광고주수는 항상 '전체' 고정(위 렌더 함수 주석 참고)
+
+    // ------------------------------------------------------------
     // 지표별 값 표기 — 지표마다 단위가 다르므로(%, 원, GRP, 억원, 건수…) pvFormatCell(금액 전용,
     // ÷1,000,000)을 쓸 수 없다. metricLabel 텍스트로 단위를 판별한다.
     // "08. 채널시청률 1%당 eq-GRPs"가 '시청률'을 포함하면서 '매출'은 없는 라벨이라 GRP 체크를

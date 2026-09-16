@@ -89,18 +89,25 @@
     }
 
     // "KT ENA M/S 트렌드" 피벗의 dataSource — 매출 원본을 그대로 넘기면 "M/S 눌렀는데 왜 매출이
-    // 나오지?"가 된다(2026-09-16, 사용자 지적). M/S는 revenue를 합산한 값이 아니라 "ENA ÷ ①선택
-    // 사업자 합"이라는 비율이라 pivot 엔진의 sum(revenue)으로는 절대 재현이 안 된다 — 조회조건 안
-    // 각 (연,월)마다 computeEnaSelectionMarketShare()로 미리 계산한 share(%)를 행 하나씩으로 만든다.
-    // metricsSelectedPeriods(metricsRevenueData) — 차트(renderMetricsMarketShareChart)와 완전히
-    // 같은 기간 목록을 써서 차트와 피벗이 항상 같은 달들을 보여주게 맞춘다.
+    // 나오지?"가 된다(2026-09-16, 사용자 지적). M/S는 revenue를 합산한 값이 아니라 "그 사업자 매출
+    // ÷ ①선택 사업자 합"이라는 비율이라 pivot 엔진의 sum(revenue)으로는 절대 재현이 안 된다.
+    // 처음엔 KT ENA 한 줄만 냈는데, 이어진 요청("M/S 테이블에서는 KT ENA만 나오지 말고 사업자별로
+    // 다 나와야지")으로 ①선택 사업자 전원의 share(%)를 각자 행으로 낸다 — computeEnaSelectionMarketShare()
+    // 의 분모 계산(metricsGroupRevenueMap({year,month},'all') 위에서 ①선택 사업자 합)과 같은 공식을
+    // 분자만 사업자별로 바꿔 재사용한다. metricsSelectedPeriods(metricsRevenueData) — 차트
+    // (renderMetricsMarketShareChart)와 완전히 같은 기간 목록을 써서 차트와 피벗이 항상 같은 달들을
+    // 보여주게 맞춘다.
     function metricsMsTrendDataForPivot() {
-      return metricsSelectedPeriods(metricsRevenueData).map(p => ({
-        channelGroup: 'KT ENA M/S',
-        year: p.year,
-        month: p.month,
-        share: computeEnaSelectionMarketShare(p.year, p.month).share
-      }));
+      const ops = metricsSelectedOperators.length ? metricsSelectedOperators : [ENA_CHANNEL_GROUP];
+      const rows = [];
+      metricsSelectedPeriods(metricsRevenueData).forEach(p => {
+        const groups = metricsGroupRevenueMap(p, 'all');
+        const market = ops.reduce((s, op) => s + (groups[op] || 0), 0);
+        ops.forEach(op => {
+          rows.push({ channelGroup: op, year: p.year, month: p.month, share: market > 0 ? ((groups[op] || 0) / market * 100) : 0 });
+        });
+      });
+      return rows;
     }
 
     // 전월비/전년비 배지 공용 계산. curr/prev 어느 한쪽이라도 없으면(연-월 데이터 없음) null —

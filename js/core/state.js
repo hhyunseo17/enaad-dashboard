@@ -308,6 +308,12 @@
     let expandedMetricsMsTrendPivot = {}, expandedMetricsMsTrendYearColumns = {};
     let expandedMetricsRevenueTrendPivot = {}, expandedMetricsRevenueTrendYearColumns = {};
     let expandedMetricsRevenueRankingPivot = {}, expandedMetricsRevenueRankingYearColumns = {};
+    // CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종의 전용 피벗 화면(2026-09-16, 사용자 요청:
+    // "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘") — 위 매출 4종과 같은 관례.
+    let expandedMetricsCprpTrendPivot = {}, expandedMetricsCprpTrendYearColumns = {};
+    let expandedMetricsRatingTrendPivot = {}, expandedMetricsRatingTrendYearColumns = {};
+    let expandedMetricsGrpTrendPivot = {}, expandedMetricsGrpTrendYearColumns = {};
+    let expandedMetricsAdvCountTrendPivot = {}, expandedMetricsAdvCountTrendYearColumns = {};
 
     // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라
     // 나머지 팔레트(Apple HIG 계보)와 회색·초록의 색조가 미세하게 어긋났고 — 예를 들어

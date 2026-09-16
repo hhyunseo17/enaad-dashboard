@@ -1466,21 +1466,23 @@
           </div>
         </section>
 
-        <!-- CPRP / 채널시청률 / eq-GRPs 미니 트렌드 3종 -->
+        <!-- CPRP / 채널시청률 / eq-GRPs 미니 트렌드 3종 — 매출 4개 차트와 같은 관례로 카드 클릭 →
+             전용 피벗 화면(2026-09-16, 사용자 요청: "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블
+             연결해줘"). 이 카드들엔 헤더 토글 버튼이 없어(제목만) event.stopPropagation()이 필요 없다. -->
         <section class="metrics-mini-grid">
-          <div class="card-box">
+          <div class="card-box clickable" onclick="openMetricsCprpTrendPivotView()">
             <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">CPRP 트렌드</h2></div></div>
             <div class="chart-container"><canvas id="chartMetricsCprpTrend"></canvas></div>
           </div>
-          <div class="card-box">
+          <div class="card-box clickable" onclick="openMetricsRatingTrendPivotView()">
             <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">채널시청률 트렌드</h2></div></div>
             <div class="chart-container"><canvas id="chartMetricsRatingTrend"></canvas></div>
           </div>
-          <div class="card-box">
+          <div class="card-box clickable" onclick="openMetricsGrpTrendPivotView()">
             <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">eq-GRPs 트렌드 (월누적)</h2></div></div>
             <div class="chart-container"><canvas id="chartMetricsGrpTrend"></canvas></div>
           </div>
-          <div class="card-box">
+          <div class="card-box clickable" onclick="openMetricsAdvCountTrendPivotView()">
             <div class="card-box-header"><div class="card-box-title"><h2 style="font-size:14px;">광고주수 트렌드</h2></div></div>
             <div class="chart-container"><canvas id="chartMetricsAdvCountTrend"></canvas></div>
           </div>
@@ -1613,7 +1615,7 @@
             <h2 class="hero-title">KT ENA M/S 트렌드 — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 12px; color: var(--text-tertiary);">평균 M/S (%)</div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">선택 사업자 전체 평균 점유율 (%)</div>
             <div id="metricsMsTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
           </div>
         </div>
@@ -1632,7 +1634,7 @@
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">KT ENA M/S(①선택 사업자 합 기준) 월별 피벗</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">①선택 사업자별 M/S(%) 월별 피벗</h2>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <button class="btn btn-sm" id="metricsMsTrendPivotResetBtn" onclick="pvResetPivot('metricsMsTrendPivot')" style="display:none;">↺ 원래대로</button>
@@ -1805,6 +1807,282 @@
               <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
                 <div class="dd-well-title">Σ 값</div>
                 <div class="dd-well-body" id="metricsRevenueRankingDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </div>
+
+    <div id="metricsCprpTrendPivotView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
+            <h2 class="hero-title">CPRP 트렌드 — 피벗 상세</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 CPRP (원)</div>
+            <div id="metricsCprpTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0 원</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
+          <div class="filter-group">
+            <span class="filter-label">연도</span>
+            <div id="metricsCprpTrendPivotYearPills" class="pills-group"></div>
+            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">월 선택</span>
+            <div id="metricsCprpTrendPivotMonthPills" class="pills-group"></div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">채널별 CPRP(원) 월별 피벗</h2>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="metricsCprpTrendPivotResetBtn" onclick="pvResetPivot('metricsCprpTrendPivot')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="metricsCprpTrendPivotBuilderBtn" onclick="pvToggleBuilder('metricsCprpTrendPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
+        </div>
+        <section class="dd-layout dd-layout-collapsed" id="metricsCprpTrendPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="metricsCprpTrendDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="metricsCprpTrendPivotHeaderRow1"></tr><tr id="metricsCprpTrendPivotHeaderRow2"></tr></thead>
+                <tbody id="metricsCprpTrendPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="metricsCprpTrendDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="metricsCprpTrendDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="metricsCprpTrendDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="metricsCprpTrendDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="metricsCprpTrendDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </div>
+
+    <div id="metricsRatingTrendPivotView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
+            <h2 class="hero-title">채널시청률 트렌드 — 피벗 상세</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 채널시청률 (%)</div>
+            <div id="metricsRatingTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
+          <div class="filter-group">
+            <span class="filter-label">연도</span>
+            <div id="metricsRatingTrendPivotYearPills" class="pills-group"></div>
+            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">월 선택</span>
+            <div id="metricsRatingTrendPivotMonthPills" class="pills-group"></div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">채널별 채널시청률(%) 월별 피벗</h2>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="metricsRatingTrendPivotResetBtn" onclick="pvResetPivot('metricsRatingTrendPivot')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="metricsRatingTrendPivotBuilderBtn" onclick="pvToggleBuilder('metricsRatingTrendPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
+        </div>
+        <section class="dd-layout dd-layout-collapsed" id="metricsRatingTrendPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="metricsRatingTrendDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="metricsRatingTrendPivotHeaderRow1"></tr><tr id="metricsRatingTrendPivotHeaderRow2"></tr></thead>
+                <tbody id="metricsRatingTrendPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="metricsRatingTrendDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="metricsRatingTrendDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="metricsRatingTrendDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="metricsRatingTrendDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="metricsRatingTrendDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </div>
+
+    <div id="metricsGrpTrendPivotView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
+            <h2 class="hero-title">eq-GRPs 트렌드 — 피벗 상세</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 eq-GRPs</div>
+            <div id="metricsGrpTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
+          <div class="filter-group">
+            <span class="filter-label">연도</span>
+            <div id="metricsGrpTrendPivotYearPills" class="pills-group"></div>
+            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">월 선택</span>
+            <div id="metricsGrpTrendPivotMonthPills" class="pills-group"></div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">채널별 eq-GRPs 월별 피벗</h2>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="metricsGrpTrendPivotResetBtn" onclick="pvResetPivot('metricsGrpTrendPivot')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="metricsGrpTrendPivotBuilderBtn" onclick="pvToggleBuilder('metricsGrpTrendPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
+        </div>
+        <section class="dd-layout dd-layout-collapsed" id="metricsGrpTrendPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="metricsGrpTrendDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="metricsGrpTrendPivotHeaderRow1"></tr><tr id="metricsGrpTrendPivotHeaderRow2"></tr></thead>
+                <tbody id="metricsGrpTrendPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="metricsGrpTrendDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="metricsGrpTrendDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="metricsGrpTrendDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="metricsGrpTrendDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="metricsGrpTrendDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </div>
+
+    <div id="metricsAdvCountTrendPivotView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">경쟁채널 지표 현황 파일 (File1)</span>
+            <h2 class="hero-title">광고주수 트렌드 — 피벗 상세</h2>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 광고주수</div>
+            <div id="metricsAdvCountTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0개사</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
+          <div class="filter-group">
+            <span class="filter-label">연도</span>
+            <div id="metricsAdvCountTrendPivotYearPills" class="pills-group"></div>
+            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">월 선택</span>
+            <div id="metricsAdvCountTrendPivotMonthPills" class="pills-group"></div>
+          </div>
+        </div>
+      </section>
+      <section class="table-container">
+        <div class="table-controls">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">채널별 광고주수 월별 피벗</h2>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="metricsAdvCountTrendPivotResetBtn" onclick="pvResetPivot('metricsAdvCountTrendPivot')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="metricsAdvCountTrendPivotBuilderBtn" onclick="pvToggleBuilder('metricsAdvCountTrendPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+          </div>
+        </div>
+        <section class="dd-layout dd-layout-collapsed" id="metricsAdvCountTrendPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="metricsAdvCountTrendDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="metricsAdvCountTrendPivotHeaderRow1"></tr><tr id="metricsAdvCountTrendPivotHeaderRow2"></tr></thead>
+                <tbody id="metricsAdvCountTrendPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="metricsAdvCountTrendDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="metricsAdvCountTrendDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="metricsAdvCountTrendDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="metricsAdvCountTrendDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="metricsAdvCountTrendDdWellValuesBody"></div>
               </div>
             </div>
           </aside>

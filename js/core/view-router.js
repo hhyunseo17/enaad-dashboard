@@ -68,6 +68,12 @@
       metricsMsTrendPivot: { containerId: 'metricsMsTrendPivotView', title: 'KT ENA M/S 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsMsTrendPivot') },
       metricsRevenueTrendPivot: { containerId: 'metricsRevenueTrendPivotView', title: '매출 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRevenueTrendPivot') },
       metricsRevenueRankingPivot: { containerId: 'metricsRevenueRankingPivotView', title: '매출 랭킹 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRevenueRankingPivot') },
+      // CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종의 "카드 클릭 → 전용 피벗 화면"(2026-09-16,
+      // 사용자 요청: "CPRP, 시청률, eq GRPs, 광고주수도 각각 피벗테이블 연결해줘") — 위 매출 4개와 같은 관례.
+      metricsCprpTrendPivot: { containerId: 'metricsCprpTrendPivotView', title: 'CPRP 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsCprpTrendPivot') },
+      metricsRatingTrendPivot: { containerId: 'metricsRatingTrendPivotView', title: '채널시청률 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRatingTrendPivot') },
+      metricsGrpTrendPivot: { containerId: 'metricsGrpTrendPivotView', title: 'eq-GRPs 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGrpTrendPivot') },
+      metricsAdvCountTrendPivot: { containerId: 'metricsAdvCountTrendPivotView', title: '광고주수 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsAdvCountTrendPivot') },
     };
 
     function switchView(viewKey, pushHistory) {
@@ -140,6 +146,10 @@
     function openMetricsMsTrendPivotView() { switchView('metricsMsTrendPivot'); }
     function openMetricsRevenueTrendPivotView() { switchView('metricsRevenueTrendPivot'); }
     function openMetricsRevenueRankingPivotView() { switchView('metricsRevenueRankingPivot'); }
+    function openMetricsCprpTrendPivotView() { switchView('metricsCprpTrendPivot'); }
+    function openMetricsRatingTrendPivotView() { switchView('metricsRatingTrendPivot'); }
+    function openMetricsGrpTrendPivotView() { switchView('metricsGrpTrendPivot'); }
+    function openMetricsAdvCountTrendPivotView() { switchView('metricsAdvCountTrendPivot'); }
 
     function toggleYearColumn(viewType, yr) {
       if (viewType === 'channel') { expandedYearColumns[yr] = !expandedYearColumns[yr]; renderChannelPivotTable(); }
