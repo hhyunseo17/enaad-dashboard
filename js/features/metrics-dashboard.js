@@ -261,6 +261,15 @@
       document.getElementById('btnMetricsScopeAll').classList.toggle('active', mode === 'all');
       document.getElementById('btnMetricsScopePayTv').classList.toggle('active', mode === 'payTv');
       document.getElementById('btnMetricsScopeCable').classList.toggle('active', mode === 'cable');
+      // "지상파+유료방송"으로 넓히면 새로 후보에 들어온 지상파 3사가 기본으로 체크돼 있어야
+      // 자연스럽다는 지적(2026-09-16, 사용자: "지상파+유료방송 선택하면 기본적으로 지상파 3사
+      // 채널사업자가 선택되어 있어야할 듯") — 이미 선택된 것들은 그대로 두고 지상파만 추가한다
+      // (반대로 다른 범위로 좁힐 때 지상파를 도로 빼지는 않는다 — 사용자가 직접 고른 선택은 건드리지 않는다).
+      if (mode === 'all') {
+        Object.keys(METRICS_OPERATOR_SCOPE).filter(op => METRICS_OPERATOR_SCOPE[op] === '지상파').forEach(op => {
+          if (!metricsSelectedOperators.includes(op)) metricsSelectedOperators.push(op);
+        });
+      }
       renderMetricsDashboard();
     }
     function setMetricsMarketByScopeMode(mode) {
@@ -275,40 +284,64 @@
       document.getElementById('btnMetricsScopeGroupCategory').classList.toggle('active', mode === 'category');
       renderMetricsMarketByScopeChart();
     }
-    function setupMetricsYearPills() {
-      const container = document.getElementById('metricsYearPills');
+    // 연도/월 조회조건 pill — metricsMain 자신뿐 아니라 매출 4개 피벗 상세 화면(metricsMarketByScopePivot
+    // 등, view-router.js)도 이 조회조건을 그대로 보여주고 조작할 수 있어야 한다(2026-09-16, 사용자
+    // 지적 — "조회조건이 위에 보여야지", 매출 대시보드의 filter-bar가 모든 피벗 화면에서 계속
+    // 보이고 조작 가능한 것과 구조를 맞춘다). containerId/onChange를 인자로 받는 범용 버전을 만들고,
+    // metricsMain 전용 함수들은 그 버전을 자기 컨테이너로 호출하는 얇은 래퍼로 남긴다 — 전역 상태
+    // (metricsSelectedYear/Months)는 하나뿐이라 어느 화면에서 바꾸든 나머지 화면에도 그대로 이어진다.
+    function metricsSetupYearPills(containerId, onChange) {
+      const container = document.getElementById(containerId);
       if (!container) return;
       const years = [...new Set(metricsRevenueData.map(r => r.year))].sort((a, b) => b - a);
       container.innerHTML = years.map(y => `<button class="pill-btn${y === metricsSelectedYear ? ' active' : ''}" data-year="${y}">${y}년</button>`).join('');
       container.querySelectorAll('.pill-btn').forEach(btn => {
-        btn.addEventListener('click', () => { metricsSelectedYear = parseInt(btn.getAttribute('data-year'), 10); renderMetricsDashboard(); });
+        btn.addEventListener('click', () => { metricsSelectedYear = parseInt(btn.getAttribute('data-year'), 10); onChange(); });
       });
     }
-
-    // 월 선택 — dashboard.html에 정적 마크업(전체+1~12월, 매출 대시보드 #monthPills와 동일 구조)이라
-    // 매번 다시 그릴 필요 없이 클릭 핸들러만 한 번 붙인다(container.dataset.wired로 중복 바인딩 방지).
-    // nextPillSelection()/isAdditiveClick()은 js/core/filters.js의 기존 범용 헬퍼 재사용.
-    function setupMetricsMonthPills() {
-      const container = document.getElementById('metricsMonthPills');
-      if (!container || container.dataset.wired) return;
-      container.dataset.wired = '1';
-      container.querySelectorAll('.pill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const val = btn.getAttribute('data-month');
-          if (val === 'all') metricsSelectedMonths = [];
-          else metricsSelectedMonths = nextPillSelection(metricsSelectedMonths, parseInt(val, 10), isAdditiveClick(e));
-          syncMetricsMonthPillActive();
-          renderMetricsDashboard();
-        });
-      });
-    }
-    function syncMetricsMonthPillActive() {
-      const container = document.getElementById('metricsMonthPills');
+    function metricsSyncMonthPillActive(containerId) {
+      const container = document.getElementById(containerId);
       if (!container) return;
       container.querySelectorAll('.pill-btn').forEach(btn => {
         const val = btn.getAttribute('data-month');
         btn.classList.toggle('active', val === 'all' ? metricsSelectedMonths.length === 0 : metricsSelectedMonths.includes(parseInt(val, 10)));
       });
+    }
+    // metricsMain의 #metricsMonthPills는 dashboard.html에 정적 마크업(전체+1~12월)이 이미 있어 그대로
+    // 재사용하지만, 피벗 상세 화면들은 빈 컨테이너라 마크업 자체를 여기서 만든다(1~12월 버튼을 4번
+    // 손으로 반복해 적어두지 않기 위해) — 둘 다 같은 함수로 처리한다(컨테이너에 버튼이 이미 있으면 생성을 건너뜀).
+    function metricsSetupMonthPills(containerId, onChange) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!container.dataset.wired) {
+        if (!container.querySelector('.pill-btn')) {
+          container.innerHTML = ['all', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            .map(v => `<button class="pill-btn${v === 'all' ? ' active' : ''}" data-month="${v}">${v === 'all' ? '전체' : v + '월'}</button>`).join('');
+        }
+        container.dataset.wired = '1';
+        container.querySelectorAll('.pill-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const val = btn.getAttribute('data-month');
+            if (val === 'all') metricsSelectedMonths = [];
+            else metricsSelectedMonths = nextPillSelection(metricsSelectedMonths, parseInt(val, 10), isAdditiveClick(e));
+            metricsSyncMonthPillActive(containerId);
+            onChange();
+          });
+        });
+      }
+      metricsSyncMonthPillActive(containerId); // 다른 화면에서 바뀐 값과 동기화(예: 상세에서 바꾸고 metricsMain으로 복귀)
+    }
+    function setupMetricsYearPills() { metricsSetupYearPills('metricsYearPills', renderMetricsDashboard); }
+    function setupMetricsMonthPills() { metricsSetupMonthPills('metricsMonthPills', renderMetricsDashboard); }
+    function syncMetricsMonthPillActive() { metricsSyncMonthPillActive('metricsMonthPills'); }
+
+    // 매출 4개 피벗 상세 화면(view-router.js VIEW_CONFIG)의 공통 진입점 — 조회조건 pill을 그 화면
+    // 전용 컨테이너(viewKey+'YearPills'/'MonthPills')에 붙이고 프리셋을 그린다.
+    function renderMetricsPivotView(viewKey) {
+      const rerender = () => renderMetricsPivotView(viewKey);
+      metricsSetupYearPills(viewKey + 'YearPills', rerender);
+      metricsSetupMonthPills(viewKey + 'MonthPills', rerender);
+      renderPresetPivot(viewKey);
     }
 
     // ── ①사업자·②채널 멀티셀렉트(기존 .multi-dropdown 패턴 재사용, toggleMultiDropdown()은 data-loader.js가

@@ -60,10 +60,14 @@
       // (2026-09-16, 사용자 요청 — 매출 대시보드의 openCategoryPivotView() 등과 같은 관례). 각 프리셋은
       // js/features/pivot-builder.js의 PIVOT_PRESETS에 등록돼 있다 — render()는 그 엔진(renderPresetPivot)을
       // 그대로 호출한다.
-      metricsMarketByScopePivot: { containerId: 'metricsMarketByScopePivotView', title: '방송광고시장 규모 추이 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsMarketByScopePivot') },
-      metricsMsTrendPivot: { containerId: 'metricsMsTrendPivotView', title: 'KT ENA M/S 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsMsTrendPivot') },
-      metricsRevenueTrendPivot: { containerId: 'metricsRevenueTrendPivotView', title: '매출 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsRevenueTrendPivot') },
-      metricsRevenueRankingPivot: { containerId: 'metricsRevenueRankingPivotView', title: '매출 랭킹 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderPresetPivot('metricsRevenueRankingPivot') },
+      // render()가 renderMetricsPivotView(viewKey)를 쓴다 — 프리셋을 그리기 전에 그 화면 전용
+      // 연도/월 조회조건 pill(metrics-dashboard.js)부터 세팅한다(2026-09-16, 사용자 요청: "조회조건이
+      // 위에 보여야지" — 매출 대시보드의 filter-bar가 모든 피벗 화면에서 계속 보이고 조작 가능한 것과
+      // 구조를 맞춘다).
+      metricsMarketByScopePivot: { containerId: 'metricsMarketByScopePivotView', title: '방송광고시장 규모 추이 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsMarketByScopePivot') },
+      metricsMsTrendPivot: { containerId: 'metricsMsTrendPivotView', title: 'KT ENA M/S 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsMsTrendPivot') },
+      metricsRevenueTrendPivot: { containerId: 'metricsRevenueTrendPivotView', title: '매출 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRevenueTrendPivot') },
+      metricsRevenueRankingPivot: { containerId: 'metricsRevenueRankingPivotView', title: '매출 랭킹 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRevenueRankingPivot') },
     };
 
     function switchView(viewKey, pushHistory) {
