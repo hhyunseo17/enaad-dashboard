@@ -128,6 +128,20 @@
       return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
     }
     function metricsMarketAndShareAt(period, scopeMode) { return period ? computeEnaPayTvMarketShare(period.year, period.month, scopeMode) : null; }
+    // 선택된 달들(월 선택 pill — 비어있으면 "전체")을 누적 합산한 버전. KPI1·2가 "월선택 전체"인데도
+    // 최신 1개월(9월)만 보여줘 매출 랭킹/트렌드와 기준이 안 맞아 보인다는 지적(2026-09-16, 사용자:
+    // "월선택 전체인데 1~9월로 안 나오지? 9월만 같은데")을 받아 신설 — renderMetricsRevenueKpis()가
+    // 단일 월 선택 땐 여전히 위 단일-기간 버전을 쓰고, 여러 달(또는 전체)이 선택되면 이걸 쓴다.
+    function metricsMarketAndShareOverMonths(months, year, scopeMode) {
+      if (!months.length) return null;
+      let market = 0, ena = 0;
+      months.forEach(m => {
+        const groups = metricsGroupRevenueMap({ year, month: m }, scopeMode);
+        market += Object.values(groups).reduce((s, v) => s + v, 0);
+        ena += groups[ENA_CHANNEL_GROUP] || 0;
+      });
+      return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
+    }
 
     // M/S 공식(KPI3·M/S트렌드·시장규모추이차트·비중 — ①선택 사업자 기준): "시장"이 전체 사업자가
     // 아니라 ①에서 선택된 사업자들의 합(ENA 포함)으로 바뀐다 — M/S는 여전히 ENA ÷ 그 합(분자는
@@ -143,6 +157,18 @@
       return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
     }
     function metricsSelectionMarketAndShareAt(period) { return period ? computeEnaSelectionMarketShare(period.year, period.month) : null; }
+    // 위 metricsMarketAndShareOverMonths()의 선택 사업자 기준 버전 — KPI3(M/S)가 쓴다.
+    function metricsSelectionMarketAndShareOverMonths(months, year) {
+      if (!months.length) return null;
+      const ops = metricsSelectedOperators.length ? metricsSelectedOperators : [ENA_CHANNEL_GROUP];
+      let market = 0, ena = 0;
+      months.forEach(m => {
+        const groups = metricsGroupRevenueMap({ year, month: m }, 'all');
+        ops.forEach(op => { market += (groups[op] || 0); });
+        ena += groups[ENA_CHANNEL_GROUP] || 0;
+      });
+      return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
+    }
 
     // ------------------------------------------------------------
     // ① 사업자 / ② 채널 후보 목록 — File1(경쟁채널 지표 현황) 하나로 통일(2026-09-16).
@@ -320,43 +346,55 @@
 
     // ------------------------------------------------------------
     // KPI 1·2·3 — 전체방송광고 시장규모(범위 'all' 고정) / 유료방송광고 시장규모(범위 'payTv' 고정) /
-    // 유료방송광고시장 M/S(범위 'payTv' 고정). 세 카드 모두 "범위" 토글과 무관하게 항상 같은 두 스코프를
-    // 보여주기로 함(2026-09-15, 사용자 요청) — 그 아래 매출 트렌드/랭킹·M/S 트렌드 차트는 기존처럼
-    // "범위" 토글(metricsScopeMode)을 그대로 따른다. 스코프가 코드에서 고정되므로 제목도 정적(HTML)이다.
+    // 유료방송광고시장 M/S(①선택 사업자 합 기준). 1·2번은 "범위" 토글과 무관하게 항상 같은 두
+    // 스코프를 보여주기로 함(2026-09-15, 사용자 요청).
+    //
+    // **월 선택을 반영해 누적 합산한다**(2026-09-16, 사용자 지적 — "월선택 전체인데 1~9월로 안
+    // 나오지? 9월만 같은데" + "KT ENA 숫자도 이상하네"). 예전엔 항상 `metricsLatestPeriod()`(최근
+    // 단일 월)만 봐서, 위쪽 "월 선택" pill이 "전체"(1~9월)여도 9월 한 달치 스냅샷만 보여줬다 —
+    // 매출 랭킹 차트가 이미 쓰고 있는 "선택된 모든 달 누적 합산" 패턴(`metricsMonthsInYear()`)을
+    // 그대로 재사용한다. 단일 월만 선택했을 땐 이전과 동일(합계=그 달 값과 같음).
+    // 전월비(MoM)는 여러 달을 합산한 상태에서는 "전월" 자체가 의미가 없어(9개월 누적의 직전 1개월과
+    // 비교할 대상이 없음) 단일 월 선택일 때만 보여주고, 여러 달/전체 선택 시엔 배지를 숨긴다.
+    // 전년비(YoY)는 누적 상태에서도 "같은 개월수의 전년 동기"와 비교하면 되므로 그대로 유지한다.
     // ------------------------------------------------------------
     function renderMetricsRevenueKpis() {
-      const period = metricsLatestPeriod(metricsRevenueData, metricsSelectedYear);
-      if (!period) {
+      const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
+      if (!months.length) {
         ['MarketSizeAll', 'MarketSize', 'Share'].forEach(k => {
           document.getElementById(`metricsKpi${k}Value`).innerText = k === 'Share' ? '- %' : '- 억원';
           metricsRenderBadge(`metricsKpi${k}MomBadge`, '', null); metricsRenderBadge(`metricsKpi${k}YoyBadge`, '', null);
         });
         return;
       }
-      const currAll = metricsMarketAndShareAt(period, 'all');
-      const momAll = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'all');
-      const yoyAll = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'all');
+      const isRange = months.length > 1;
+      const periodLabel = metricsPeriodRangeLabel(metricsSelectedYear, months);
+      const latestPeriod = { year: metricsSelectedYear, month: months[months.length - 1] };
+
+      const currAll = metricsMarketAndShareOverMonths(months, metricsSelectedYear, 'all');
+      const momAll = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'all');
+      const yoyAll = metricsMarketAndShareOverMonths(months, metricsSelectedYear - 1, 'all');
       document.getElementById('metricsKpiMarketSizeAllValue').innerText = metricsFmtNum(currAll.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${period.year}년 ${period.month}월 · 경쟁채널 지표 현황 파일 · 지상파+유료방송`;
-      metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', metricsGrowthPct(currAll.market, momAll && momAll.market), '%');
+      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 지상파+유료방송`;
+      metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', momAll && metricsGrowthPct(currAll.market, momAll.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
 
-      const currPay = metricsMarketAndShareAt(period, 'payTv');
-      const momPay = metricsMarketAndShareAt(metricsPrevMonthPeriod(period), 'payTv');
-      const yoyPay = metricsMarketAndShareAt(metricsPrevYearPeriod(period), 'payTv');
+      const currPay = metricsMarketAndShareOverMonths(months, metricsSelectedYear, 'payTv');
+      const momPay = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'payTv');
+      const yoyPay = metricsMarketAndShareOverMonths(months, metricsSelectedYear - 1, 'payTv');
       document.getElementById('metricsKpiMarketSizeValue').innerText = metricsFmtNum(currPay.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeSub').innerText = `${period.year}년 ${period.month}월 · 경쟁채널 지표 현황 파일 · 종편+케이블`;
-      metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(currPay.market, momPay && momPay.market), '%');
+      document.getElementById('metricsKpiMarketSizeSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 종편+케이블`;
+      metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', momPay && metricsGrowthPct(currPay.market, momPay.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
       // M/S는 KPI1·2와 달리 ①선택 사업자 합 기준(2026-09-16) — "시장"이 전체가 아니라 지금 고른
       // 사업자들의 합(ENA 포함)이라, 어떤 경쟁사를 고르느냐에 따라 값이 달라진다.
-      const currSel = metricsSelectionMarketAndShareAt(period);
-      const momSel = metricsSelectionMarketAndShareAt(metricsPrevMonthPeriod(period));
-      const yoySel = metricsSelectionMarketAndShareAt(metricsPrevYearPeriod(period));
+      const currSel = metricsSelectionMarketAndShareOverMonths(months, metricsSelectedYear);
+      const momSel = isRange ? null : metricsSelectionMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod));
+      const yoySel = metricsSelectionMarketAndShareOverMonths(months, metricsSelectedYear - 1);
       document.getElementById('metricsKpiShareValue').innerText = currSel.share.toFixed(1) + ' %';
-      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 ÷ 선택 사업자 ${metricsSelectedOperators.length}개 합 ${metricsFmtNum(currSel.market / 1e8, 2)}억원`;
-      metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(currSel.share, momSel && momSel.share), '%p');
+      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 ÷ 선택 사업자 ${metricsSelectedOperators.length}개 합 ${metricsFmtNum(currSel.market / 1e8, 2)}억원 · ${periodLabel}`;
+      metricsRenderBadge('metricsKpiShareMomBadge', '전월', momSel && metricsPointDiff(currSel.share, momSel.share), '%p');
       metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currSel.share, yoySel && yoySel.share), '%p');
     }
 
