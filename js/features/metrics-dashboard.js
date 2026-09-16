@@ -186,6 +186,21 @@
     // (2026-09-16, 사용자 요청 — "케이블은 케이블끼리, 종편은 종편끼리 붙여놔줘". METRICS_OPERATOR_SCOPE는
     // metrics-data-loader.js의 사업자→범위 하드코딩 맵을 그대로 재사용).
     const METRICS_SCOPE_ORDER = { '지상파': 0, '종편': 1, '케이블': 2 };
+    // "구분별" 스택(방송광고시장 규모 추이 차트, metricsMarketByScopeGrouping==='category') 전용
+    // 고정 색 — 지상파는 빨강, 종편은 에메랄드/민트, 케이블은 파랑(2026-09-16, 사용자 요청: "케이블
+    // 파랑, 종편 에메랄드/민트, 지상파 빨강으로 하자"). 값은 새로 만들지 않고 화면에 이미 있는
+    // categoryColorsLight/Dark(state.js)의 IMC(빨강)/인포머셜(에메랄드)/일반광고(파랑)를 그대로
+    // 재사용한다 — CLAUDE.md 절대원칙(색상은 화면에 이미 있는 hue만 쓴다)과 같은 이유. 이 3구분은
+    // 사업자 여럿을 묶은 집계라 metricsCompetitorColor()의 "파랑은 ENA 전용" 제약과는 다른 맥락이다.
+    const METRICS_SCOPE_CATEGORY_COLOR = {
+      '지상파': { light: '#FF4D3D', dark: '#FF453A' },
+      '종편':   { light: '#43DBB5', dark: '#2ED1A8' },
+      '케이블': { light: '#479FFF', dark: '#0A84FF' }
+    };
+    function metricsScopeCategoryColor(cat) {
+      const c = METRICS_SCOPE_CATEGORY_COLOR[cat];
+      return c ? c[currentTheme === 'light' ? 'light' : 'dark'] : metricsCompetitorColor(0);
+    }
     function metricsAllOperatorGroups() {
       const set = new Set();
       metricsRevenueData.filter(r => metricsScopeMatchRow(r, metricsScopeMode)).forEach(r => set.add(r.channelGroup));
@@ -470,7 +485,7 @@
       if (byCategory) {
         const presentCats = [...new Set(ops.map(op => METRICS_OPERATOR_SCOPE[op]).filter(Boolean))]
           .sort((a, b) => METRICS_SCOPE_ORDER[a] - METRICS_SCOPE_ORDER[b]);
-        series = presentCats.map(cat => ({ key: cat, label: cat, color: metricsCompetitorColor(METRICS_SCOPE_ORDER[cat]) }));
+        series = presentCats.map(cat => ({ key: cat, label: cat, color: metricsScopeCategoryColor(cat) }));
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${presentCats.join('/')}, 선택 사업자 기준)`;
       } else {
         // 색 인덱스는 원래 배열 위치(i)가 아니라 "ENA를 뺀 목록에서 몇 번째인지"로 매긴다 — i를

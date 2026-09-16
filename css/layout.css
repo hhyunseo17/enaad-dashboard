@@ -528,6 +528,12 @@
 .metrics-mini-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 900px) { .metrics-mini-grid { grid-template-columns: repeat(2, 1fr); } }
 
+/* 지표 대시보드 차트는 전부 매출 대시보드보다 낮게 느껴진다는 지적(2026-09-16, 사용자: "매출
+   대시보드보다 안 보이니까") — 매출 대시보드 차트는 .chart-container 기본 min-height(280px)를
+   그대로 쓰는데, 지표 쪽은 컨트롤 pill이 카드 헤더에 하나 더 얹혀 있어 상대적으로 차트 영역이
+   좁아 보인다. #metricsMainView 안의 .chart-container만 기본값보다 키운다(매출 대시보드는 그대로). */
+#metricsMainView .chart-container { min-height: 340px; }
+
 /* ① 사업자 · ② 채널 독립 멀티셀렉트(2026-09-16 — 더 이상 캐스케이딩 아님). 기존 .multi-dropdown
    패턴을 그대로 쓰되, 두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
 .metrics-cascade-btn { min-width: 160px; }
