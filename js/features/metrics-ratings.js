@@ -11,61 +11,69 @@
     // KPI 3·4·5 — CPRP(원) / ENA 채널시청률(소수 3자리) / 시청률 1%당 매출(억원)
     // ------------------------------------------------------------
     // File1 원본이 아직 안 걷힌 미래 달을 값 0으로 미리 채워둔 placeholder 행을 갖고 있다(실 샘플로
-    // 확인, 2026-09-15 — "260910 기준" 리포트인데 10~12월 CPRP·채널시청률이 전부 정확히 0). "최신
-    // 달"을 고를 때 0은 "아직 안 채워짐"으로 보고 건너뛴다 — CPRP·시청률·GRP는 실제로 0이 나올 일이
-    // 없는 지표라, 값 0을 진짜 데이터로 오인하면 KPI가 (안 채워진) 최신 달을 골라 0으로 찍힌다.
-    function metricsRatingsLatestPeriod(metricCode, channel, indexMode, year) {
-      if (!metricCode) return null;
-      let months = metricsRatingsData.filter(r => r.metricCode === metricCode && r.channel === channel && r.indexMode === indexMode && r.year === year && r.value !== 0).map(r => r.month);
-      if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
-      return months.length ? { year, month: Math.max(...months) } : null;
-    }
+    // 확인, 2026-09-15 — "260910 기준" 리포트인데 10~12월 CPRP·채널시청률이 전부 정확히 0). value===0을
+    // "아직 안 채워짐"으로 보고 건너뛴다 — CPRP·시청률·GRP는 실제로 0이 나올 일이 없는 지표라, 값
+    // 0을 진짜 데이터로 오인하면 평균이 그만큼 낮아져 버린다.
     function metricsRatingsValueAt(metricCode, channel, indexMode, period) {
       if (!metricCode || !period) return null;
       const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.channel === channel && r.indexMode === indexMode && r.year === period.year && r.month === period.month);
       return row ? row.value : null;
     }
+    // 주어진 기간 목록(periods)에 걸친 File1 원본 값의 단순평균 — CPRP·채널시청률·시청률1%당매출
+    // 전부 이 방식으로 통일한다(2026-09-16, 사용자 확정: 처음엔 "CPRP의 산식은 채널 기준으로
+    // 매출/eq-GRPs"라고 했다가 곧바로 "아니면 CPRP도 그냥 평균내"로 단순화 — 셋 다 재계산 없이
+    // File1 원본 월별 값을 조회조건 기간만큼 평균낸다). value===0(미보고 placeholder) 달은
+    // metricsRatingsValueAt이 그 행을 찾아도 그대로 포함시키지 않도록, 호출부가 periods 자체를
+    // 이미 value!==0인 달로만 걸러서 넘긴다(metricsSelectedPeriods(scopedRows) 패턴).
+    function metricsRatingsAverageAt(periods, metricCode, channel, indexMode) {
+      if (!periods.length) return null;
+      const vals = periods.map(p => metricsRatingsValueAt(metricCode, channel, indexMode, p)).filter(v => v !== null && v !== undefined);
+      return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+    }
+    // KPI 3장 공용 계산 — metricCode를 조회조건(연도 복수선택×월 선택) 안에서 평균낸 현재값 + 전월비/
+    // 전년비 비교값을 한 번에 구한다. 전월비(MoM)는 "선택 기간이 정확히 한 달"일 때만 의미가 있어
+    // (여러 달 평균의 "전월"이 뭘 가리키는지 모호해서) 그때만 계산하고, 전년비(YoY)는 여러 연도가
+    // 선택되면(단일-앵커 관례) 숨기되 여러 달 평균이어도 "그 달들의 전년 동월 평균"과는 비교할 수
+    // 있어 그대로 계산한다(2026-09-16, "지표 대시보드 전체로 확장" 확정 원칙과 동일).
+    function metricsRatingsKpiOf(metricCode, channel, indexMode, isMultiYear) {
+      if (!metricCode) return { curr: null, mom: null, yoy: null, periods: [] };
+      const scoped = metricsRatingsData.filter(r => r.metricCode === metricCode && r.channel === channel && r.indexMode === indexMode && r.value !== 0);
+      const periods = metricsSelectedPeriods(scoped);
+      const curr = metricsRatingsAverageAt(periods, metricCode, channel, indexMode);
+      const mom = periods.length === 1 ? metricsRatingsAverageAt([metricsPrevMonthPeriod(periods[0])], metricCode, channel, indexMode) : null;
+      const yoy = isMultiYear ? null : metricsRatingsAverageAt(periods.map(p => ({ year: p.year - 1, month: p.month })), metricCode, channel, indexMode);
+      return { curr, mom, yoy, periods };
+    }
 
     function renderMetricsRatingsKpis() {
       const channel = ENA_REPRESENTATIVE_CHANNEL;
       const idx = metricsIndexMode;
+      const isMultiYear = metricsYearsInScope().length > 1;
 
-      // CPRP·채널시청률·시청률1%당매출은 "최신 스냅샷"(구간 합산이 아니다) — 여러 연도가 선택돼도
-      // 어느 한 시점 값을 보여줘야 하므로, filters.js의 단일-앵커 관례와 같은 원칙으로 선택된 연도
-      // 중 최신(metricsPrimaryYear())을 기준 삼는다(2026-09-16, "지표 대시보드 전체로 확장" 확정).
-      // File1 원본은 "천원" 단위라 ×1,000 해서 원 단위로 표기한다(plan 확정사항 3).
+      // CPRP — File1 원본은 "천원" 단위라 ×1,000 해서 원 단위로 표기한다(plan 확정사항 3).
       const cprpCode = metricsFindMetricCode(METRICS_LABEL.cprp, idx);
-      const cprpPeriod = metricsRatingsLatestPeriod(cprpCode, channel, idx, metricsPrimaryYear());
-      const cprpNow = metricsRatingsValueAt(cprpCode, channel, idx, cprpPeriod);
-      const cprpMom = metricsRatingsValueAt(cprpCode, channel, idx, metricsPrevMonthPeriod(cprpPeriod));
-      const cprpYoy = metricsRatingsValueAt(cprpCode, channel, idx, metricsPrevYearPeriod(cprpPeriod));
-      document.getElementById('metricsKpiCprpValue').innerText = cprpNow !== null ? Math.round(cprpNow * 1000).toLocaleString() + ' 원' : '- 원';
-      document.getElementById('metricsKpiCprpSub').innerText = cprpPeriod ? `${cprpPeriod.year}년 ${cprpPeriod.month}월(${idx}) · 원 단위 환산(×1,000)` : '경쟁채널 지표 현황 파일';
-      metricsRenderBadge('metricsKpiCprpMomBadge', '전월', metricsGrowthPct(cprpNow, cprpMom), '%');
-      metricsRenderBadge('metricsKpiCprpYoyBadge', '전년', metricsGrowthPct(cprpNow, cprpYoy), '%');
+      const cprp = metricsRatingsKpiOf(cprpCode, channel, idx, isMultiYear);
+      document.getElementById('metricsKpiCprpValue').innerText = cprp.curr !== null ? Math.round(cprp.curr * 1000).toLocaleString() + ' 원' : '- 원';
+      document.getElementById('metricsKpiCprpSub').innerText = cprp.periods.length ? `${metricsPeriodRangeLabel(cprp.periods)}(${idx}) 평균 · 원 단위 환산(×1,000)` : '경쟁채널 지표 현황 파일';
+      metricsRenderBadge('metricsKpiCprpMomBadge', '전월', metricsGrowthPct(cprp.curr, cprp.mom), '%');
+      metricsRenderBadge('metricsKpiCprpYoyBadge', '전년', metricsGrowthPct(cprp.curr, cprp.yoy), '%');
 
       // ENA 채널시청률 — 소수점 셋째 자리까지(plan 확정사항 3, File1 원본 정밀도를 살린다).
       const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx, true); // exact — "채널시청률 1%당 eq-GRPs"(08)와 접두어 충돌 방지
-      const ratingPeriod = metricsRatingsLatestPeriod(ratingCode, channel, idx, metricsPrimaryYear());
-      const ratingNow = metricsRatingsValueAt(ratingCode, channel, idx, ratingPeriod);
-      const ratingMom = metricsRatingsValueAt(ratingCode, channel, idx, metricsPrevMonthPeriod(ratingPeriod));
-      const ratingYoy = metricsRatingsValueAt(ratingCode, channel, idx, metricsPrevYearPeriod(ratingPeriod));
-      document.getElementById('metricsKpiRatingValue').innerText = ratingNow !== null ? ratingNow.toFixed(3) + ' %' : '- %';
-      document.getElementById('metricsKpiRatingSub').innerText = ratingPeriod ? `${ratingPeriod.year}년 ${ratingPeriod.month}월(${idx})` : '경쟁채널 지표 현황 파일';
-      metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(ratingNow, ratingMom), '%p');
-      metricsRenderBadge('metricsKpiRatingYoyBadge', '전년', metricsPointDiff(ratingNow, ratingYoy), '%p');
+      const rating = metricsRatingsKpiOf(ratingCode, channel, idx, isMultiYear);
+      document.getElementById('metricsKpiRatingValue').innerText = rating.curr !== null ? rating.curr.toFixed(3) + ' %' : '- %';
+      document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균` : '경쟁채널 지표 현황 파일';
+      metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(rating.curr, rating.mom), '%p');
+      metricsRenderBadge('metricsKpiRatingYoyBadge', '전년', metricsPointDiff(rating.curr, rating.yoy), '%p');
 
       // 시청률 1%당 매출 — File1 원본값 그대로(재계산 안 함), 일평균/프라임타임 토글과 무관하게
       // 항상 '전체' 기준으로 고정한다(plan 확정사항 4 — M/S와 마찬가지로 이 토글의 영향을 받지 않는다).
       const rprCode = metricsFindMetricCode(METRICS_LABEL.revPerRating, '전체');
-      const rprPeriod = metricsRatingsLatestPeriod(rprCode, channel, '전체', metricsPrimaryYear());
-      const rprNow = metricsRatingsValueAt(rprCode, channel, '전체', rprPeriod);
-      const rprMom = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevMonthPeriod(rprPeriod));
-      const rprYoy = metricsRatingsValueAt(rprCode, channel, '전체', metricsPrevYearPeriod(rprPeriod));
-      document.getElementById('metricsKpiRevPerRatingValue').innerText = rprNow !== null ? metricsFmtNum(rprNow, 2) + ' 억원' : '- 억원';
-      document.getElementById('metricsKpiRevPerRatingSub').innerText = rprPeriod ? `${rprPeriod.year}년 ${rprPeriod.month}월 · 파일 원본값(일평균 기준, 토글 무관)` : '경쟁채널 지표 현황 파일';
-      metricsRenderBadge('metricsKpiRevPerRatingMomBadge', '전월', metricsGrowthPct(rprNow, rprMom), '%');
-      metricsRenderBadge('metricsKpiRevPerRatingYoyBadge', '전년', metricsGrowthPct(rprNow, rprYoy), '%');
+      const rpr = metricsRatingsKpiOf(rprCode, channel, '전체', isMultiYear);
+      document.getElementById('metricsKpiRevPerRatingValue').innerText = rpr.curr !== null ? metricsFmtNum(rpr.curr, 2) + ' 억원' : '- 억원';
+      document.getElementById('metricsKpiRevPerRatingSub').innerText = rpr.periods.length ? `${metricsPeriodRangeLabel(rpr.periods)} 평균 · 파일 원본값(일평균 기준, 토글 무관)` : '경쟁채널 지표 현황 파일';
+      metricsRenderBadge('metricsKpiRevPerRatingMomBadge', '전월', metricsGrowthPct(rpr.curr, rpr.mom), '%');
+      metricsRenderBadge('metricsKpiRevPerRatingYoyBadge', '전년', metricsGrowthPct(rpr.curr, rpr.yoy), '%');
     }
 
     // ------------------------------------------------------------
@@ -80,7 +88,7 @@
       if (chartInstances[chartKey]) { chartInstances[chartKey].destroy(); chartInstances[chartKey] = null; }
       if (!metricCode) return; // 해당 라벨의 지표를 File1에서 찾지 못함 — 빈 캔버스로 둔다.
 
-      // value===0인 달은 제외한다 — File1의 미보고 미래 달 placeholder(위 metricsRatingsLatestPeriod
+      // value===0인 달은 제외한다 — File1의 미보고 미래 달 placeholder(위 metricsRatingsAverageAt
       // 주석 참고). 안 걸러내면 트렌드 끝부분이 0으로 뚝 떨어져 보인다. metricsSelectedPeriods()에
       // 이 metricCode+indexMode로 미리 좁힌 배열을 넘겨 연도 복수선택까지 그대로 반영한다
       // (2026-09-16, "지표 대시보드 전체로 확장" 확정 — metricsMonthsInYear()가 이미 월 선택 pill도
