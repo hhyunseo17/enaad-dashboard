@@ -393,7 +393,12 @@
         series = presentCats.map(cat => ({ key: cat, label: cat, color: metricsCompetitorColor(METRICS_SCOPE_ORDER[cat]) }));
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${presentCats.join('/')}, 선택 사업자 기준)`;
       } else {
-        series = ops.map((op, i) => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : metricsCompetitorColor(i), isEna: metricsIsEnaName(op) }));
+        // 색 인덱스는 원래 배열 위치(i)가 아니라 "ENA를 뺀 목록에서 몇 번째인지"로 매긴다 — i를
+        // 그대로 쓰면 metricsCompetitorColor()의 (i%9)+1 순환에서 i=1과 i=10처럼 9씩 차이나는
+        // 인덱스끼리 같은 나머지가 나와 서로 다른 두 사업자가 같은 색을 받는 충돌이 있었다
+        // (2026-09-16, 사용자 지적 — "채널A랑 SBS미디어넷 거의 같은 색인데").
+        const nonEnaOps = ops.filter(op => !metricsIsEnaName(op));
+        series = ops.map(op => ({ key: op, label: metricsOperatorDisplayName(op), color: metricsIsEnaName(op) ? RC('curr') : metricsCompetitorColor(nonEnaOps.indexOf(op)), isEna: metricsIsEnaName(op) }));
         series.sort((a, b) => (a.isEna === b.isEna) ? 0 : (a.isEna ? 1 : -1)); // stable — ENA만 맨 끝으로, 나머지 상대 순서 유지
         document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
       }
@@ -483,6 +488,11 @@
     // "KT ENA랑 SBS미디어넷 색이 너무 비슷해", "파란색은 KT ENA 하나만 쓰자"). ENA가 아닌 계열
     // (사업자·채널·지상파/종편/케이블 구분 전부)에 색을 줄 땐 이 헬퍼로 0번(파랑)을 아예 건너뛰고
     // 1~9번 9색만 순환한다.
+    // ⚠ 호출부 주의: i는 반드시 "ENA를 뺀 목록"에서 0부터 매긴 인덱스여야 한다 — 원래 배열의
+    // 위치(ENA 포함)를 그대로 넘기면 (i%9)+1 순환 특성상 9씩 차이나는 두 인덱스(예: 1과 10)가
+    // 같은 나머지를 내 서로 다른 두 계열이 같은 색을 받는 충돌이 생긴다(2026-09-16, 실제로
+    // 발생 — "채널A랑 SBS미디어넷 거의 같은 색인데"). `list.filter(x => !isEna(x)).indexOf(x)`
+    // 패턴으로 다시 매긴 인덱스를 넘길 것.
     function metricsCompetitorColor(i) { return seriesColor((i % 9) + 1); }
 
     // 선형/로그 축 토글 — CJ ENM처럼 압도적으로 큰 사업자가 하나 섞이면 선형축에서 나머지가 전부
@@ -507,13 +517,14 @@
       const labels = months.map(m => `${m}월`);
       const names = metricsSelectedOperators;
       const isLog = metricsRevenueTrendScale === 'log';
+      const nonEnaNames = names.filter(n => !metricsIsEnaName(n)); // metricsCompetitorColor() 색 충돌 방지(아래 참고)
 
-      const datasets = names.map((name, idx) => {
+      const datasets = names.map((name) => {
         const data = months.map(m => {
           const v = (metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode)[name] || 0) / 1e8;
           return isLog && v <= 0 ? null : v; // 로그축은 0 이하를 못 그린다 — null이면 spanGaps로 선만 이어준다.
         });
-        const color = metricsIsEnaName(name) ? RC('curr') : metricsCompetitorColor(idx);
+        const color = metricsIsEnaName(name) ? RC('curr') : metricsCompetitorColor(nonEnaNames.indexOf(name));
         return { label: metricsOperatorDisplayName(name), data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: metricsIsEnaName(name) ? 3 : 2, pointRadius: 3, pointBackgroundColor: color, spanGaps: true };
       });
 

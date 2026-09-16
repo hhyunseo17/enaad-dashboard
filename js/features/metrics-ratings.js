@@ -83,12 +83,13 @@
       if (metricsSelectedMonths.length > 0) months = months.filter(m => metricsSelectedMonths.includes(m)); // 월 선택 pill(비어있으면 전체)
       const labels = months.map(m => `${m}월`);
       const channels = metricsRatingsChannelSelection();
+      const nonEnaChannels = channels.filter(ch => !ENA_CHANNELS.includes(ch)); // metricsCompetitorColor() 색 충돌 방지(metrics-dashboard.js 참고)
 
-      const datasets = channels.map((ch, idx) => {
+      const datasets = channels.map((ch) => {
         // ENA_CHANNELS.includes() — 대표채널 비교 모드에서 ENA DRAMA/PLAY/STORY를 골라도 강조색을
         // 받는다(예전엔 대표채널 "ENA" 단일값만 있어 정확히 일치 비교로 충분했다).
         const isEna = ENA_CHANNELS.includes(ch);
-        const color = isEna ? RC('curr') : metricsCompetitorColor(idx); // 0번(파랑)은 ENA 전용 — metrics-dashboard.js 참고
+        const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch)); // 0번(파랑)은 ENA 전용
         const data = months.map(m => {
           const row = metricsRatingsData.find(r => r.metricCode === metricCode && r.indexMode === indexMode && r.year === metricsSelectedYear && r.month === m && r.channel === ch);
           return row ? row.value * valueMultiplier : null;
