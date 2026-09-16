@@ -122,13 +122,26 @@
       el.innerText = `${label} ${value >= 0 ? '+' : ''}${value.toFixed(d)}${unit} ${value >= 0 ? '▲' : '▼'}`;
     }
 
-    // 화면 맨 위 "데이터 기준" 한 줄 — File1(경쟁채널 지표 현황)에 실제로 있는 최신 연/월을 그대로
-    // 보여준다(2026-09-16, 사용자 요청 — 출처 설명 범례 대신 "며칠 기준인지만" 필요하다고 지적).
-    // metric_code='01'(방송사업자 광고매출, 14개 사업자 전원이 매달 보고)을 기준으로 삼는다 — 모든
-    // 사업자·채널이 다 채워지는 제일 신뢰도 높은 지표라서다. value===0인 미보고 placeholder 행은
-    // 제외(다른 곳과 동일한 관례).
+    // 화면 맨 위 "데이터 기준" 한 줄.
+    //
+    // 우선순위 1: metricsReportAsOfDate(js/core/metrics-data-loader.js, /api/competitor-ratings-meta) —
+    // File1(경쟁채널 지표 현황) 엑셀 내부 "{연도}년" 시트 H2에 적힌 리포트 발행 기준일을 그대로 보여준다
+    // (2026-09-16, 사용자 확인 — "최신 데이터가 있는 달"과는 다른 개념이라 원본 그대로 표기해야 함).
+    // 우선순위 2(폴백): 이 값이 없으면(ETL을 이 컬럼이 생긴 뒤로 재실행하지 않은 환경, 또는 조회 실패)
+    // 기존 방식대로 metric_code='01'(방송사업자 광고매출, 14개 사업자 전원이 매달 보고 — 모든 사업자·
+    // 채널이 다 채워지는 제일 신뢰도 높은 지표) 기준 "실제 데이터가 있는 최신 연/월"을 계산해 보여준다.
+    // value===0인 미보고 placeholder 행은 제외(다른 곳과 동일한 관례).
     function renderMetricsDataAsOfLabel() {
       const el = document.getElementById('metricsDataAsOfLabel'); if (!el) return;
+
+      if (typeof metricsReportAsOfDate === 'string' && metricsReportAsOfDate) {
+        const m = metricsReportAsOfDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) {
+          el.innerText = `데이터 기준: ${Number(m[1])}년 ${Number(m[2])}월 ${Number(m[3])}일`;
+          return;
+        }
+      }
+
       const rows = metricsRatingsData.filter(r => r.metricCode === '01' && r.value !== 0);
       if (!rows.length) { el.innerText = ''; return; }
       const latest = rows.reduce((a, b) => (b.year > a.year || (b.year === a.year && b.month > a.month)) ? b : a);

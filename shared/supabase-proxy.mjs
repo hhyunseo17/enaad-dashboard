@@ -409,6 +409,21 @@ export async function handleCompetitorRevenueRequest(env, request) {
   }
 }
 
+// 리포트(File1) 자체의 "as of" 날짜 — competitor_ratings 응답 shape(행 배열)을 건드리지 않으려고
+// 별도 엔드포인트로 뺐다. 싱글턴 테이블(id=1 고정, supabase/schema.sql 참고)이라 항상 0~1행.
+// scripts/etl/load-competitor-data.mjs가 File1 "{연도}년" 시트 H2를 읽어 채운다 — 아직 이 ETL을
+// 이 값이 생긴 뒤로 재실행하지 않았다면 report_as_of_date가 null인 행 하나만 온다(프론트가 폴백 처리).
+export async function handleCompetitorRatingsMetaRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireMetricsAccess(env, request);
+  if (authError) return authError;
+  try {
+    return await proxyView(env, 'competitor_ratings_meta');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
 export async function handleTargetsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   const authError = await requireAuth(env, request);

@@ -431,3 +431,67 @@ alter table profiles enable row level security;
 
 revoke all on profiles from anon, authenticated;
 grant select, insert, update on profiles to service_role;
+
+-- ------------------------------------------------------------
+-- 8. competitor_ratings / competitor_revenue / competitor_ratings_meta — 지표 대시보드(경쟁채널 벤치마크)
+--
+-- scripts/etl/load-competitor-data.mjs(독립 스크립트, run.mjs/load-targets.mjs와 무관)가 File1(경쟁채널
+-- 지표 현황)/File2(매체별 광고비 raw) 두 엑셀을 upsert만으로 채운다. run.mjs 계열과 달리 배치/컷오버
+-- 개념이 없다 — 리포트 원본을 그대로 옮기는 것뿐이라 감사용 bronze/silver 분리가 필요 없기 때문.
+--
+-- 이 두 테이블은 애초에 Supabase SQL Editor에서 직접(out-of-band) 만들어져 이 파일에 빠져 있었다
+-- (2026-09-16 기준 실제 운영 DB와 대조해 이 문서를 실물에 맞춰 소급 반영). 새로 적용하는 경우에도
+-- 아래 `create table if not exists`가 실제 컬럼 구성과 정확히 일치하도록 유지할 것.
+-- ------------------------------------------------------------
+
+create table if not exists competitor_ratings (
+  id            bigint generated always as identity primary key,
+  year          int not null,
+  index_mode    text not null,                     -- File1 'INDEX' 컬럼(연동/실측 등)
+  metric_code   text not null,                      -- File1 '구분' 원문의 선두 번호(01/03/... , '02'는 File2로 대체돼 제외)
+  metric_label  text not null,                      -- '구분' 원문에서 번호를 뗀 텍스트
+  channel       text not null,
+  month         int not null,
+  value         numeric not null,
+  updated_at    timestamptz not null default now(),
+  unique (year, index_mode, metric_code, channel, month)
+);
+
+create table if not exists competitor_revenue (
+  id              bigint generated always as identity primary key,
+  channel         text not null,
+  operator_major  text not null,
+  operator_mid    text not null,
+  channel_group   text not null,
+  year            int not null,
+  month           int not null,
+  revenue         bigint not null default 0,        -- 원 단위(File2 원본은 백만원 — ETL이 환산해 적재)
+  updated_at      timestamptz not null default now(),
+  unique (channel, year, month)
+);
+
+-- 리포트(File1) 자체의 "as of" 날짜 — 엑셀 내부 "{연도}년" 시트(연도는 파싱된 데이터의 최댓값으로 동적
+-- 결정, 하드코딩 금지) H2 셀에 있는 값. "최신 데이터가 있는 연/월"과는 다른 개념이다(전자는 리포트
+-- 발행일, 후자는 그 안에 몇 월치 실적이 채워졌는지) — 렌더 쪽(js/features/metrics-dashboard.js
+-- renderMetricsDataAsOfLabel())이 이 구분을 명확히 표기한다. competitor_ratings(2만행대)에 컬럼을
+-- 추가해 행마다 중복 저장하는 대신, etl_load_batches/current_batch와 같은 싱글턴 메타 테이블 패턴을
+-- 재사용한다.
+create table if not exists competitor_ratings_meta (
+  id                  smallint primary key default 1 check (id = 1),
+  report_as_of_date   date,
+  updated_at          timestamptz not null default now()
+);
+insert into competitor_ratings_meta (id) values (1)
+  on conflict (id) do nothing;
+
+alter table competitor_ratings enable row level security;
+alter table competitor_revenue enable row level security;
+alter table competitor_ratings_meta enable row level security;
+-- 정책 없음 — anon/authenticated 전부 차단, service_role만 BYPASSRLS로 접근(다른 테이블과 동일한 방어선).
+-- 브라우저 노출은 /api/competitor-ratings 등 프록시(requireMetricsAccess, 이메일 허용목록)를 통해서만.
+
+revoke all on competitor_ratings from anon, authenticated;
+revoke all on competitor_revenue from anon, authenticated;
+revoke all on competitor_ratings_meta from anon, authenticated;
+
+grant select, insert, update on competitor_ratings, competitor_revenue, competitor_ratings_meta to service_role;

@@ -127,6 +127,78 @@ async function upsertAll(supabase, table, rows, onConflict) {
   }
 }
 
+// ------------------------------------------------------------
+// 리포트 "as of" 날짜 (File1 내부 "{연도}년" 시트 H2 셀)
+//
+// 2026-09-16, 사용자 확인: File1 안에 연도별 시트("26년" 등)가 있고 그 H2 셀에 리포트 발행 기준일이
+// 적혀 있다. "최신 데이터가 있는 연/월"(metric_code='01' 기준 latest row, renderMetricsDataAsOfLabel의
+// 기존 계산)과는 다른 개념 — 전자는 "이 리포트가 언제자 기준으로 작성됐는지", 후자는 "그 안에 몇 월치
+// 실적까지 채워져 있는지"다. 시트명이 연도에 따라 바뀌므로("26년"→"27년"→"28년") 하드코딩하지 않고,
+// RATINGS_SHEET_NAME("변환용취합")을 파싱해 얻은 연도들의 최댓값으로 동적으로 구성한다(시스템 시계는
+// 신뢰하지 않는다 — 파일이 실제로 몇 년도 데이터까지 담고 있는지가 기준).
+// ------------------------------------------------------------
+
+function determineMaxYear(ratingsRows) {
+  if (!ratingsRows.length) return null;
+  return ratingsRows.reduce((max, r) => (r.year > max ? r.year : max), ratingsRows[0].year);
+}
+
+// transform.mjs의 parseDateFull과 동일한 패턴(Date 객체 → 숫자 시리얼(XLSX.SSF.parse_date_code) →
+// 문자열 정규식 폴백) — H2가 실제 Excel 날짜 타입인지, 텍스트("2026-09-10"/"20260910"/"26.9.10")인지
+// 알 수 없어 셋 다 방어적으로 처리한다.
+function parseAsOfDateValue(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return null;
+    return `${raw.getUTCFullYear()}-${String(raw.getUTCMonth() + 1).padStart(2, '0')}-${String(raw.getUTCDate()).padStart(2, '0')}`;
+  }
+  if (typeof raw === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(raw);
+    if (!parsed) return null;
+    return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d || 1).padStart(2, '0')}`;
+  }
+  const str = String(raw).trim();
+  let m = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);       // 2026-09-10 / 2026.9.10 / 2026/09/10
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = str.match(/^(\d{4})(\d{2})(\d{2})$/);                        // 20260910
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = str.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})/);            // 26.9.10 (2자리 연도)
+  if (m) return `20${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  return null;
+}
+
+// 이 함수는 절대 던지지 않는다(호출부에서 try/catch 불필요) — 실패하면 경고만 남기고 null을 돌려줘
+// 나머지 15개 지표 적재를 막지 않는다(README의 source_file_modified_at 폴백과 같은 태도).
+function parseReportAsOfDate(buffer, maxYear) {
+  if (!maxYear) {
+    console.warn('[경쟁채널 지표 as-of 날짜] 파싱된 ratings 행이 없어 연도를 알 수 없습니다 — 건너뜁니다.');
+    return null;
+  }
+  const sheetName = `${maxYear % 100}년`;
+  try {
+    const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+    const sheet = wb.Sheets[sheetName];
+    if (!sheet) {
+      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}" 시트를 찾을 수 없습니다(시트 목록: ${wb.SheetNames.join(', ')}) — 이 값 없이 계속 진행합니다.`);
+      return null;
+    }
+    const cell = sheet['H2'];
+    if (!cell || cell.v === undefined || cell.v === null || cell.v === '') {
+      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!H2 셀이 비어 있습니다 — 이 값 없이 계속 진행합니다.`);
+      return null;
+    }
+    const parsed = parseAsOfDateValue(cell.v);
+    if (!parsed) {
+      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!H2 값("${cell.v}")을 날짜로 해석하지 못했습니다 — 이 값 없이 계속 진행합니다.`);
+      return null;
+    }
+    return parsed;
+  } catch (err) {
+    console.warn(`[경쟁채널 지표 as-of 날짜] 읽기 실패(무시하고 계속 진행): ${err.message}`);
+    return null;
+  }
+}
+
 async function main() {
   assertEnv();
   const [ratingsPath, revenuePath] = process.argv.slice(2);
@@ -137,19 +209,32 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-  console.log(`[1/4] File1 읽는 중: ${ratingsPath}`);
-  const ratingsRows = parseCompetitorRatingsWorkbook(readFileSync(ratingsPath));
+  console.log(`[1/5] File1 읽는 중: ${ratingsPath}`);
+  const ratingsBuffer = readFileSync(ratingsPath);
+  const ratingsRows = parseCompetitorRatingsWorkbook(ratingsBuffer);
   console.log(`  ${ratingsRows.length}행 파싱 완료`);
 
-  console.log(`[2/4] File2 읽는 중: ${revenuePath}`);
+  console.log(`[2/5] File2 읽는 중: ${revenuePath}`);
   const revenueRows = parseCompetitorRevenueWorkbook(readFileSync(revenuePath));
   console.log(`  ${revenueRows.length}행 파싱 완료`);
 
-  console.log('[3/4] competitor_ratings upsert');
+  console.log('[3/5] competitor_ratings upsert');
   await upsertAll(supabase, 'competitor_ratings', ratingsRows, 'year,index_mode,metric_code,channel,month');
 
-  console.log('[4/4] competitor_revenue upsert');
+  console.log('[4/5] competitor_revenue upsert');
   await upsertAll(supabase, 'competitor_revenue', revenueRows, 'channel,year,month');
+
+  console.log('[5/5] 리포트 as-of 날짜(File1 "{연도}년" 시트 H2) 확인 후 competitor_ratings_meta upsert');
+  const maxYear = determineMaxYear(ratingsRows);
+  const reportAsOfDate = parseReportAsOfDate(ratingsBuffer, maxYear);
+  if (reportAsOfDate) {
+    const { error } = await supabase.from('competitor_ratings_meta')
+      .upsert({ id: 1, report_as_of_date: reportAsOfDate, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error(`  competitor_ratings_meta upsert 실패(무시하고 계속): ${error.message}`);
+    else console.log(`  report_as_of_date=${reportAsOfDate} 적재 완료`);
+  } else {
+    console.warn('  report_as_of_date를 얻지 못해 competitor_ratings_meta 갱신을 건너뜁니다(기존 값 유지, 프론트는 폴백 표시로 대체됨).');
+  }
 
   console.log(`완료. ratings ${ratingsRows.length}건, revenue ${revenueRows.length}건 처리.`);
   console.log('주의: 파일에서 삭제/변경되어 사라진 과거 행은 upsert만으로는 정리되지 않습니다. 필요 시 Supabase에서 수동 확인하세요.');

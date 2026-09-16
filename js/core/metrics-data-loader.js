@@ -85,6 +85,12 @@
     let metricsRatingsData = [];         // File1 파싱 결과(long-format) 전체 — 01번(매출)도 포함, metricsRevenueData는 이 배열에서 파생
     let metricsDataLoaded = false;       // fetchMetricsDataHttp() 성공 여부
     let metricsDataFetchPromise = null;  // 진행 중이거나 완료된 fetch를 캐시 — 지연 로딩을 호출부가 여러 번 트리거해도 1회만 fetch
+    // 리포트(File1) 자체의 "as of" 날짜 — /api/competitor-ratings-meta(competitor_ratings_meta 싱글턴
+    // 테이블, scripts/etl/load-competitor-data.mjs가 File1 내부 "{연도}년" 시트 H2를 읽어 채움). "최신
+    // 데이터가 있는 연/월"과는 다른 개념(전자는 리포트 발행 기준일, 후자는 그 안에 몇 월치 실적이
+    // 채워졌는지) — js/features/metrics-dashboard.js의 renderMetricsDataAsOfLabel()이 이 값을 우선
+    // 쓰고, null이면(ETL을 이 컬럼이 생긴 뒤로 재실행하지 않았거나 조회 실패) 기존 계산으로 폴백한다.
+    let metricsReportAsOfDate = null;
     // 취급고/회계(매출기준)는 이 탭 전용 상태(metricsBasisMode)를 따로 두지 않는다 — "취급고를
     // 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와 KT ENA/ENA 채널 매출로
     // 쓴다"는 개념(2026-09-15, 사용자 요청)이라, 이 탭에도 버튼은 있지만(dashboard.html) 항상 메인
@@ -92,6 +98,7 @@
     // 보게 하기 위해서다(setMetricsRevenueBasis(), metrics-dashboard.js).
 
     const METRICS_RATINGS_URL = '/api/competitor-ratings';
+    const METRICS_RATINGS_META_URL = '/api/competitor-ratings-meta';
 
     // ------------------------------------------------------------
     // fetchMetricsDataHttp() — 지연 로딩 진입점
@@ -115,16 +122,33 @@
         return res.json();
       });
 
+      // 리포트 as-of 날짜는 부가 정보다 — 조회에 실패하거나(엔드포인트가 아직 배포 전이거나) 값이
+      // 아직 비어 있어도(ETL을 이 컬럼이 생긴 뒤로 재실행하지 않은 환경) 지표 대시보드 전체가 막히면
+      // 안 된다. 그래서 이 fetch는 절대 reject하지 않고(catch로 흡수) metricsReportAsOfDate만 세팅한다
+      // — 실패해도 null로 남아 렌더 쪽이 기존 계산으로 폴백한다.
+      const metaPromise = fetchJson(METRICS_RATINGS_META_URL).then(rows => {
+        const row = Array.isArray(rows) ? rows[0] : null;
+        metricsReportAsOfDate = (row && row.report_as_of_date) ? row.report_as_of_date : null;
+      }).catch(err => {
+        metricsReportAsOfDate = null;
+        console.warn('[metrics-data-loader] 리포트 as-of 날짜 조회 실패(기존 방식으로 폴백):', err.message);
+      });
+
       // Supabase 행은 snake_case(ETL이 그렇게 적재 — scripts/etl/load-competitor-data.mjs)라
       // 나머지 코드 전체가 기대하는 camelCase 필드명으로 변환한다. 필드명 매핑 외 가공 없음
       // (정규화·치환·파싱은 ETL 쪽에서 이미 끝난 채로 들어온다). File2는 더 이상 fetch하지 않는다
       // (위 파일 헤더 주석 참고 — 분석에서 완전히 제외, 2026-09-16).
-      metricsDataFetchPromise = fetchJson(METRICS_RATINGS_URL).then(ratingsRows => {
+      const ratingsPromise = fetchJson(METRICS_RATINGS_URL).then(ratingsRows => {
         metricsRatingsData = ratingsRows.map(r => ({
           year: r.year, indexMode: r.index_mode, metricCode: r.metric_code, metricLabel: r.metric_label,
           channel: r.channel, month: r.month, value: Number(r.value)
         }));
         rebuildMetricsSubstitution();
+      });
+
+      // metaPromise는 절대 reject하지 않으므로 Promise.all이 실패하는 경우는 ratingsPromise가
+      // 실패했을 때뿐이다 — as-of 날짜 부가 조회가 핵심 데이터 로드를 절대 막지 않는다.
+      metricsDataFetchPromise = Promise.all([ratingsPromise, metaPromise]).then(() => {
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
       }).catch(err => {

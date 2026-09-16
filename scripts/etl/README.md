@@ -99,6 +99,8 @@ node load-competitor-data.mjs "C:\경로\경쟁채널 지표 현황.xlsx" "C:\�
 ```
 리포트가 갱신될 때마다(File1/File2 둘 다) 재실행. 파일에서 삭제된 과거 행은 upsert만으로는 정리되지 않는다(load-targets.mjs와 동일한 한계) — 필요 시 Supabase에서 수동 확인.
 
+**리포트 as-of 날짜(`competitor_ratings_meta`, 2026-09-16 추가)**: File1 안에는 연도별 시트("26년" 등)가 있고 그 `H2` 셀에 이 리포트가 실제로 언제자 기준으로 작성됐는지가 적혀 있다 — "그 안에 몇 월치 데이터가 채워졌는지"(예: 9월까지 실적 있음)와는 다른 정보라 대시보드 헤더의 "데이터 기준" 표시가 이 값을 우선 사용한다(`js/features/metrics-dashboard.js`의 `renderMetricsDataAsOfLabel()`). 시트명은 연도에 따라 바뀌므로("26년"→"27년"→"28년") 파싱된 ratings 행의 최댓값 연도로 스크립트가 동적으로 결정한다(하드코딩 없음). 이 스텝은 실패해도(시트/셀이 없거나 형식이 안 맞음) 콘솔에 경고만 남기고 나머지 15개 지표 적재를 막지 않는다 — `competitor_ratings_meta.report_as_of_date`가 비어 있으면 프론트가 기존 방식("최신 데이터가 있는 연/월")으로 자동 폴백한다.
+
 ## 목표 적재 (`load-targets.mjs`)
 `run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 매출기준 | 대분류 | 귀속월 | 목표)를
 읽어 5대분류로 재분류(`대행수익` 등은 `기타광고`로 흡수)한 뒤 `sales_targets` 테이블에 upsert한다. 배치/컷오버 개념이
