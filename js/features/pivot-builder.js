@@ -680,16 +680,23 @@
         dom: { head1: 'metricsMarketByScopePivotHeaderRow1', head2: 'metricsMarketByScopePivotHeaderRow2', body: 'metricsMarketByScopePivotTableBody', total: 'metricsMarketByScopePivotTotalAmount' },
       },
 
+      // M/S는 매출 원본을 그대로 보여주면 안 된다(2026-09-16, 사용자 지적: "M/S 트렌드 눌렀을 때는
+      // M/S 숫자가 나와야지 이거 왜 매출이 나오지?") — M/S는 ENA 매출을 그대로 합산한 값이 아니라
+      // "ENA ÷ ①선택 사업자 합"이라는 비율이라, revenue 필드를 sum해서는 절대 나올 수 없다.
+      // metricsMsTrendDataForPivot()(metrics-dashboard.js)이 조회조건 안 각 (연,월)마다
+      // computeEnaSelectionMarketShare()로 미리 계산한 share(%) 값을 행으로 만들어 준다 — rows는
+      // 사업자/구분(scope) 분해가 의미 없어(M/S는 이미 "선택 사업자 합" 기준 하나뿐) 'channelGroup'
+      // 하나만 두고(값은 항상 'KT ENA M/S' 한 줄), format:'percent'로 pvFormatCell이 금액(÷100만)
+      // 대신 %로 찍게 한다.
       metricsMsTrendPivot: {
-        rows: ['scope', 'channelGroup'],
-        rowFallbacks: ['(미지정)', '(미지정)'],
-        fieldSorters: { scope: 'scopeOrder', channelGroup: 'valueDesc' },
+        rows: ['channelGroup'],
+        rowFallbacks: ['(미지정)'],
         columns: ['year', 'month'],
-        values: [{ field: 'revenue', agg: 'sum' }],
+        values: [{ field: 'share', agg: 'avg', format: 'percent' }],
         sourceFilter: null,
-        dataSource: () => metricsRevenueDataForPivot(),
+        dataSource: () => metricsMsTrendDataForPivot(),
         columnDefaultExpanded: true,
-        subtotalDepths: [0],
+        subtotalDepths: [],
         toggleDepth: 0,
         depthStyles: PV_STYLE_TREE,
         subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
@@ -772,12 +779,18 @@
     // 지표 대시보드 매출 4종 피벗은 metricsRevenueData(File1 사업자별 매출)만 읽어서 놓을 수 있는 필드가
     // 이 다섯 개뿐이다 — 매출 대시보드 rawData의 부서·광고주 같은 필드는 애초에 이 데이터셋에 없다.
     const PV_METRICS_REVENUE_FIELDS = ['scope', 'channelGroup', 'year', 'month', 'revenue'];
+    // M/S 트렌드 피벗 전용 — 매출 원본이 아니라 metricsMsTrendDataForPivot()(metrics-dashboard.js)가
+    // 만드는 파생 데이터셋(월별 M/S% 하나)만 읽는다. rows에 'scope'/'revenue'를 남겨두면 존재하지도
+    // 않는 필드를 드롭할 수 있게 돼(2026-09-16, 사용자 지적: "M/S 눌렀을 때는 M/S 숫자가 나와야지
+    // 이거 왜 매출이 나오지?" — 원인은 필드 자체가 아니라 revenue 값을 그대로 보여준 것이었지만,
+    // 화이트리스트도 이 데이터셋 실제 필드에 맞게 새로 만든다).
+    const PV_METRICS_MS_FIELDS = ['channelGroup', 'year', 'month', 'share'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
       goalTrendPivot: PV_GOAL_FIELDS, goalDeptPivot: PV_GOAL_FIELDS,
       agencyCompPivot: PV_AC_FIELDS, upfrontPivot: PV_UP_FIELDS,
-      metricsMarketByScopePivot: PV_METRICS_REVENUE_FIELDS, metricsMsTrendPivot: PV_METRICS_REVENUE_FIELDS,
+      metricsMarketByScopePivot: PV_METRICS_REVENUE_FIELDS, metricsMsTrendPivot: PV_METRICS_MS_FIELDS,
       metricsRevenueTrendPivot: PV_METRICS_REVENUE_FIELDS, metricsRevenueRankingPivot: PV_METRICS_REVENUE_FIELDS,
     };
 
@@ -969,8 +982,12 @@
     // 금액은 원 단위로 누적해 두고 표시 직전에만 백만원으로 줄인다(원본과 동일하게 반올림 정수).
     // 합계/평균은 백만원 반올림 정수(원본 렌더러와 동일), 개수/고유개수는 건수 그대로.
     // 집계 방식을 안 보고 무조건 1e6으로 나누면 '개수 : 광고주' 같은 값이 통째로 0이 된다.
-    function pvFormatCell(value, agg) {
+    // format(선택) — 지정 없으면 기존과 동일(금액, ÷100만). 'percent'는 M/S 같은 비율 전용
+    // (metricsMsTrendPivot, 2026-09-16 — 사용자 지적: "M/S 눌렀을 때는 M/S 숫자가 나와야지 이거 왜
+    // 매출이 나오지?") — 금액 가정(÷1,000,000)을 그대로 타면 8.5%가 0으로 사라진다.
+    function pvFormatCell(value, agg, format) {
       if (agg === 'count' || agg === 'distinct') return value ? value.toLocaleString() : '-';
+      if (format === 'percent') return (value === null || value === undefined || !isFinite(value)) ? '-' : value.toFixed(1) + '%';
       // 값이 없을 때만 대시. **음수를 대시로 감추지 않는다** — 회계조정은 음수인 경우가 많아서,
       // `m > 0`으로 거르던 원래 조건에서는 회계 기준으로 보면 그 행이 통째로 '-'였다.
       // -0.4백만이 Math.round로 -0이 되는 것만 0으로 되돌린다(그대로 두면 "-0"으로 찍힌다).
@@ -1045,9 +1062,9 @@
           // 소계·총합계 칸 색은 클래스가 아니라 인라인이다 — pv-num-sum/pv-num-total은
           // pivot-table.css에서 `.row-grand-total` 아래에만 정의돼 있어 데이터 행에는 효과가 없다.
           const style = col.isSubtotal ? (st.subtotal || preset.subtotalStyle) : (st.month || 'text-align:right;');
-          html += `<td style="${style}">${pvFormatCell(pvComputeMetric(m, primary), primary.agg)}</td>`;
+          html += `<td style="${style}">${pvFormatCell(pvComputeMetric(m, primary), primary.agg, primary.format)}</td>`;
         });
-        html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child), primary.agg)}</td></tr>`;
+        html += `<td style="${st.total || preset.totalStyle}">${pvFormatCell(nodeTotal(child), primary.agg, primary.format)}</td></tr>`;
         out.push(html);
 
         if (hasMore && isExpanded) pvRenderRows(child, preset, depth + 1, path, visibleColumns, valueDefs, expandedRows, out, rowFields, cfg);
@@ -1099,7 +1116,7 @@
         filters: [],
         rows: p.rows.slice(),
         columns: p.columns.slice(),
-        values: p.values.map((v) => ({ id: detailDataValueIdCounter++, field: v.field, agg: v.agg })),
+        values: p.values.map((v) => ({ id: detailDataValueIdCounter++, field: v.field, agg: v.agg, format: v.format })),
         sorts: {},
         colSort: null,
       };
@@ -1166,7 +1183,7 @@
         document.getElementById(preset.dom.head2).innerHTML = '';
         document.getElementById(preset.dom.body).innerHTML =
           `<tr><td style="text-align:center; color:var(--text-tertiary); padding:16px;">${rowFields.length ? '열' : '행'} 영역에 필드를 놓으세요</td></tr>`;
-        document.getElementById(preset.dom.total).innerText = '0 백만';
+        document.getElementById(preset.dom.total).innerText = (valueDefs[0] && valueDefs[0].format === 'percent') ? '0%' : '0 백만';
         return;
       }
 
@@ -1210,13 +1227,14 @@
       const G = preset.grandTotal;
       visibleColumns.forEach(col => {
         const m = pvMergeMetrics(root, col.leafKeys);
-        body += `<td${col.isSubtotal ? G.subtotal : G.month}>${pvFormatCell(pvComputeMetric(m, primary), primary.agg)}</td>`;
+        body += `<td${col.isSubtotal ? G.subtotal : G.month}>${pvFormatCell(pvComputeMetric(m, primary), primary.agg, primary.format)}</td>`;
       });
       const grand = pvComputeMetric(root.metrics[PV_ROWTOTAL], primary);
-      body += `<td${G.total}>${pvFormatCell(grand, primary.agg)}</td></tr>`;
+      body += `<td${G.total}>${pvFormatCell(grand, primary.agg, primary.format)}</td></tr>`;
       document.getElementById(preset.dom.body).innerHTML = mapPivotHtml(body);
 
       document.getElementById(preset.dom.total).innerText = (primary.agg === 'count' || primary.agg === 'distinct')
         ? `${(grand || 0).toLocaleString()} 건`
+        : primary.format === 'percent' ? `${(grand || 0).toFixed(1)}%`
         : `${Math.round((grand || 0) / 1000000).toLocaleString()} 백만`;
     }

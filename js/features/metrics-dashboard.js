@@ -88,6 +88,21 @@
       return metricsRevenueData.filter(r => years.includes(r.year) && (metricsSelectedMonths.length === 0 || metricsSelectedMonths.includes(r.month)));
     }
 
+    // "KT ENA M/S 트렌드" 피벗의 dataSource — 매출 원본을 그대로 넘기면 "M/S 눌렀는데 왜 매출이
+    // 나오지?"가 된다(2026-09-16, 사용자 지적). M/S는 revenue를 합산한 값이 아니라 "ENA ÷ ①선택
+    // 사업자 합"이라는 비율이라 pivot 엔진의 sum(revenue)으로는 절대 재현이 안 된다 — 조회조건 안
+    // 각 (연,월)마다 computeEnaSelectionMarketShare()로 미리 계산한 share(%)를 행 하나씩으로 만든다.
+    // metricsSelectedPeriods(metricsRevenueData) — 차트(renderMetricsMarketShareChart)와 완전히
+    // 같은 기간 목록을 써서 차트와 피벗이 항상 같은 달들을 보여주게 맞춘다.
+    function metricsMsTrendDataForPivot() {
+      return metricsSelectedPeriods(metricsRevenueData).map(p => ({
+        channelGroup: 'KT ENA M/S',
+        year: p.year,
+        month: p.month,
+        share: computeEnaSelectionMarketShare(p.year, p.month).share
+      }));
+    }
+
     // 전월비/전년비 배지 공용 계산. curr/prev 어느 한쪽이라도 없으면(연-월 데이터 없음) null —
     // 호출부가 배지를 숨긴다. prev===0은 성장률(%) 계산에서만 분모라 막고, %p 차이는 0도 유효하다.
     function metricsGrowthPct(curr, prev) {
