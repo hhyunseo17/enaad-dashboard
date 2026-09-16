@@ -502,14 +502,9 @@
 .dashboard-tab.active { background: var(--primary-blue-glow); color: var(--primary-blue-on-glow); font-weight: 600; }
 .dashboard-tab-badge-new { display: inline-flex; align-items: center; padding: 1px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0; border-radius: var(--radius-full); background: var(--accent-red-bg); color: var(--accent-red); }
 
-/* 데이터 출처 범례 한 줄. 자사매출 치환 · 매출/M-S · 시청률류를 각기 다른 파일에서 가져온다는 사실을
-   화면 맨 위에서 한 번 밝혀 둔다 — 숫자를 보다가 "이 값은 어디서 왔지"로 되돌아오지 않게 한다. */
+/* 데이터 기준 날짜 한 줄(2026-09-16 — 출처 설명 범례는 사용자 요청으로 없애고 이 한 줄만 남김). */
 .metrics-source-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 8px 18px; background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); font-size: 12.5px; color: var(--text-secondary); }
 .metrics-legend-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.metrics-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.metrics-legend-dot.ena { background: var(--primary-blue); }
-.metrics-legend-dot.revenue { background: var(--accent-orange); }
-.metrics-legend-dot.ratings { background: var(--accent-green); }
 
 /* 컨트롤바 — 매출 대시보드의 filter-bar와 같은 표면·여백을 쓰되(같은 화면 언어),
    sticky를 걸지 않는다(연도/토글 6종이 두 줄이라 필터바보다 훨씬 높고, 고정하면 차트 영역을 크게 잠식한다). */
@@ -533,10 +528,9 @@
 .metrics-mini-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 900px) { .metrics-mini-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* ① 사업자 → ② 채널 캐스케이딩 멀티셀렉트. 기존 .multi-dropdown 패턴을 그대로 쓰되,
-   두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
+/* ① 사업자 · ② 채널 독립 멀티셀렉트(2026-09-16 — 더 이상 캐스케이딩 아님). 기존 .multi-dropdown
+   패턴을 그대로 쓰되, 두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
 .metrics-cascade-btn { min-width: 160px; }
-.metrics-cascade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* 상세표 티저 — metricsDetail로 들어가기 전 몇 줄만 보여주는 얕은 표. 흐림 그라데이션으로
    "더 있다"는 인상을 주고, 실제 이동은 "더 보기" 링크가 맡는다. */

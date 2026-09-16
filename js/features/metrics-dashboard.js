@@ -1,7 +1,7 @@
 // ============================================================
 // js/features/metrics-dashboard.js
 // 지표 대시보드(경쟁채널 벤치마크) — 매출/M-S 쪽: 컨트롤바, KPI 1·2(시장규모/M-S), M/S 트렌드(누적막대),
-// 매출 트렌드(라인)/랭킹(가로막대), 사업자·채널 캐스케이딩 멀티셀렉트, 오케스트레이션(renderMetricsDashboard()).
+// 매출 트렌드(라인)/랭킹(가로막대), ①사업자·②채널 독립 멀티셀렉트, 오케스트레이션(renderMetricsDashboard()).
 // CPRP/채널시청률/eq-GRPs·시청률1%당매출·상세표는 js/features/metrics-ratings.js(다음 순서 파일).
 //
 // 데이터 계약은 js/core/metrics-data-loader.js가 전부 정의한다(fetchMetricsDataHttp/rebuildMetricsSubstitution/
@@ -65,6 +65,19 @@
       el.style.display = 'inline-flex';
       el.className = 'badge-growth ' + (value >= 0 ? 'up' : 'down');
       el.innerText = `${label} ${value >= 0 ? '+' : ''}${value.toFixed(1)}${unit} ${value >= 0 ? '▲' : '▼'}`;
+    }
+
+    // 화면 맨 위 "데이터 기준" 한 줄 — File1(경쟁채널 지표 현황)에 실제로 있는 최신 연/월을 그대로
+    // 보여준다(2026-09-16, 사용자 요청 — 출처 설명 범례 대신 "며칠 기준인지만" 필요하다고 지적).
+    // metric_code='01'(방송사업자 광고매출, 14개 사업자 전원이 매달 보고)을 기준으로 삼는다 — 모든
+    // 사업자·채널이 다 채워지는 제일 신뢰도 높은 지표라서다. value===0인 미보고 placeholder 행은
+    // 제외(다른 곳과 동일한 관례).
+    function renderMetricsDataAsOfLabel() {
+      const el = document.getElementById('metricsDataAsOfLabel'); if (!el) return;
+      const rows = metricsRatingsData.filter(r => r.metricCode === '01' && r.value !== 0);
+      if (!rows.length) { el.innerText = ''; return; }
+      const latest = rows.reduce((a, b) => (b.year > a.year || (b.year === a.year && b.month > a.month)) ? b : a);
+      el.innerText = `데이터 기준: ${latest.year}년 ${latest.month}월`;
     }
 
     // File1(경쟁채널 지표 현황)은 "구분" 원문에서 번호(01./03. 등)를 뗀 텍스트가 metricLabel이다.
@@ -164,11 +177,15 @@
         const years = [...new Set(metricsRevenueData.map(r => r.year))];
         metricsSelectedYear = years.length ? Math.max(...years) : new Date().getFullYear();
       }
-      if (metricsSelectedOperators.length === 0) {
+      if (!metricsOperatorsInitialized) {
         // 기본값은 "범위"(기본 유료방송) 안에 있는 사업자 전부다(2026-09-16, 사용자 요청: "유료방송에
         // 들어가는 모든 사업자 다 찍어줘야돼") — top4만 뽑던 이전 랭킹 로직은 폐지. metricsAllOperatorGroups()가
         // 이미 metricsScopeMode로 후보를 좁히고 KT ENA를 맨 앞에 두는 정렬까지 해주므로 그대로 쓴다.
+        // `.length===0`이 아니라 별도 초기화 플래그로 판단한다 — 안 그러면 사용자가 "전체선택"을 눌러
+        // 전부 해제했을 때(배열이 다시 []가 됨) 다음 렌더에서 이 기본값이 도로 채워져 "전체 해제가
+        // 안 되는" 버그가 있었다(2026-09-16, 사용자 지적).
         metricsSelectedOperators = metricsAllOperatorGroups();
+        metricsOperatorsInitialized = true;
       }
       // ②채널은 기본값을 채우지 않는다 — 비워두면 metricsRatingsChannelSelection()이 알아서
       // ①사업자별 대표채널로 자동 대체한다(위 함수 주석 참고).
@@ -244,7 +261,11 @@
       });
     }
 
-    // ── ①사업자 → ②채널 캐스케이딩 멀티셀렉트(기존 .multi-dropdown 패턴 재사용, toggleMultiDropdown()은 data-loader.js가 범용으로 이미 제공) ──
+    // ── ①사업자·②채널 멀티셀렉트(기존 .multi-dropdown 패턴 재사용, toggleMultiDropdown()은 data-loader.js가
+    // 범용으로 이미 제공) — 서로 독립적으로 선택한다(2026-09-16, 사용자 요청: "사업자선택이랑 채널선택이
+    // 자유롭지 않네? 그냥 이거 독립적으로 선택하게 하자" — 예전엔 ②후보가 ①에서 체크한 사업자에만
+    // 캐스케이딩됐고, ①을 바꾸면 ②선택이 조용히 잘려나갔다). ②의 후보 목록은 "범위" 안 사업자 전체
+    // (`metricsAllOperatorGroups()`)를 기준으로 하되, ①에서 실제로 뭘 체크했는지는 더 이상 안 본다.
     function renderMetricsOperatorCheckboxes() {
       const container = document.getElementById('listMetricsOperatorCheckboxes'); if (!container) return;
       const list = metricsAllOperatorGroups();
@@ -255,13 +276,11 @@
     function onMetricsOperatorCheckboxChange() {
       const container = document.getElementById('listMetricsOperatorCheckboxes');
       metricsSelectedOperators = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
-      const validChannels = new Set(metricsChannelsForOperators(metricsSelectedOperators));
-      metricsSelectedChannels = metricsSelectedChannels.filter(c => validChannels.has(c)); // ②는 ①에 캐스케이딩
       renderMetricsDashboard();
     }
     function renderMetricsChannelCheckboxes() {
       const container = document.getElementById('listMetricsChannelCheckboxes'); if (!container) return;
-      const list = metricsChannelsForOperators(metricsSelectedOperators);
+      const list = metricsChannelsForOperators(metricsAllOperatorGroups());
       container.innerHTML = list.map(ch => `<label class="checkbox-item"><input type="checkbox" value="${ch}" onchange="onMetricsChannelCheckboxChange()" ${metricsSelectedChannels.includes(ch) ? 'checked' : ''}> ${ch}</label>`).join('');
       const checkAll = document.getElementById('checkAllMetricsChannel');
       if (checkAll) { const all = list.length > 0 && list.every(ch => metricsSelectedChannels.includes(ch)); checkAll.checked = all; checkAll.indeterminate = !all && metricsSelectedChannels.length > 0; }
@@ -538,6 +557,8 @@
       }
 
       loadingEl.style.display = 'none'; errorEl.style.display = 'none'; bodyEl.style.display = 'flex';
+
+      renderMetricsDataAsOfLabel();
 
       // 취급고/회계는 이 탭 전용 상태가 없이 전역 revenueBasisMode를 그대로 공유한다(위 "컨트롤
       // 핸들러" 절 참고) — 메인 대시보드 쪽 버튼으로 바뀐 채 이 탭을 다시 열거나 렌더가 다시 도는

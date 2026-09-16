@@ -270,10 +270,13 @@
     let metricsMarketByScopeMode = 'amount'; // 시장규모 추이 차트 전용: 'amount'(금액, 기본) | 'share'(비중 100% 누적)
     let metricsRevenueTrendScale = 'linear'; // 매출 트렌드 차트 전용: 'linear'(기본) | 'log' — CJ ENM처럼 한 계열이 압도적으로 커서
                                               // 나머지가 바닥에 뭉치는 문제를 로그축으로 완화(2026-09-15, 사용자 요청)
-    let metricsSelectedOperators = [];     // ① 선택된 채널그룹(사업자) 목록 — 렌더 시 비어 있으면 기본값(KT ENA+매출상위)으로 채운다.
-    let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(①에서 캐스케이딩) — 비어 있으면 CPRP/시청률/GRP 등은
-                                            // ①사업자별 대표채널로 자동 대체한다(metricsRatingsChannelSelection(), 2026-09-16 —
-                                            // "사업자 비교/대표채널 비교" 토글은 폐지, ②를 직접 체크하는 것 자체가 선택이다).
+    let metricsSelectedOperators = [];     // ① 선택된 사업자(채널그룹) 목록 — ②채널과 독립적으로 선택한다(2026-09-16, 더 이상 캐스케이딩 아님).
+    let metricsOperatorsInitialized = false; // ①의 최초 기본값(범위 안 전체)을 이미 채웠는지 — `.length===0`으로 판단하면
+                                            // 사용자가 "전체선택"으로 전부 해제했을 때 다음 렌더에서 기본값이 도로 채워지는
+                                            // 버그가 있었다(2026-09-16, 사용자 지적: "전체가 해제될 수도 있게 돼야지").
+    let metricsSelectedChannels = [];      // ② 선택된 개별 채널 목록(①과 독립 — 후보 목록만 "범위" 안 전체 사업자 기준으로
+                                            // 좁혀지고, ①에서 실제로 체크한 사업자와는 무관하다). 비어 있으면 CPRP/시청률/GRP
+                                            // 등은 ①사업자별 대표채널로 자동 대체한다(metricsRatingsChannelSelection()).
     let expandedMetricsDetailPivot = {};   // metricsDetail 상세표: 행(지표→채널) 트리 펼침 상태
     let expandedMetricsDetailYearColumns = {}; // metricsDetail 상세표: 연도 열 펼침 상태
 
