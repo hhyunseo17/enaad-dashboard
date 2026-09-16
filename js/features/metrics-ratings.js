@@ -63,8 +63,10 @@
       const rating = metricsRatingsKpiOf(ratingCode, channel, idx, isMultiYear);
       document.getElementById('metricsKpiRatingValue').innerText = rating.curr !== null ? rating.curr.toFixed(3) + ' %' : '- %';
       document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균` : '경쟁채널 지표 현황 파일';
-      metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(rating.curr, rating.mom), '%p');
-      metricsRenderBadge('metricsKpiRatingYoyBadge', '전년', metricsPointDiff(rating.curr, rating.yoy), '%p');
+      // 원값 자체가 0.1%대라 %p 배지도 기본 소수 1자리로는 실제 변화가 "+0.0%p"로 뭉개진다 —
+      // 메인 값과 같은 3자리로(metricsRenderBadge decimals 인자, 2026-09-16).
+      metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(rating.curr, rating.mom), '%p', 3);
+      metricsRenderBadge('metricsKpiRatingYoyBadge', '전년', metricsPointDiff(rating.curr, rating.yoy), '%p', 3);
 
       // 시청률 1%당 매출 — File1 원본값 그대로(재계산 안 함), 일평균/프라임타임 토글과 무관하게
       // 항상 '전체' 기준으로 고정한다(plan 확정사항 4 — M/S와 마찬가지로 이 토글의 영향을 받지 않는다).

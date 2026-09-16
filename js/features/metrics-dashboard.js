@@ -111,13 +111,20 @@
     }
     // KPI 카드 배지 렌더. unit '%'는 상대성장률(전월/전년 대비 증감률), '%p'는 이미 %인 값(M/S·시청률)의
     // 절대 차이 — 퍼센트의 퍼센트 성장률은 읽기 어려워서 이 둘을 구분한다(plan 확정사항 3).
-    function metricsRenderBadge(elId, label, value, unit) {
+    // decimals 기본값 1 — 대부분의 배지(M/S %p, 매출 성장률 %)는 값 자체가 한 자리 수~두 자리
+    // %대라 소수 1자리로 충분하다. ENA 채널시청률처럼 원값 자체가 0.1%대인 지표는 1자리로는 진짜
+    // 변화(예: +0.015%p)가 전부 "+0.0%p"로 뭉개져 사라진다 — 호출부가 이 값의 자릿수에 맞는
+    // decimals를 넘길 수 있게 열어둔다(2026-09-16, 사용자 지적: 화면에 "전년 +0.0%p"만 보이길래
+    // "이거 전년비 확인해볼래"라고 물어봄 — Supabase 실측으로 0.1065%→0.1215%, 실제로는 +0.015%p
+    // 증가가 있었는데 toFixed(1)에 가려 0으로 보인 것이었다).
+    function metricsRenderBadge(elId, label, value, unit, decimals) {
       const el = document.getElementById(elId);
       if (!el) return;
       if (value === null || value === undefined || !isFinite(value)) { el.style.display = 'none'; return; }
+      const d = decimals === undefined ? 1 : decimals;
       el.style.display = 'inline-flex';
       el.className = 'badge-growth ' + (value >= 0 ? 'up' : 'down');
-      el.innerText = `${label} ${value >= 0 ? '+' : ''}${value.toFixed(1)}${unit} ${value >= 0 ? '▲' : '▼'}`;
+      el.innerText = `${label} ${value >= 0 ? '+' : ''}${value.toFixed(d)}${unit} ${value >= 0 ? '▲' : '▼'}`;
     }
 
     // 화면 맨 위 "데이터 기준" 한 줄 — File1(경쟁채널 지표 현황)에 실제로 있는 최신 연/월을 그대로
