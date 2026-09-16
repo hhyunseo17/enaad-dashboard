@@ -145,7 +145,9 @@ function determineMaxYear(ratingsRows) {
 
 // transform.mjs의 parseDateFull과 동일한 패턴(Date 객체 → 숫자 시리얼(XLSX.SSF.parse_date_code) →
 // 문자열 정규식 폴백) — H2가 실제 Excel 날짜 타입인지, 텍스트("2026-09-10"/"20260910"/"26.9.10")인지
-// 알 수 없어 셋 다 방어적으로 처리한다.
+// 알 수 없어 셋 다 방어적으로 처리한다. **문자열 정규식은 시작(^) 앵커를 쓰지 않는다** — 실 샘플로
+// 확인한 값이 "Updated : 2026-09-10"처럼 라벨 접두어가 붙어 있었다(2026-09-16, 사용자 스크린샷) —
+// 앵커가 있으면 이 접두어 때문에 매칭 자체가 실패한다. 문자열 어디에 있든 날짜 패턴만 찾는다.
 function parseAsOfDateValue(raw) {
   if (raw === null || raw === undefined || raw === '') return null;
   if (raw instanceof Date) {
@@ -158,11 +160,11 @@ function parseAsOfDateValue(raw) {
     return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d || 1).padStart(2, '0')}`;
   }
   const str = String(raw).trim();
-  let m = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);       // 2026-09-10 / 2026.9.10 / 2026/09/10
+  let m = str.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);        // "Updated : 2026-09-10" / 2026.9.10 / 2026/09/10
   if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-  m = str.match(/^(\d{4})(\d{2})(\d{2})$/);                        // 20260910
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = str.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})/);            // 26.9.10 (2자리 연도)
+  m = str.match(/(?:^|\D)(\d{8})(?:\D|$)/);                        // 20260910(앞뒤가 숫자가 아닌 경우만 — 다른 8자리 숫자와 혼동 방지)
+  if (m) { const s = m[1]; return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`; }
+  m = str.match(/(\d{2})[-./](\d{1,2})[-./](\d{1,2})/);            // 26.9.10 (2자리 연도)
   if (m) return `20${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
   return null;
 }
@@ -182,17 +184,22 @@ function parseReportAsOfDate(buffer, maxYear) {
       console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}" 시트를 찾을 수 없습니다(시트 목록: ${wb.SheetNames.join(', ')}) — 이 값 없이 계속 진행합니다.`);
       return null;
     }
-    const cell = sheet['H2'];
-    if (!cell || cell.v === undefined || cell.v === null || cell.v === '') {
-      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!H2 셀이 비어 있습니다 — 이 값 없이 계속 진행합니다.`);
-      return null;
+    // H2 하나만 보지 않고 H1~H3을 순서대로 시도한다(실 샘플로 확인, 2026-09-16 — H2가 맞았다).
+    // **원본 셀의 서식 문자열(cell.w)을 원시값(cell.v)보다 먼저 쓴다** — 실 샘플에서 H2의 raw
+    // Date는 "2026-09-09T14:59:08.000Z"였는데(시각 성분이 낀 일련값 — NOW()류 수식으로 만들어진
+    // 값으로 보인다), Excel 서식이 이를 "Updated : 2026/09/10"으로 표시했다. cell.v를 UTC 기준으로
+    // 그대로 해석하면 이 시각 성분 때문에 정확히 하루 어긋난다(사용자가 화면에서 실제로 보는 날짜와
+    // 다름) — 사람이 Excel에서 읽는 그대로(cell.w)가 진실이므로 이걸 우선한다.
+    const candidates = ['H1', 'H2', 'H3'];
+    for (const addr of candidates) {
+      const cell = sheet[addr];
+      if (!cell) continue;
+      const parsed = (cell.w && parseAsOfDateValue(cell.w)) || (cell.v !== undefined && cell.v !== null && cell.v !== '' ? parseAsOfDateValue(cell.v) : null);
+      if (parsed) return parsed;
+      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!${addr} 값(w="${cell.w}", v="${cell.v}")을 날짜로 해석하지 못했습니다 — 다음 후보를 확인합니다.`);
     }
-    const parsed = parseAsOfDateValue(cell.v);
-    if (!parsed) {
-      console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!H2 값("${cell.v}")을 날짜로 해석하지 못했습니다 — 이 값 없이 계속 진행합니다.`);
-      return null;
-    }
-    return parsed;
+    console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}"!H1~H3에서 날짜를 찾지 못했습니다 — 이 값 없이 계속 진행합니다.`);
+    return null;
   } catch (err) {
     console.warn(`[경쟁채널 지표 as-of 날짜] 읽기 실패(무시하고 계속 진행): ${err.message}`);
     return null;
@@ -214,17 +221,10 @@ async function main() {
   const ratingsRows = parseCompetitorRatingsWorkbook(ratingsBuffer);
   console.log(`  ${ratingsRows.length}행 파싱 완료`);
 
-  console.log(`[2/5] File2 읽는 중: ${revenuePath}`);
-  const revenueRows = parseCompetitorRevenueWorkbook(readFileSync(revenuePath));
-  console.log(`  ${revenueRows.length}행 파싱 완료`);
-
-  console.log('[3/5] competitor_ratings upsert');
+  console.log('[2/5] competitor_ratings upsert');
   await upsertAll(supabase, 'competitor_ratings', ratingsRows, 'year,index_mode,metric_code,channel,month');
 
-  console.log('[4/5] competitor_revenue upsert');
-  await upsertAll(supabase, 'competitor_revenue', revenueRows, 'channel,year,month');
-
-  console.log('[5/5] 리포트 as-of 날짜(File1 "{연도}년" 시트 H2) 확인 후 competitor_ratings_meta upsert');
+  console.log('[3/5] 리포트 as-of 날짜(File1 "{연도}년" 시트 H2) 확인 후 competitor_ratings_meta upsert');
   const maxYear = determineMaxYear(ratingsRows);
   const reportAsOfDate = parseReportAsOfDate(ratingsBuffer, maxYear);
   if (reportAsOfDate) {
@@ -236,7 +236,24 @@ async function main() {
     console.warn('  report_as_of_date를 얻지 못해 competitor_ratings_meta 갱신을 건너뜁니다(기존 값 유지, 프론트는 폴백 표시로 대체됨).');
   }
 
-  console.log(`완료. ratings ${ratingsRows.length}건, revenue ${revenueRows.length}건 처리.`);
+  // File2(매체별 광고비 raw)는 더 이상 지표 대시보드가 쓰지 않는다(js/core/metrics-data-loader.js
+  // 헤더 주석 참고 — File1 하나로 통일됐다, 2026-09-16). competitor_revenue는 롤백 안전망으로만
+  // 남겨둔 legacy 테이블이라, 이 파일을 못 읽거나 형식이 바뀌어도(실측: "변환용" 시트가 없고
+  // "Sheet1"만 있는 파일이 전달된 적이 있다) ratings/as-of-date 적재를 절대 막으면 안 된다 — 그래서
+  // 이 둘(critical path)보다 뒤에서, 실패해도 무시하고 넘어가는 구조로 돌린다.
+  console.log(`[4/5] File2 읽는 중(레거시 롤백용, 실패해도 계속 진행): ${revenuePath}`);
+  let revenueRowCount = 0;
+  try {
+    const revenueRows = parseCompetitorRevenueWorkbook(readFileSync(revenuePath));
+    console.log(`  ${revenueRows.length}행 파싱 완료`);
+    revenueRowCount = revenueRows.length;
+    console.log('[5/5] competitor_revenue upsert');
+    await upsertAll(supabase, 'competitor_revenue', revenueRows, 'channel,year,month');
+  } catch (err) {
+    console.warn(`  File2 처리 실패(무시하고 계속 진행 — competitor_ratings/competitor_ratings_meta는 이미 반영됨): ${err.message}`);
+  }
+
+  console.log(`완료. ratings ${ratingsRows.length}건, revenue ${revenueRowCount}건 처리.`);
   console.log('주의: 파일에서 삭제/변경되어 사라진 과거 행은 upsert만으로는 정리되지 않습니다. 필요 시 Supabase에서 수동 확인하세요.');
 }
 
