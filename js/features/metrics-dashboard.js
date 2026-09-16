@@ -22,10 +22,6 @@
       if (mode === 'cable') return row.scope === '케이블';
       return row.scope === '종편' || row.scope === '케이블'; // 'payTv' 기본값
     }
-    function metricsScopeLabel(scopeMode) {
-      const mode = scopeMode || metricsScopeMode;
-      return mode === 'all' ? '지상파+유료방송' : mode === 'cable' ? '케이블' : '유료방송';
-    }
 
     // 데이터에 실제로 있는 (연도 내) 월 목록 — 오름차순. metricsSelectedMonths(월 선택 pill, 비어있으면
     // 전체)로 좁힌다 — 매출 대시보드의 selectedMonths와 같은 원칙, 이 탭 전용 상태라 전역과 분리.
@@ -108,7 +104,10 @@
       return out;
     }
 
-    // M/S 공식(plan 확정사항): ENA 사업자 총합(치환값) ÷ "범위" 토글이 가리키는 시장 총매출 × 100.
+    // M/S 공식(KPI1·2 전용 — 진짜 전체 산업 규모 기준): ENA 사업자 총합(치환값) ÷ "범위" 토글이
+    // 가리키는 시장 총매출 × 100. KPI1·2("전체방송광고 시장규모"/"유료방송광고 시장규모")는 ①②선택과
+    // 무관하게 항상 이 진짜 전체 규모를 보여주기로 함(2026-09-16, 사용자 확인 — "이 둘은 진짜 전체
+    // 산업 규모로 그대로"). KPI3(M/S)·M/S트렌드·시장규모추이차트·비중은 아래 selection 버전을 쓴다.
     function computeEnaPayTvMarketShare(year, month, scopeMode) {
       const groups = metricsGroupRevenueMap({ year, month }, scopeMode || metricsScopeMode);
       const market = Object.values(groups).reduce((s, v) => s + v, 0);
@@ -116,6 +115,21 @@
       return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
     }
     function metricsMarketAndShareAt(period, scopeMode) { return period ? computeEnaPayTvMarketShare(period.year, period.month, scopeMode) : null; }
+
+    // M/S 공식(KPI3·M/S트렌드·시장규모추이차트·비중 — ①선택 사업자 기준): "시장"이 전체 사업자가
+    // 아니라 ①에서 선택된 사업자들의 합(ENA 포함)으로 바뀐다 — M/S는 여전히 ENA ÷ 그 합(분자는
+    // 항상 ENA로 고정, 사용자가 다른 사업자를 골라도 분자가 바뀌지 않는다). "범위" 토글과 무관하게
+    // ①에서 실제로 선택된 이름만 합산한다(scope='all'로 조회 — 선택 자체가 이미 ①드롭다운에서 그
+    // 시점의 범위 안에서 고른 것들이라 이중 필터링하지 않는다. 2026-09-16, 사용자 요청: "사업자,
+    // 채널에 따라 시장, 비중, M/S 등등 바뀌는 게 맞을 거 같아" + "KT ENA 기준이어야 되는 건 맞는데").
+    function computeEnaSelectionMarketShare(year, month) {
+      const groups = metricsGroupRevenueMap({ year, month }, 'all');
+      const ops = metricsSelectedOperators.length ? metricsSelectedOperators : [ENA_CHANNEL_GROUP];
+      const market = ops.reduce((s, op) => s + (groups[op] || 0), 0);
+      const ena = groups[ENA_CHANNEL_GROUP] || 0;
+      return { market, ena, share: market > 0 ? (ena / market * 100) : 0 };
+    }
+    function metricsSelectionMarketAndShareAt(period) { return period ? computeEnaSelectionMarketShare(period.year, period.month) : null; }
 
     // ------------------------------------------------------------
     // ① 사업자 / ② 채널 후보 목록 — File1(경쟁채널 지표 현황) 하나로 통일(2026-09-16).
@@ -321,68 +335,55 @@
       metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', metricsGrowthPct(currPay.market, momPay && momPay.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
-      document.getElementById('metricsKpiShareValue').innerText = currPay.share.toFixed(1) + ' %';
-      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currPay.ena / 1e8, 2)}억원 ÷ 유료방송 시장 ${metricsFmtNum(currPay.market / 1e8, 2)}억원`;
-      metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(currPay.share, momPay && momPay.share), '%p');
-      metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currPay.share, yoyPay && yoyPay.share), '%p');
+      // M/S는 KPI1·2와 달리 ①선택 사업자 합 기준(2026-09-16) — "시장"이 전체가 아니라 지금 고른
+      // 사업자들의 합(ENA 포함)이라, 어떤 경쟁사를 고르느냐에 따라 값이 달라진다.
+      const currSel = metricsSelectionMarketAndShareAt(period);
+      const momSel = metricsSelectionMarketAndShareAt(metricsPrevMonthPeriod(period));
+      const yoySel = metricsSelectionMarketAndShareAt(metricsPrevYearPeriod(period));
+      document.getElementById('metricsKpiShareValue').innerText = currSel.share.toFixed(1) + ' %';
+      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 ÷ 선택 사업자 ${metricsSelectedOperators.length}개 합 ${metricsFmtNum(currSel.market / 1e8, 2)}억원`;
+      metricsRenderBadge('metricsKpiShareMomBadge', '전월', metricsPointDiff(currSel.share, momSel && momSel.share), '%p');
+      metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currSel.share, yoySel && yoySel.share), '%p');
     }
 
     // ------------------------------------------------------------
-    // 방송광고시장 규모 추이 — "범위" 토글(metricsScopeMode)이 가리키는 구분만 쌓는다(2026-09-15,
-    // 사용자 요청 — 예전엔 범위와 무관하게 지상파/종편/케이블 셋을 항상 다 보여줬으나, 위쪽 조회조건과
-    // 안 맞다는 지적으로 범위에 맞춰 좁힌다). 색은 카테고리별로 고정 인덱스를 써서 범위가 바뀌어도
-    // (예: 유료방송→케이블) 같은 카테고리가 항상 같은 색을 유지한다.
-    // 그룹별로 자기참조 행 우선/세부채널 합산 폴백을 쓰는 metricsGroupRevenueMap()을 그대로 재사용해
-    // 중복 합산을 피한다(같은 그룹을 자기참조 총합 + 세부채널로 두 번 더하지 않음).
-    // "비중" 모드(metricsMarketByScopeMode==='share')는 같은 카테고리 구성을 월별 100% 누적으로 바꿔
-    // "범위 안에서 각 구분이 차지하는 비중이 달에 따라 어떻게 바뀌는지"를 보여준다.
+    // 방송광고시장 규모 추이 — ①선택 사업자별로 쌓는다(2026-09-16, 사용자 요청 — 지상파/종편/케이블
+    // 카테고리 고정이 아니라 "시장"·"비중"도 M/S와 똑같이 ①선택을 따라야 한다는 지적). ENA는
+    // 강조색(RC('curr')), 나머지는 서수 팔레트(seriesColor) — 매출 트렌드/랭킹차트와 동일한 색 규칙.
+    // "비중" 모드(metricsMarketByScopeMode==='share')는 같은 선택 구성을 월별 100% 누적으로 바꿔
+    // "선택 사업자들 사이에서 각자 비중이 달에 따라 어떻게 바뀌는지"를 보여준다.
     // ------------------------------------------------------------
-    const METRICS_SCOPE_CATEGORIES = ['지상파', '종편', '케이블'];
-    const METRICS_SCOPE_CATEGORY_COLOR_INDEX = { '지상파': 0, '종편': 1, '케이블': 2 };
-    function metricsScopeCategoriesForMode(scopeMode) {
-      if (scopeMode === 'cable') return ['케이블'];
-      if (scopeMode === 'all') return METRICS_SCOPE_CATEGORIES;
-      return ['종편', '케이블']; // 'payTv' 기본값
-    }
     function renderMetricsMarketByScopeChart() {
       const canvas = document.getElementById('chartMetricsMarketByScope'); if (!canvas) return;
       if (chartInstances.metricsMarketByScope) { chartInstances.metricsMarketByScope.destroy(); chartInstances.metricsMarketByScope = null; }
 
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
-      const categories = metricsScopeCategoriesForMode(metricsScopeMode);
+      const ops = metricsSelectedOperators;
       const isShare = metricsMarketByScopeMode === 'share';
-      document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (${categories.join('/')})`;
-      if (!months.length) return;
+      document.getElementById('metricsMarketByScopeChartTitle').innerText = `방송광고시장 규모 추이 (선택 사업자 ${ops.length}개 합)`;
+      if (!months.length || !ops.length) return;
       const labels = months.map(m => `${m}월`);
 
-      // 채널그룹 → scope(지상파/종편/케이블) 조회용 — 그룹당 행 하나만 있으면 되므로 캐시.
-      const scopeByGroup = {};
-      metricsRevenueData.forEach(r => { if (!scopeByGroup[r.channelGroup]) scopeByGroup[r.channelGroup] = r.scope; });
-
-      const dataByCat = categories.map(() => []);
+      const dataByOp = ops.map(() => []);
       months.forEach(m => {
-        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, metricsScopeMode); // 위 컨트롤바의 "범위" 토글 그대로 반영
-        const catTotal = {}; categories.forEach(c => { catTotal[c] = 0; });
-        Object.keys(groups).forEach(g => {
-          const cat = scopeByGroup[g];
-          if (cat && catTotal.hasOwnProperty(cat)) catTotal[cat] += groups[g];
-        });
-        const monthTotal = categories.reduce((s, c) => s + catTotal[c], 0);
-        categories.forEach((cat, i) => {
-          dataByCat[i].push(isShare ? (monthTotal > 0 ? (catTotal[cat] / monthTotal * 100) : 0) : (catTotal[cat] / 1e8));
+        const groups = metricsGroupRevenueMap({ year: metricsSelectedYear, month: m }, 'all'); // 선택 자체가 이미 범위 안에서 고른 것 — 이중 필터링 안 함
+        const monthTotal = ops.reduce((s, op) => s + (groups[op] || 0), 0);
+        ops.forEach((op, i) => {
+          const v = groups[op] || 0;
+          dataByOp[i].push(isShare ? (monthTotal > 0 ? (v / monthTotal * 100) : 0) : (v / 1e8));
         });
       });
 
-      const colors = categories.map(cat => seriesColor(METRICS_SCOPE_CATEGORY_COLOR_INDEX[cat]));
+      const colors = ops.map((op, i) => metricsIsEnaName(op) ? RC('curr') : seriesColor(i));
       const ctx = canvas.getContext('2d');
       chartInstances.metricsMarketByScope = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels, datasets: categories.map((cat, i) => ({
-            label: cat, data: dataByCat[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator(),
+          labels, datasets: ops.map((op, i) => ({
+            label: metricsOperatorDisplayName(op), data: dataByOp[i], backgroundColor: ddBarFill(colors[i]), borderRadius: 0, ...ddStackSeparator(),
             datalabels: isShare ? { display: false } : {
               // 합계 라벨은 스택 맨 위 계열 하나에만 붙인다(js/features/trend-portfolio-channel.js와 동일 패턴).
-              display: (ctx) => cat === categories[categories.length - 1],
+              display: (ctx) => i === ops.length - 1,
               anchor: 'end', align: 'top', offset: 4, color: dataLabelTextColor(), font: { size: 12, weight: FW() },
               formatter: (value, ctx) => { let total = 0; ctx.chart.data.datasets.forEach(ds => { total += ds.data[ctx.dataIndex] || 0; }); return total > 0 ? metricsFmtNum(total, 1) + '억' : ''; }
             }
@@ -399,18 +400,18 @@
     }
 
     // ------------------------------------------------------------
-    // KT ENA M/S 트렌드 — 꺾은선. "범위" 토글이 가리키는 시장 기준 M/S(%)만 보여준다
-    // (왼쪽 시장규모 차트는 지상파/종편/케이블 고정 3분류, 이쪽은 범위 토글에 따라 달라짐).
+    // KT ENA M/S 트렌드 — 꺾은선. ①선택 사업자 합 기준 M/S(%)를 보여준다(2026-09-16 — 왼쪽 시장규모
+    // 차트·KPI3와 같은 기준으로 통일, computeEnaSelectionMarketShare() 참고).
     // ------------------------------------------------------------
     function renderMetricsMarketShareChart() {
       const canvas = document.getElementById('chartMetricsMarketShare'); if (!canvas) return;
       if (chartInstances.metricsMs) { chartInstances.metricsMs.destroy(); chartInstances.metricsMs = null; }
-      document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S 트렌드 (${metricsScopeLabel()})`;
+      document.getElementById('metricsMsChartTitle').innerText = `KT ENA M/S 트렌드 (선택 사업자 ${metricsSelectedOperators.length}개 기준)`;
 
       const months = metricsMonthsInYear(metricsRevenueData, metricsSelectedYear);
       if (!months.length) return;
       const labels = months.map(m => `${m}월`);
-      const shareVals = months.map(m => computeEnaPayTvMarketShare(metricsSelectedYear, m, metricsScopeMode).share);
+      const shareVals = months.map(m => computeEnaSelectionMarketShare(metricsSelectedYear, m).share);
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsMs = new Chart(ctx, {

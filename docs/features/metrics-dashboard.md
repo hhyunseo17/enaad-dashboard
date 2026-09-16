@@ -36,13 +36,24 @@ File1은 사업자 단위로만 보고하고(File2 같은 세부채널 분해가
 - `computeEnaMonthlyRevenue(year, month, channelFilter?)`(`metrics-data-loader.js`)와 그 안의 `matchesMetricsBasis(r)`가 전역 `revenueBasisMode`(state.js)를 직접 읽는다. `matchesMetricsBasis()`는 그래도 `kpi.js`의 `matchesCurrentBasis()`와 같은 규칙(취급고=실적만/회계=실적+회계조정)을 복제한 별도 함수로 유지한다 — core(`metrics-data-loader.js`)가 features(`kpi.js`)의 함수를 직접 호출하면 레이어가 거꾸로 의존하게 되기 때문(스크립트 로드 순서 관례 위반).
 - `rebuildMetricsSubstitution()`(인자 없음)이 `renderMetricsDashboard()`의 매 렌더마다 다시 호출된다 — 어느 쪽 버튼으로 바뀌었든, 또는 이 탭에서 다른 컨트롤을 조작해 재렌더가 돌 때마다 항상 최신 값 기준으로 KT ENA 부분이 재계산된다.
 
-## M/S(시장점유율) 공식
+## M/S(시장점유율) 공식 — 카드마다 "시장"의 정의가 다르다 (2026-09-16 재설계)
+KPI1·2("전체방송광고 시장규모"/"유료방송광고 시장규모")와 나머지(KPI3 M/S·M/S트렌드·"방송광고시장 규모 추이"차트·비중 토글)는 서로 다른 "시장" 정의를 쓴다 — 사용자 확인: "1·2번은 진짜 전체 산업 규모로 그대로, 3번(M/S)부터는 ①선택 사업자 합 기준".
+
 ```
-M/S(%) = KT ENA 사업자 총합(치환값) ÷ "범위" 토글이 가리키는 시장 총매출 × 100
+KPI1·2 (진짜 전체 산업 규모, ①②선택과 무관):
+  시장규모 = "범위" 토글이 가리키는 전체 사업자 총매출 합
+  → computeEnaPayTvMarketShare(y, m, scopeMode)
+
+KPI3(M/S)·M/S트렌드·시장규모추이차트·비중 (①선택 사업자 기준):
+  시장 = ①에서 선택된 사업자들의 매출 합(ENA 포함, "범위" 토글과 무관 — 선택 자체가 이미 그
+         시점의 범위 안에서 고른 것들이라 이중 필터링하지 않는다)
+  M/S(%) = KT ENA 사업자 총합(치환값) ÷ 위 "시장" × 100  ← 분자는 항상 ENA로 고정
+  → computeEnaSelectionMarketShare(y, m)
 ```
-- **범위**: 지상파+유료방송(전체) / 유료방송(기본, 종편+케이블) / 케이블. File1엔 File2의 사업자대분류/사업자중분류 같은 스코프 컬럼이 없어, `METRICS_OPERATOR_SCOPE`(metrics-data-loader.js)라는 사업자→범위 하드코딩 맵으로 직접 분류한다(2026-09-16, 사용자 확인) — 지상파: KBS/MBC(전국)/SBS(민방포함), 종편: JTBC/TV조선/채널A/MBN, 케이블: KT ENA/CJ ENM/MBC Plus/SBS 계열/KBS N/티캐스트/iHQ. `metricsScopeMatchRow()`(metrics-dashboard.js)가 각 매출 행의 `scope` 필드(치환 시점에 이 맵으로 채워짐)를 그대로 필터링.
-- 분모도 그 범위 안 KT ENA 항목은 치환값으로 넣은 뒤 합산한다(`computeEnaPayTvMarketShare()`가 `metricsGroupRevenueMap()` 결과를 그대로 합산).
-- M/S 트렌드차트는 %선이 아니라 **누적(stacked) 막대**다 — 월별 막대 하나 = 범위 시장 총매출, "KT ENA"(강조색)+"기타"(중립색) 두 구간, % 라벨은 ENA 구간 위에 직접 표기.
+
+- **범위**: 지상파+유료방송(전체) / 유료방송(기본, 종편+케이블) / 케이블. File1엔 File2의 사업자대분류/사업자중분류 같은 스코프 컬럼이 없어, `METRICS_OPERATOR_SCOPE`(metrics-data-loader.js)라는 사업자→범위 하드코딩 맵으로 직접 분류한다(2026-09-16, 사용자 확인) — 지상파: KBS/MBC(전국)/SBS(민방포함), 종편: JTBC/TV조선/채널A/MBN, 케이블: KT ENA/CJ ENM/MBC Plus/SBS 계열/KBS N/티캐스트/iHQ. `metricsScopeMatchRow()`(metrics-dashboard.js)가 각 매출 행의 `scope` 필드(치환 시점에 이 맵으로 채워짐)를 그대로 필터링. **재설계 후 "범위" 토글의 실질 역할은 ①사업자 선택 후보군을 좁히는 것과 기본 선택 랭킹의 스코프뿐** — KPI1·2는 이 토글과 무관하게 각각 'all'/'payTv' 고정, KPI3 이후는 아예 이 토글을 안 본다(①에서 이미 고른 이름만 합산).
+- M/S 트렌드차트는 %선(꺾은선) 하나만 그린다 — 목업 초안엔 누적(stacked) 막대 아이디어도 있었으나 실제 구현은 라인 차트다.
+- "방송광고시장 규모 추이"(왼쪽) 차트는 원래 지상파/종편/케이블 3개 카테고리로 쌓았으나, ①선택 사업자별 스택으로 바뀌었다(위 "재설계" 참고) — ENA는 강조색, 나머지는 서수 팔레트, "비중" 모드는 선택 사업자들 사이의 월별 구성비(100% 누적).
 
 ## 사업자(①) ↔ 채널(②) 매핑, 표시 이름 — 전부 하드코딩 (2026-09-16)
 File1엔 File2의 "채널그룹→세부채널" 같은 대응관계를 알려주는 컬럼이 전혀 없다. 그래서 세 개의 하드코딩 맵(`metrics-data-loader.js`)이 이 파일 전체의 사업자/채널 개념을 떠받친다 — 전부 사람이 Supabase에 직접 질의해 실제 데이터를 대조하며 만들었다(2026-09-16):
@@ -99,7 +110,8 @@ File1로 통일하면서 두 가지가 동시에 참이 된다: (a) 매출(01번
 | `rebuildMetricsSubstitution()` | metrics-data-loader.js | `metricsRatingsData`의 metric_code='01' 행 → `metricsRevenueData` 파생(KT ENA만 치환), 매 렌더마다 재호출 |
 | `metricsChannelsForOperator(op)` / `metricsRepresentativeChannel(op)` / `metricsOperatorDisplayName(op)` | metrics-data-loader.js | ①사업자→②채널/대표채널/표시이름 하드코딩 맵 접근자(위 "사업자↔채널 매핑" 절) |
 | `metricsGroupRevenueMap(period, scopeMode)` | metrics-dashboard.js | 사업자별 월 매출 총합(File1은 세부채널 분해가 없어 자기참조 폴백 로직 자체가 필요 없어짐) |
-| `computeEnaPayTvMarketShare(y, m, scopeMode)` | metrics-dashboard.js | M/S 공식 그대로(plan에 명시된 함수명) |
+| `computeEnaPayTvMarketShare(y, m, scopeMode)` | metrics-dashboard.js | KPI1·2 전용 — 범위 토글이 가리키는 전체 사업자 합 기준 M/S(plan에 명시된 함수명, 2026-09-16부터 KPI1·2에만 씀) |
+| `computeEnaSelectionMarketShare(y, m)` | metrics-dashboard.js | KPI3(M/S)·M/S트렌드·시장규모추이차트·비중 전용 — ①선택 사업자 합 기준(2026-09-16 신설) |
 | `metricsEnsureDefaultSelections()` | metrics-dashboard.js | 최초 렌더 시 연도/①사업자 기본값 채움(연중 누적 합산으로 랭킹, 2026-09-16 — 사용자가 고른 뒤로는 건드리지 않음) |
 | `renderMetricsDashboard()` | metrics-dashboard.js | `VIEW_CONFIG.metricsMain.render()` — 지연 fetch, 로딩/에러 상태, 컨트롤·KPI·차트 전부 오케스트레이션 |
 | `renderMetricsRevenueKpis()` | metrics-dashboard.js | KPI① 시장규모, KPI② M/S |
@@ -161,6 +173,7 @@ File1로 통일하면서 두 가지가 동시에 참이 된다: (a) 매출(01번
 22. **[21번 정정] 버튼 자체는 이 탭에도 있어야 했다** — 21번에서 버튼까지 지웠더니 사용자가 바로 정정: "회계기준/취급고 기준 토글을 없애면 안 되지, 그거에 따라 숫자가 바뀌어야 되는데" + "취급고를 누르면 매출 대시보드에 있는 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와야 한다"(2026-09-15). 즉 없애야 했던 건 **버튼**이 아니라 **이 탭만의 독립된 별도 상태**였다 — 버튼은 다시 넣고(`#btnMetricsBasisPerformance`/`#btnMetricsBasisAccounting`, `onclick="setMetricsRevenueBasis(mode)"`), 그 버튼이 이 탭 전용 값이 아니라 **전역 `revenueBasisMode`를 직접** 바꾸게 했다(`setMetricsRevenueBasis()`가 `data-loader.js`의 `setRevenueBasis()`를 그대로 호출 — 메인 대시보드 버튼/필터까지 같이 갱신됨). 위 "자사 매출기준" 절 최신 버전 참고 — 21번 설명 중 "토글 자체가 없다"는 이제 틀린 서술이다(버튼은 있다, 상태만 공유).
 23. **[치명적, 수정됨] 기본 선택된 "①사업자" 목록이 실제 매출 순위와 무관해 보였다 — ②채널 목록도 같이 이상해짐** — 사용자가 드롭다운을 열어 "5개 선택됨"인데 체크된 항목이 눈에 안 띄는 걸 이상하다고 지적, 이어서 "옆에 채널도 이상해"라고 지적(2026-09-16). 원인: `metricsEnsureDefaultSelections()`가 `metricsLatestPeriod()`(최근 단일 월)로 top4 사업자를 뽑았는데, File2가 아직 마감 전인 9월엔 KT ENA(File1 치환값)를 뺀 **전 채널그룹이 0원 플레이스홀더**라(11번 항목의 File2판 — 9월 File2 raw 자체가 전부 0, KT ENA만 File1로 주입돼 채워짐) 나머지 4자리가 "동률 0원" 임의 순서로(Object.entries 순회 순서) 뽑혔다 — 실제로는 CJENM·JTBC·기타·TV조선(1~8월 유료방송 누적 기준 1~4위, Supabase 실측)이 뽑혀야 하는데 순서가 보장되지 않았다. `renderMetricsRevenueRankingChart()`에 이미 있던 "연중 누적 합산" 패턴을 그대로 재사용해 `metricsEnsureDefaultSelections()`도 `metricsMonthsInYear()`가 반환하는 모든 달을 합산한 뒤(0원인 달은 자동으로 영향 없음) `v > 0` 필터까지 걸어 랭킹을 매기도록 수정. ②채널 캐스케이딩 목록(`metricsChannelsForOperators()`)은 ①사업자 선택을 그대로 입력받는 구조라 이 수정 하나로 같이 정상화된다.
 24. **[대규모 재설계] File2를 분석에서 완전히 제외 — File1 하나로 통일 (2026-09-16)** — 23번 조사 도중 사용자가 근본 해결을 요청: "그냥 파일2는 분석에서 제외하자". File2는 마감 전 달마다 KT ENA 제외 전원이 0원 플레이스홀더인 게 반복되는 버그의 근본 원인이었다(11·23번 모두 이 문제의 다른 증상). Supabase로 File1의 "01.방송사업자 광고매출"을 직접 확인한 결과 14개 사업자 전원이 마감 전 달에도 실측/추정 값을 보고하고 있어(9월 CJ ENM 204억 등 전부 nonzero) 이 문제 자체가 사라짐을 확인 — File2 fetch(`METRICS_REVENUE_URL`)와 `injectOperatorRevenueFromRatings()`(File1→File2 조인 주입 로직), `metricsRevenueDataOriginal` 캐시, "자기참조 합계 행 합성" 폴백을 전부 제거하고 `rebuildMetricsSubstitution()`이 File1 metric_code='01' 행에서 직접 `metricsRevenueData`를 만들도록 재작성. 이어서 사용자가 "사업자-채널도 파일1에 있는 채널만 대상으로 하고, M/S도 죄다 파일1에 있는 걸로 해" + 직접 제공한 사업자→범위(지상파/종편/케이블) 매핑을 받아 `METRICS_OPERATOR_SCOPE`로 하드코딩(위 "M/S 공식" 절 참고). 처음엔 "File1 metric 01은 사업자 단위뿐이니 ①→②채널 캐스케이딩 자체가 불필요해지는 것 아니냐"고 되물었으나, 사용자가 "아니 채널 필요해" + 직접 사업자→채널 매핑(KT ENA/CJ ENM/MBC PLUS/SBS미디어넷/KBSN 5개 + 나머지는 자기 자신)을 제공 — `METRICS_OPERATOR_CHANNEL_MAP`으로 하드코딩하고, 매출 트렌드/랭킹은 매출이 사업자 단위로만 존재해 이 토글과 무관하게 항상 ①기준으로 고정. 마지막으로 "미니트렌드 차트에도 적용하자"는 요청에 따라 CPRP/채널시청률/eq-GRPs/광고주수와 상세표 티저가 쓰던 고정 6채널 목록(`METRICS_RATINGS_FIXED_CHANNELS`)을 폐지하고 `metricsRatingsChannelSelection()`이 ①②선택을 그대로 따르도록 재설계(사업자 비교 모드는 대표채널로 근사). 부작용: File1의 채널 단위 지표(03~15번)는 실제로 15개 채널만 있어(위 "사업자↔채널 매핑" 절 참고) TV조선/채널A/MBN/KBS/MBC(전국)/SBS(민방포함)/티캐스트/iHQ 8개 사업자는 CPRP/시청률/GRP 미니차트에서 빈 줄로 나온다 — File1 자체의 데이터 커버리지 한계이며 버그가 아니다. File2 서빙 인프라(`functions/api/competitor-revenue.js`, ETL, `competitor_revenue` 테이블)는 롤백 여지를 남겨 삭제하지 않고 그대로 뒀다.
+25. **[재설계] "시장"·"비중"·M/S가 KPI1·2를 빼고 전부 ①선택 사업자 기준으로 바뀜 (2026-09-16)** — 24번 직후 사용자가 "사업자, 채널에 따라 시장, 비중, M/S 등등 바뀌는 게 맞을 거 같아"라고 지적. 처음엔 "M/S 분자도 선택한 사업자로 바뀌어야 하나" 되물었으나 사용자가 정정: "어떻게 하는 게 나을까? KT ENA 기준이어야 되는 건 맞는데" — 분자(ENA)는 고정하고 분모("시장")만 ①선택 기준으로 바꾸는 것으로 합의. 이어서 KPI1·2("전체방송광고/유료방송광고 시장규모")도 포함할지 물었더니 "아니오, 1·2번은 진짜 전체 산업 규모로 그대로"라고 확정 — 결과적으로 카드마다 "시장"의 정의가 갈리는 구조가 됐다(위 "M/S 공식" 절 참고): KPI1·2는 `computeEnaPayTvMarketShare()`(범위 토글 기준 전체 사업자 합, 그대로 유지)를, KPI3(M/S)·M/S트렌드·"방송광고시장 규모 추이"차트·비중 토글은 신설한 `computeEnaSelectionMarketShare()`(①선택 사업자 합, 범위 토글 무시)를 쓴다. "방송광고시장 규모 추이" 차트는 지상파/종편/케이블 3카테고리 스택에서 ①선택 사업자별 스택으로 갈아엎었다(`METRICS_SCOPE_CATEGORIES`/`METRICS_SCOPE_CATEGORY_COLOR_INDEX`/`metricsScopeCategoriesForMode()` 삭제, 이제 안 씀). 재설계 후 "범위" 토글의 실질 역할은 ①사업자 선택 후보군을 좁히는 것과 기본 선택 랭킹의 스코프뿐이다 — KPI3 이후 차트들은 이 토글을 아예 안 본다.
 
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
