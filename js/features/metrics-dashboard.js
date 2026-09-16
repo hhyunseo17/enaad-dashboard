@@ -368,6 +368,14 @@
       // 돌아오는 왕복 토글이 된다(이전엔 좁힐 때 선택을 그대로 뒀었는데, 그러면 "유료방송"으로 좁혀도
       // 지상파 3사가 여전히 체크된 채 남아 범위와 선택이 어긋났다).
       metricsSelectedOperators = metricsSelectedOperators.filter(op => metricsScopeMatchRow({ scope: METRICS_OPERATOR_SCOPE[op] }, mode));
+      // 'payTv'(종편+케이블)와 'all'(+지상파) 둘 다 종편을 포함하므로, 케이블만 찍힌 상태에서
+      // 넓힐 때는 매번 종편을 되돌려놔야 한다 — 예전엔 'all'로 넓힐 때 지상파만 추가하고 종편은
+      // 빠뜨려서, 케이블→유료방송으로 넓혀도 종편이 안 돌아오는 버그가 있었다(2026-09-16, 사용자 지적).
+      if (mode === 'payTv' || mode === 'all') {
+        Object.keys(METRICS_OPERATOR_SCOPE).filter(op => METRICS_OPERATOR_SCOPE[op] === '종편').forEach(op => {
+          if (!metricsSelectedOperators.includes(op)) metricsSelectedOperators.push(op);
+        });
+      }
       if (mode === 'all') {
         Object.keys(METRICS_OPERATOR_SCOPE).filter(op => METRICS_OPERATOR_SCOPE[op] === '지상파').forEach(op => {
           if (!metricsSelectedOperators.includes(op)) metricsSelectedOperators.push(op);
