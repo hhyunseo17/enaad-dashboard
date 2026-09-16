@@ -25,20 +25,17 @@ async function getAuthorizationHeader() {
   return data.session ? `Bearer ${data.session.access_token}` : null;
 }
 
-// 지표 대시보드(경쟁채널 벤치마크) 탭 노출 제한 — 롤아웃 초기라 소수에게만 공개.
-// 여기는 UI만 숨긴다(콘솔로 우회 가능) — 실제 차단은 shared/supabase-proxy.mjs의
-// requireMetricsAccess()(서버 쪽 403)다. 이 목록이 그 함수의 기본값/환경변수(METRICS_ALLOWED_EMAILS)와
-// 어긋나면 "탭은 보이는데 데이터는 403" 또는 "탭은 없는데 실제로는 허용" 같은 불일치가 생기니
-// 사람을 추가/제거할 때 두 곳을 같이 고친다.
-const METRICS_ALLOWED_EMAILS = ['hyunseo@ktena.co.kr'];
+// 지표 대시보드(경쟁채널 벤치마크) 탭 노출 — 이메일 허용목록 롤아웃은 종료(2026-09-16, 사용자 요청:
+// "supabase에서도 가입가능한 사람 다 보이게 해줘") — 이제 다른 /api/*와 동일하게 "로그인만 하면
+// 전원 접근 가능"으로 돌아간다(shared/supabase-proxy.mjs의 requireMetricsAccess()도 같은 커밋에서
+// 로그인 여부만 검사하도록 맞춰 바꿨다).
 // switchView()(view-router.js)가 metricsMain/metricsDetail 진입을 막을지 동기적으로 확인할 때 쓴다 —
 // Supabase 세션 조회는 비동기라 그때마다 다시 물을 수 없어 ensureAuthenticated() 시점에 한 번 캐싱.
 let metricsAccessAllowed = false;
 
 function applyMetricsAccessGate(email) {
-  // METRICS_DASHBOARD_ENABLED(state.js)는 롤백 스위치 — 이메일 허용목록과 별개로, false면
-  // 누구에게도(허용목록에 있어도) 탭을 보여주지 않는다.
-  metricsAccessAllowed = METRICS_DASHBOARD_ENABLED && !!email && METRICS_ALLOWED_EMAILS.includes(email.toLowerCase());
+  // METRICS_DASHBOARD_ENABLED(state.js)는 롤백 스위치 — false면 로그인 여부와 무관하게 탭을 숨긴다.
+  metricsAccessAllowed = METRICS_DASHBOARD_ENABLED && !!email;
   const tabBtn = document.getElementById('dashboardTabMetrics');
   if (tabBtn) tabBtn.style.display = metricsAccessAllowed ? '' : 'none';
 }
