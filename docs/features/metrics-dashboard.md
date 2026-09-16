@@ -261,6 +261,8 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
     - **요약행 숨김**: 위 사용자가 나열한 9개 지표(metric_code 05/09/10/11/12/13/14/15/16 — AD Ratio/CPRP/일평균 광고량/시청률1%당매출/광고주수/광고주당매출/브랜드수/브랜드당매출/사업자별 광고주수)는 비율·평균·건수 성격이라 채널을 단순 합산한 최상위 "요약" 행 숫자 자체가 성립하지 않는다(반대로 03/04/06/07/08 — 채널시청률·eq-GRPs 계열은 도달량 성격이라 채널 총합이 그 구간 전체 임팩트로 해석 가능해 그대로 둠). `METRICS_DETAIL_NO_SUMMARY_CODES` Set 신설, `metricsRenderDetailRows()`가 depth 0(지표 행) + 이 Set에 속한 metricCode일 때 `pvMergeMetrics()` 자체를 안 부르고 모든 열에 `-`만 찍는다 — 채널별(depth 1) 행은 그대로 실값 유지.
     - **조회조건 연동**: `metricsDetail`은 지금까지 연도/월 pill 자체가 없어 `renderMetricsDetailPivot()`이 `metricsRatingsData`를 필터 없이 통째로 읽어 File1이 갖고 있는 모든 연도(2025년~)가 항상 다 나왔다. 다른 8개 피벗 상세 화면과 같은 원칙(`renderMetricsPivotView`)으로 `renderMetricsDetailView()`(metrics-ratings.js, VIEW_CONFIG.metricsDetail.render()의 새 진입점)를 신설해 `metricsSetupYearPills`/`metricsSetupMonthPills`를 이 화면 전용 컨테이너(`#metricsDetailYearPills`/`#metricsDetailMonthPills`, dashboard.html에 hero 섹션 하단 신설)에 연결한 뒤 `renderMetricsDetailPivot()`을 호출. `renderMetricsDetailPivot()` 자체도 `metricsSelectedPeriods(rows)`로 뽑은 기간 집합으로 한 번 더 필터링.
 
+63. **채널시청률 1%당 eq-GRPs(08)도 상세표 요약행에서 제외** — 사용자 후속 요청(2026-09-16): "채널시청률 1%당 eq-GRPs도 요약 없애줘". 62번에서 CPRP(09)와 같은 "1%당" 비율 성격인데 08만 남아 있었던 걸 지적 — `METRICS_DETAIL_NO_SUMMARY_CODES`(metrics-ratings.js)에 `'08'` 추가. eq-GRPs 원값 계열(06 누적/07 1일)과 채널시청률(03/04)은 도달량 성격이라 그대로 둠.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.
