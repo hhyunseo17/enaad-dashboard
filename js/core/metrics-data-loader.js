@@ -36,7 +36,13 @@
     // rawData(메인 매출 데이터셋) 쪽 KT ENA 계열 채널 전체 — js/core/filters.js의 updateFilterCheckboxes()
     // 안에 있는 targetOrder 배열과 동일 목록이다(그 배열은 함수 지역 스코프라 여기서 재사용할 수 없어
     // 그대로 복제해 둔다 — 값이 바뀌면 두 곳을 함께 고칠 것).
-    const KT_ENA_FAMILY_CHANNELS = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
+    // **'기타' 누락으로 1~9월 누적이 33.67억원 적게 잡혔었다**(2026-09-16, 사용자 지적: "1~9월
+    // 446.75억원으로 돼 있는데 왜 지표에선 413억원이야" — Supabase로 직접 대조해 413.08억+33.67억
+    // ('기타' 채널의 1~9월 실적 합)=446.75억으로 정확히 일치함을 확인). rawData.channel 값 중
+    // "기타"는 skylife큐톤·IMC 인서트애드 등 실제 매출인데(원본 목록을 짤 때 빠졌던 것으로 보임)
+    // 이 회사 매출 전체가 KT ENA 계열 채널뿐이라 본부매출로 잡히는 모든 채널이 결국 ENA 총계에
+    // 포함돼야 한다 — 그래서 이 목록에도 추가한다.
+    const KT_ENA_FAMILY_CHANNELS = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV', '기타'];
 
     // ------------------------------------------------------------
     // 사업자(①) ↔ 채널(②) 매핑, 사업자 ↔ 범위(지상파/종편/케이블) — File1엔 이 대응관계를 알려주는
