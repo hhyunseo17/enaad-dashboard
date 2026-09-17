@@ -1491,6 +1491,28 @@
           </div>
         </section>
 
+        <!-- "1%↑ 시청률 프로그램 수" — 드라마&영화/오락 2개 장르, 채널별 그룹막대 + 월별 추이 라인
+             (2026-09-17 신규). program_ratings_monthly(본방만, ETL 처리 완료) 기반, js/features/metrics-ratings.js.
+             ①②(사업자/채널) 선택과 무관한 별도 데이터셋이라 피벗 드릴다운은 없다(1차 범위 밖). -->
+        <section class="grid-2col grid-zone5">
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (채널별)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;">
+              <canvas id="chartMetricsGenreQualifyingBar"></canvas>
+            </div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (월별 추이)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;">
+              <canvas id="chartMetricsGenreQualifyingTrend"></canvas>
+            </div>
+          </div>
+        </section>
+
         <!-- 지표 상세 테이블 티저는 폐지(2026-09-16, 사용자 요청: "메인 페이지에서 아래 표는 안
              나왔으면 좋겠어") — 헤더 "🔍 세부데이터" 버튼이 지표 대시보드에서는 이제 metricsDetail로
              바로 연결된다(view-router.js openDetailDataView() 참고). -->

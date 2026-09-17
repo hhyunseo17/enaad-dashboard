@@ -967,4 +967,6 @@
       renderMetricsRatingTrendChart();      // metrics-ratings.js
       renderMetricsGrpTrendChart();         // metrics-ratings.js
       renderMetricsAdvCountTrendChart();    // metrics-ratings.js
+      renderMetricsGenreQualifyingBarChart();   // metrics-ratings.js
+      renderMetricsGenreQualifyingTrendChart(); // metrics-ratings.js
     }

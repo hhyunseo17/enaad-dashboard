@@ -412,6 +412,21 @@ export async function handleCompetitorRatingsMetaRequest(env, request) {
   }
 }
 
+// 지표 대시보드 — 장르별 1%↑ 시청률 프로그램 수 차트용. program_ratings_monthly는 회차 단위 원본을
+// scripts/etl/load-program-ratings.mjs가 (채널,프로그램,장르,연,월) 단위로 미리 집계해둔 테이블이다
+// (약 16,684행). competitor_ratings와 마찬가지로 이 데이터도 지표 대시보드 탭 전용이라
+// requireMetricsAccess(현재는 로그인 여부만 검사 — 위 주석 참고)를 그대로 따른다.
+export async function handleProgramRatingsRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireMetricsAccess(env, request);
+  if (authError) return authError;
+  try {
+    return await proxyView(env, 'program_ratings_monthly');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
 export async function handleTargetsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
   const authError = await requireAuth(env, request);

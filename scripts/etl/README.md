@@ -101,6 +101,16 @@ node load-competitor-data.mjs "C:\경로\경쟁채널 지표 현황.xlsx" "C:\�
 
 **리포트 as-of 날짜(`competitor_ratings_meta`, 2026-09-16 추가)**: File1 안에는 연도별 시트("26년" 등)가 있고 그 `H2` 셀에 이 리포트가 실제로 언제자 기준으로 작성됐는지가 적혀 있다 — "그 안에 몇 월치 데이터가 채워졌는지"(예: 9월까지 실적 있음)와는 다른 정보라 대시보드 헤더의 "데이터 기준" 표시가 이 값을 우선 사용한다(`js/features/metrics-dashboard.js`의 `renderMetricsDataAsOfLabel()`). 시트명은 연도에 따라 바뀌므로("26년"→"27년"→"28년") 파싱된 ratings 행의 최댓값 연도로 스크립트가 동적으로 결정한다(하드코딩 없음). 이 스텝은 실패해도(시트/셀이 없거나 형식이 안 맞음) 콘솔에 경고만 남기고 나머지 15개 지표 적재를 막지 않는다 — `competitor_ratings_meta.report_as_of_date`가 비어 있으면 프론트가 기존 방식("최신 데이터가 있는 연/월")으로 자동 폴백한다.
 
+## 프로그램별 시청률 적재 (`load-program-ratings.mjs`)
+지표 대시보드의 "장르별 1%↑ 시청률 프로그램 수" 차트용. `competitor_ratings`(File1, 월별 집계 리포트)와는 완전히 다른 원본으로, 회차 단위 시청률 데이터(약 259K행)를 담은 로컬 엑셀 파일을 인자로 받는다. `load-competitor-data.mjs`/`load-targets.mjs`와 마찬가지로 독립 스크립트이며 배치/컷오버 없이 upsert만 한다.
+
+시트 이름이 날짜로 매번 바뀌고 헤더 행 위치도 미묘하게 달라질 수 있어, 하드코딩된 행 번호 대신 "채널"이 A열에 정확히 일치하는 행을 찾아 그 다음 행부터 데이터로 취급한다. 본방유무가 "본방"인 행만 남기고(재방 제외 — 시청률이 구조적으로 낮아 프로그램 성과를 왜곡함), (채널,프로그램,장르,연,월) 키로 그룹핑해 `rating_sum`(개인2049 합)/`episode_count`(회차 수)를 `program_ratings_monthly`에 upsert한다. 여러 달을 합산할 때 월별 평균을 다시 평균 내지 않고 `rating_sum`/`episode_count`를 각각 합산한 뒤 나누는 가중평균을 쓰기 위한 구조다.
+
+```
+node load-program-ratings.mjs "C:\경로\program-ratings.xlsx"
+```
+파일에서 삭제된 과거 행은 upsert만으로는 정리되지 않는다(다른 스크립트와 동일한 한계) — 필요 시 Supabase에서 수동 확인.
+
 ## 목표 적재 (`load-targets.mjs`)
 `run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 매출기준 | 대분류 | 귀속월 | 목표)를
 읽어 5대분류로 재분류(`대행수익` 등은 `기타광고`로 흡수)한 뒤 `sales_targets` 테이블에 upsert한다. 배치/컷오버 개념이

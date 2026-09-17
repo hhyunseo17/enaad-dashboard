@@ -85,6 +85,11 @@
     let metricsRatingsData = [];         // File1 파싱 결과(long-format) 전체 — 01번(매출)도 포함, metricsRevenueData는 이 배열에서 파생
     let metricsDataLoaded = false;       // fetchMetricsDataHttp() 성공 여부
     let metricsDataFetchPromise = null;  // 진행 중이거나 완료된 fetch를 캐시 — 지연 로딩을 호출부가 여러 번 트리거해도 1회만 fetch
+    // program_ratings_monthly(채널×프로그램×장르×연월 사전집계, 본방만·ETL 처리 완료) — "1%↑ 시청률
+    // 프로그램 수" 차트 2종(js/features/metrics-ratings.js) 전용. 실패해도 지표 대시보드 전체가
+    // 막히면 안 되므로 아래 fetchMetricsDataHttp()에서 절대 reject하지 않는 soft-fail로 채운다
+    // (metaPromise와 같은 패턴) — 실패 시 빈 배열로 남는다.
+    let programRatingsData = [];
     // 리포트(File1) 자체의 "as of" 날짜 — /api/competitor-ratings-meta(competitor_ratings_meta 싱글턴
     // 테이블, scripts/etl/load-competitor-data.mjs가 File1 내부 "{연도}년" 시트 H2를 읽어 채움). "최신
     // 데이터가 있는 연/월"과는 다른 개념(전자는 리포트 발행 기준일, 후자는 그 안에 몇 월치 실적이
@@ -99,6 +104,7 @@
 
     const METRICS_RATINGS_URL = '/api/competitor-ratings';
     const METRICS_RATINGS_META_URL = '/api/competitor-ratings-meta';
+    const PROGRAM_RATINGS_URL = '/api/program-ratings';
 
     // ------------------------------------------------------------
     // fetchMetricsDataHttp() — 지연 로딩 진입점
@@ -146,9 +152,21 @@
         rebuildMetricsSubstitution();
       });
 
-      // metaPromise는 절대 reject하지 않으므로 Promise.all이 실패하는 경우는 ratingsPromise가
-      // 실패했을 때뿐이다 — as-of 날짜 부가 조회가 핵심 데이터 로드를 절대 막지 않는다.
-      metricsDataFetchPromise = Promise.all([ratingsPromise, metaPromise]).then(() => {
+      // programRatingsData(장르별 1%↑ 시청률 프로그램 수 차트 전용) — metaPromise와 같은 soft-fail
+      // 패턴. 이 신규 차트가 실패해도 지표 대시보드 전체(KPI·기존 차트)가 막히면 안 된다.
+      const programRatingsPromise = fetchJson(PROGRAM_RATINGS_URL).then(rows => {
+        programRatingsData = rows.map(r => ({
+          channel: r.channel, program: r.program, genre: r.genre, year: r.year, month: r.month,
+          ratingSum: Number(r.rating_sum), episodeCount: Number(r.episode_count)
+        }));
+      }).catch(err => {
+        programRatingsData = [];
+        console.warn('[metrics-data-loader] 프로그램별 시청률 데이터 조회 실패(장르 차트만 비활성화):', err.message);
+      });
+
+      // metaPromise/programRatingsPromise는 절대 reject하지 않으므로 Promise.all이 실패하는 경우는
+      // ratingsPromise가 실패했을 때뿐이다 — 부가 조회가 핵심 데이터 로드를 절대 막지 않는다.
+      metricsDataFetchPromise = Promise.all([ratingsPromise, metaPromise, programRatingsPromise]).then(() => {
         metricsDataLoaded = true;
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
       }).catch(err => {

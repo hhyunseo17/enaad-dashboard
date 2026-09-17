@@ -349,3 +349,130 @@
         if (hasMore && isExpanded) metricsRenderDetailRows(child, depth + 1, path, visibleColumns, rowFields, expandedRows, rowDefaultExpanded, metricOrder, out);
       });
     }
+
+    // ------------------------------------------------------------
+    // "1%↑ 시청률 프로그램 수" — 드라마&영화/오락 2개 장르, 채널별 그룹막대 + 월별 추이 라인
+    // (2026-09-17 신규). 데이터 소스는 program_ratings_monthly(채널×프로그램×장르×연월 사전집계,
+    // 본방만 — ETL 처리 완료, js/core/metrics-data-loader.js의 programRatingsData). ①②(사업자/채널)
+    // 선택과 무관 — 원본이 13개 채널 전체를 담은 별도 데이터셋이라 그 selection을 걸러내지 않는다.
+    // 연/월 조회기간만 metricsSelectedPeriods()로 적용(다른 미니차트들과 같은 관례).
+    //
+    // 그 달 그 프로그램(본방)의 평균 시청률 = rating_sum ÷ episode_count. 여러 달에 걸친 평균은
+    // 월별 평균끼리 다시 평균내면 안 되고(회차 수 적은 달이 과대반영됨) rating_sum과 episode_count를
+    // 각각 합산한 뒤 나누는 가중평균이어야 한다 — 왼쪽 채널별 막대가 이 방식.
+    // ------------------------------------------------------------
+    const METRICS_GENRE_QUALIFYING_GENRES = ['드라마&영화', '오락'];
+    const METRICS_GENRE_QUALIFYING_THRESHOLD = 0.01; // 평균 시청률 1%
+
+    // 왼쪽 막대(채널별) — (channel, program, genre) 단위로 조회기간 내 rating_sum/episode_count를
+    // 합산한 가중평균이 임계값 이상이면 그 프로그램을 "달성"으로 카운트한다.
+    function computeGenreQualifyingByChannel() {
+      const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
+      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month));
+
+      const groups = new Map();
+      rows.forEach(r => {
+        const key = r.channel + '|' + r.program + '|' + r.genre;
+        const g = groups.get(key) || { channel: r.channel, genre: r.genre, ratingSum: 0, episodeCount: 0 };
+        g.ratingSum += r.ratingSum; g.episodeCount += r.episodeCount;
+        groups.set(key, g);
+      });
+
+      const counts = {}; // counts[channel] = { '드라마&영화': n, '오락': n }
+      groups.forEach(g => {
+        if (g.episodeCount > 0 && (g.ratingSum / g.episodeCount) >= METRICS_GENRE_QUALIFYING_THRESHOLD) {
+          counts[g.channel] = counts[g.channel] || {};
+          counts[g.channel][g.genre] = (counts[g.channel][g.genre] || 0) + 1;
+        }
+      });
+      return counts;
+    }
+
+    // 오른쪽 라인(월별, 전체 채널 합산) — program_ratings_monthly가 이미 월 단위라 그 달 행 자체가
+    // "그 프로그램의 그 달 평균"이다. 채널 무관하게 (year,month,genre) 단위로 카운트만 합산한다.
+    function computeGenreQualifyingMonthlyTrend() {
+      const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
+      const counts = {}; // counts['2026-3'] = { '드라마&영화': n, '오락': n }
+      programRatingsData
+        .filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && r.episodeCount > 0 && (r.ratingSum / r.episodeCount) >= METRICS_GENRE_QUALIFYING_THRESHOLD)
+        .forEach(r => {
+          const key = r.year + '-' + r.month;
+          counts[key] = counts[key] || {};
+          counts[key][r.genre] = (counts[key][r.genre] || 0) + 1;
+        });
+      return counts;
+    }
+
+    // 왼쪽: 채널별 그룹 막대(드라마&영화/오락 나란히). x축은 (합계) 내림차순 — 랭킹차트류와 같은 관례.
+    function renderMetricsGenreQualifyingBarChart() {
+      const canvas = document.getElementById('chartMetricsGenreQualifyingBar'); if (!canvas) return;
+      if (chartInstances.metricsGenreQualifyingBar) { chartInstances.metricsGenreQualifyingBar.destroy(); chartInstances.metricsGenreQualifyingBar = null; }
+
+      const counts = computeGenreQualifyingByChannel();
+      const channels = Object.keys(counts).sort((a, b) => {
+        const totalA = (counts[a]['드라마&영화'] || 0) + (counts[a]['오락'] || 0);
+        const totalB = (counts[b]['드라마&영화'] || 0) + (counts[b]['오락'] || 0);
+        return totalB - totalA;
+      });
+
+      const dramaColor = seriesColor(0);
+      const varietyColor = seriesColor(1);
+      const dramaData = channels.map(ch => counts[ch]['드라마&영화'] || 0);
+      const varietyData = channels.map(ch => counts[ch]['오락'] || 0);
+
+      const ctx = canvas.getContext('2d');
+      chartInstances.metricsGenreQualifyingBar = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: channels,
+          datasets: [
+            { label: '드라마&영화', data: dramaData, backgroundColor: ddBarFill(dramaColor, false), borderRadius: 4, barPercentage: 1, categoryPercentage: 0.8, ...ddGroupSeparator(),
+              datalabels: { display: 'auto', anchor: 'end', align: 'end', offset: 2, color: dataLabelTextColor(), font: { size: 12, weight: FW() }, formatter: (v) => v > 0 ? v : '' } },
+            { label: '오락', data: varietyData, backgroundColor: ddBarFill(varietyColor, false), borderRadius: 4, barPercentage: 1, categoryPercentage: 0.8, ...ddGroupSeparator(),
+              datalabels: { display: 'auto', anchor: 'end', align: 'end', offset: 2, color: dataLabelTextColor(), font: { size: 12, weight: FW() }, formatter: (v) => v > 0 ? v : '' } },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 24 } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}개` } } },
+          scales: { x: { ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ grace: '10%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => Number.isInteger(v) ? v : '' } }) }
+        }
+      });
+    }
+
+    // 오른쪽: 월별 추이 라인(전체 채널 합산, 장르별 2개 선). x축은 metricsSelectedPeriods() 시간순 —
+    // 여러 연도가 섞이면 metricsPeriodLabel()이 "25.9" 형식으로, 한 연도뿐이면 "9월"로 표기한다.
+    function renderMetricsGenreQualifyingTrendChart() {
+      const canvas = document.getElementById('chartMetricsGenreQualifyingTrend'); if (!canvas) return;
+      if (chartInstances.metricsGenreQualifyingTrend) { chartInstances.metricsGenreQualifyingTrend.destroy(); chartInstances.metricsGenreQualifyingTrend = null; }
+
+      const periods = metricsSelectedPeriods(programRatingsData);
+      const labels = periods.map(metricsPeriodLabel);
+      const counts = computeGenreQualifyingMonthlyTrend();
+
+      const dramaColor = seriesColor(0);
+      const varietyColor = seriesColor(1);
+      const dramaData = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c['드라마&영화'] || 0) : 0; });
+      const varietyData = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c['오락'] || 0) : 0; });
+
+      const ctx = canvas.getContext('2d');
+      chartInstances.metricsGenreQualifyingTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: '드라마&영화', data: dramaData, borderColor: dramaColor, backgroundColor: dramaColor, fill: false, tension: 0.3, borderWidth: 2, pointRadius: 2.5 },
+            { label: '오락', data: varietyData, borderColor: varietyColor, backgroundColor: varietyColor, fill: false, tension: 0.3, borderWidth: 2, pointRadius: 2.5 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
+          plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}개` } } },
+          scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
+            y: ddValueAxis({ grace: '10%', ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => Number.isInteger(v) ? v : '' } }) }
+        }
+      });
+    }

@@ -495,3 +495,41 @@ revoke all on competitor_revenue from anon, authenticated;
 revoke all on competitor_ratings_meta from anon, authenticated;
 
 grant select, insert, update on competitor_ratings, competitor_revenue, competitor_ratings_meta to service_role;
+
+-- ------------------------------------------------------------
+-- 9. program_ratings_monthly — 지표 대시보드(장르별 1%↑ 시청률 프로그램 수 차트)
+--
+-- competitor_ratings(File1, 월별 집계 리포트)와는 완전히 별개의 원본이다. 사용자가 올린
+-- program-ratings.xlsx는 회차 단위 원본(약 259K행, 본방만 필터링하면 약 94K행)이라 그대로
+-- 브라우저에 내려주기엔 너무 크다 — scripts/etl/load-program-ratings.mjs가 (channel, program,
+-- genre, year, month) 키로 월별 집계해 이 테이블에 upsert한다.
+--
+-- rating_sum/episode_count로 저장하는 이유: 프론트가 여러 달(조회기간)을 골랐을 때 "월별 평균의
+-- 평균"을 내면 회차 수가 적은 달이 과대 반영되는 가중치 오류가 생긴다. 대신 기간에 해당하는 행들의
+-- rating_sum과 episode_count를 각각 합산한 뒤 나누는 가중평균으로 계산해야 하므로, 미리 나눈
+-- 평균값이 아니라 분자/분모를 그대로 저장한다.
+--
+-- 개인2049(수도권 개인 2049 기준) 시청률 — competitor_ratings의 CPRP/채널시청률과 동일한 기준이라
+-- 라벨링 관례가 일치한다(docs/features/metrics-dashboard.md 참고). 본방만 집계 대상(재방 제외 —
+-- 재방은 시청률이 구조적으로 낮아 프로그램 성과를 왜곡하므로 원본 단계에서 버린다).
+-- ------------------------------------------------------------
+
+create table if not exists program_ratings_monthly (
+  id             bigint generated always as identity primary key,
+  channel        text not null,
+  program        text not null,
+  genre          text not null,
+  year           int not null,
+  month          int not null,
+  rating_sum     numeric not null,      -- 그 달 본방 회차들의 개인2049(수도권 개인 2049 기준) 시청률 합
+  episode_count  int not null,          -- 그 달 본방 회차 수
+  updated_at     timestamptz not null default now(),
+  unique (channel, program, genre, year, month)
+);
+
+alter table program_ratings_monthly enable row level security;
+-- 정책 없음 — 다른 base table과 동일하게 anon/authenticated 전부 차단, service_role만
+-- BYPASSRLS로 접근. 브라우저 노출은 /api/program-ratings 프록시(requireMetricsAccess)를 통해서만.
+
+revoke all on program_ratings_monthly from anon, authenticated;
+grant select, insert, update on program_ratings_monthly to service_role;
