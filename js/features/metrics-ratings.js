@@ -142,7 +142,10 @@
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw !== null ? metricsFmtNum(c.raw, decimals) : '-'}${valueSuffix}` } } },
           scales: { x: { offset: true, ticks: { color: CH('#F2F4F6'), font: { size: 13, weight: FW() } }, grid: { display: false } },
-            y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) + valueSuffix } }) }
+            // y축 눈금엔 단위(%/원/개사)를 안 붙인다 — 5개 눈금마다 반복되면 시각적으로 번잡하다
+            // (2026-09-17, 사용자 지적: "% 표시는 지워줘 눈아프네"). 툴팁엔 그대로 남겨(위 callback)
+            // 값을 정확히 확인할 때만 단위가 보이게 한다.
+            y: ddValueAxis({ grace: 0, max: maxVal > 0 ? maxVal * 1.1 : undefined, ticks: { color: CH('#8B95A1'), maxTicksLimit: 5, padding: 6, font: { size: 13, weight: FW() }, callback: v => metricsFmtNum(v, decimals <= 1 ? 0 : decimals) } }) }
         }
       });
     }
