@@ -17,10 +17,13 @@
       { key: 'revenueBasis', label: '회계계정' }, { key: 'isUpfront', label: '업프론트여부' },
       { key: 'amount', label: '금액' }
     ];
-    // 상단 전역 필터바가 이미 연/월/부서/채널/방송·디지털/대분류를 커버하므로, 아래쪽 드래그앤드롭
-    // 필터 well에는 이 필드들을 놓을 수 없다(행/열/값에는 계속 쓸 수 있음) — onDetailDataWellDrop/onDetailDataChipDrop에서 가드.
-    // 대행사/광고주는 전역 검색이 부분일치라 별도로 더 좁히고 싶을 수 있어 필터 well에서도 허용.
-    const DD_FILTER_BAR_COVERED_FIELDS = new Set(['year', 'month', 'dept', 'channel', 'broadDigital', 'categoryReclassified']);
+    // 상단 전역 필터바(매출)/전역 컨트롤바(지표)가 이미 연/월/부서/채널/방송·디지털/대분류(매출)와
+    // ①사업자(channelGroup)/범위(scope, 지표)를 커버하므로, 아래쪽 드래그앤드롭 필터 well에는 이
+    // 필드들을 놓을 수 없다(행/열/값에는 계속 쓸 수 있음) — onDetailDataWellDrop/onDetailDataChipDrop에서
+    // 가드(2026-09-17, 사용자 요청: "이미 조회조건에 있는 거는 필터에 들어가면 튕기게끔 해줘야돼" —
+    // 지표 대시보드 컨트롤바가 전역으로 바뀌면서 channelGroup/scope도 이 목록에 추가). 대행사/광고주는
+    // 전역 검색이 부분일치라 별도로 더 좁히고 싶을 수 있어 필터 well에서도 허용.
+    const DD_FILTER_BAR_COVERED_FIELDS = new Set(['year', 'month', 'dept', 'channel', 'broadDigital', 'categoryReclassified', 'channelGroup', 'scope']);
 
     const DETAIL_DATA_AGG_LABELS = { sum: '합계', avg: '평균', count: '개수', distinct: '고유 개수' };
 
@@ -49,7 +52,7 @@
     // 필드 목록이 그 화면에서만 의미 있는 항목으로 길어지지 않게 하기 위함이다.
     // scope/channelGroup/revenue는 지표 대시보드 매출 4종 피벗(metricsMarketByScopePivot 등, pivot-builder.js
     // PV_FIELD_WHITELIST)에서만 쓴다 — metricsRevenueData(File1 사업자별 매출) 전용 필드라 공용 DETAIL_DATA_FIELDS엔 없다.
-    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출' };
+    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출', program: '프로그램', genre: '장르', band: '구간', avgRating: '평균 시청률', value: '값' };
     function detailDataFieldLabel(key) {
       const f = DETAIL_DATA_FIELDS.find(x => x.key === key);
       return f ? f.label : (DD_EXTRA_FIELD_LABELS[key] || key);
