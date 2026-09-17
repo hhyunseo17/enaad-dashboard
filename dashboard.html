@@ -1355,7 +1355,7 @@
                 <span id="metricsKpiMarketSizeAllMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiMarketSizeAllYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiMarketSizeAllSub">매체별 광고비 raw 파일 · 지상파+유료방송</div>
+              <div class="kpi-source-note" id="metricsKpiMarketSizeAllSub">지상파+유료방송</div>
             </div>
           </div>
           <div class="kpi-card">
@@ -1366,7 +1366,7 @@
                 <span id="metricsKpiMarketSizeMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiMarketSizeYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiMarketSizeSub">매체별 광고비 raw 파일 · 종편+케이블</div>
+              <div class="kpi-source-note" id="metricsKpiMarketSizeSub">종편+케이블</div>
             </div>
           </div>
           <div class="kpi-card">
@@ -1381,14 +1381,14 @@
             </div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-header"><span class="kpi-title">ENA 채널 CPRP</span></div>
+            <div class="kpi-header"><span class="kpi-title">ENA 채널 CPRP(수2049)</span></div>
             <div class="kpi-value-box">
               <div id="metricsKpiCprpValue" class="kpi-value">- 원</div>
               <div class="kpi-sub" style="flex-wrap: wrap;">
                 <span id="metricsKpiCprpMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiCprpYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiCprpSub">경쟁채널 지표 현황 파일 (원 단위 환산) · 수도권 개인 2049 기준</div>
+              <div class="kpi-source-note" id="metricsKpiCprpSub"></div>
             </div>
           </div>
           <div class="kpi-card">
@@ -1399,7 +1399,7 @@
                 <span id="metricsKpiRatingMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiRatingYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiRatingSub">경쟁채널 지표 현황 파일 · 수도권 개인 2049 기준</div>
+              <div class="kpi-source-note" id="metricsKpiRatingSub">수도권 개인 2049 기준</div>
             </div>
           </div>
           <div class="kpi-card">
@@ -1410,7 +1410,7 @@
                 <span id="metricsKpiRevPerRatingMomBadge" class="badge-growth up" style="display:none;">-</span>
                 <span id="metricsKpiRevPerRatingYoyBadge" class="badge-growth up" style="display:none;">-</span>
               </div>
-              <div class="kpi-source-note" id="metricsKpiRevPerRatingSub">경쟁채널 지표 현황 파일 원본값 그대로 · 수도권 개인 2049 기준</div>
+              <div class="kpi-source-note" id="metricsKpiRevPerRatingSub">수도권 개인 2049 기준</div>
             </div>
           </div>
         </section>
@@ -1449,7 +1449,7 @@
         <section class="grid-2col grid-zone5">
           <div class="card-box clickable" onclick="openMetricsRevenueTrendPivotView()">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>매출</h2></div>
+              <div class="card-box-title"><h2>광고매출</h2></div>
               <div class="pills-group" onclick="event.stopPropagation()">
                 <button id="btnMetricsRevenueTrendLinear" class="pill-btn active" onclick="setMetricsRevenueTrendScale('linear')">선형</button>
                 <button id="btnMetricsRevenueTrendLog" class="pill-btn" onclick="setMetricsRevenueTrendScale('log')">로그</button>
@@ -1461,7 +1461,7 @@
           </div>
           <div class="card-box clickable" onclick="openMetricsRevenueRankingPivotView()">
             <div class="card-box-header">
-              <div class="card-box-title"><h2 id="metricsRevenueRankingChartTitle">매출 랭킹</h2></div>
+              <div class="card-box-title"><h2 id="metricsRevenueRankingChartTitle">광고매출 랭킹</h2></div>
             </div>
             <div class="chart-container">
               <canvas id="chartMetricsRevenueRanking"></canvas>
@@ -1474,20 +1474,20 @@
              연결해줘"). 이 카드들엔 헤더 토글 버튼이 없어(제목만) event.stopPropagation()이 필요 없다. -->
         <section class="metrics-mini-grid">
           <div class="card-box clickable" onclick="openMetricsCprpTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>CPRP</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
-            <div class="chart-container"><canvas id="chartMetricsCprpTrend"></canvas></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>CPRP</h2><span style="font-size:12px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartMetricsCprpTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsRatingTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>채널시청률</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
-            <div class="chart-container"><canvas id="chartMetricsRatingTrend"></canvas></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>채널시청률</h2><span style="font-size:12px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartMetricsRatingTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsGrpTrendPivotView()">
-            <div class="card-box-header"><div class="card-box-title"><h2>eq-GRPs (월누적)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
-            <div class="chart-container"><canvas id="chartMetricsGrpTrend"></canvas></div>
+            <div class="card-box-header"><div class="card-box-title"><h2>eq-GRPs (월누적)</h2><span style="font-size:12px; font-weight:400; color:var(--text-tertiary);">수도권 개인 2049 기준</span></div></div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartMetricsGrpTrend"></canvas></div>
           </div>
           <div class="card-box clickable" onclick="openMetricsAdvCountTrendPivotView()">
             <div class="card-box-header"><div class="card-box-title"><h2>광고주수</h2></div></div>
-            <div class="chart-container"><canvas id="chartMetricsAdvCountTrend"></canvas></div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartMetricsAdvCountTrend"></canvas></div>
           </div>
         </section>
 
@@ -1497,7 +1497,7 @@
         <section class="grid-2col grid-zone5">
           <div class="card-box">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (채널별)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
+              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (채널별)</h2><span style="font-size:12px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
             </div>
             <div class="chart-container" style="height: 400px;">
               <canvas id="chartMetricsGenreQualifyingBar"></canvas>
@@ -1505,7 +1505,7 @@
           </div>
           <div class="card-box">
             <div class="card-box-header">
-              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (월별 추이)</h2><span style="font-size:10px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
+              <div class="card-box-title"><h2>1%↑ 시청률 프로그램 수 (월별 추이)</h2><span style="font-size:12px; font-weight:400; color:var(--text-tertiary);">본방 기준 · 수도권 개인 2049</span></div>
             </div>
             <div class="chart-container" style="height: 400px;">
               <canvas id="chartMetricsGenreQualifyingTrend"></canvas>

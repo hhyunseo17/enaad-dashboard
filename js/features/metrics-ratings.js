@@ -54,7 +54,7 @@
       const cprpCode = metricsFindMetricCode(METRICS_LABEL.cprp, idx);
       const cprp = metricsRatingsKpiOf(cprpCode, channel, idx, isMultiYear);
       document.getElementById('metricsKpiCprpValue').innerText = cprp.curr !== null ? Math.round(cprp.curr * 1000).toLocaleString() + ' 원' : '- 원';
-      document.getElementById('metricsKpiCprpSub').innerText = cprp.periods.length ? `${metricsPeriodRangeLabel(cprp.periods)}(${idx}) 평균 · 원 단위 환산(×1,000)` : '경쟁채널 지표 현황 파일';
+      document.getElementById('metricsKpiCprpSub').innerText = cprp.periods.length ? `${metricsPeriodRangeLabel(cprp.periods)}(${idx}) 평균` : '';
       metricsRenderBadge('metricsKpiCprpMomBadge', '전월', metricsGrowthPct(cprp.curr, cprp.mom), '%');
       metricsRenderBadge('metricsKpiCprpYoyBadge', '전년', metricsGrowthPct(cprp.curr, cprp.yoy), '%');
 
@@ -62,7 +62,7 @@
       const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx, true); // exact — "채널시청률 1%당 eq-GRPs"(08)와 접두어 충돌 방지
       const rating = metricsRatingsKpiOf(ratingCode, channel, idx, isMultiYear);
       document.getElementById('metricsKpiRatingValue').innerText = rating.curr !== null ? rating.curr.toFixed(3) + ' %' : '- %';
-      document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균` : '경쟁채널 지표 현황 파일';
+      document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균 · 수도권 개인 2049 기준` : '수도권 개인 2049 기준';
       // 원값 자체가 0.1%대라 %p 배지도 기본 소수 1자리로는 실제 변화가 "+0.0%p"로 뭉개진다 —
       // 메인 값과 같은 3자리로(metricsRenderBadge decimals 인자, 2026-09-16).
       metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(rating.curr, rating.mom), '%p', 3);
@@ -73,7 +73,7 @@
       const rprCode = metricsFindMetricCode(METRICS_LABEL.revPerRating, '전체');
       const rpr = metricsRatingsKpiOf(rprCode, channel, '전체', isMultiYear);
       document.getElementById('metricsKpiRevPerRatingValue').innerText = rpr.curr !== null ? metricsFmtNum(rpr.curr, 2) + ' 억원' : '- 억원';
-      document.getElementById('metricsKpiRevPerRatingSub').innerText = rpr.periods.length ? `${metricsPeriodRangeLabel(rpr.periods)} 평균 · 파일 원본값(일평균 기준, 토글 무관)` : '경쟁채널 지표 현황 파일';
+      document.getElementById('metricsKpiRevPerRatingSub').innerText = rpr.periods.length ? `${metricsPeriodRangeLabel(rpr.periods)} 평균 · 수도권 개인 2049 기준` : '수도권 개인 2049 기준';
       metricsRenderBadge('metricsKpiRevPerRatingMomBadge', '전월', metricsGrowthPct(rpr.curr, rpr.mom), '%');
       metricsRenderBadge('metricsKpiRevPerRatingYoyBadge', '전년', metricsGrowthPct(rpr.curr, rpr.yoy), '%');
     }
@@ -353,9 +353,11 @@
     // ------------------------------------------------------------
     // "1%↑ 시청률 프로그램 수" — 드라마&영화/오락 2개 장르, 채널별 그룹막대 + 월별 추이 라인
     // (2026-09-17 신규). 데이터 소스는 program_ratings_monthly(채널×프로그램×장르×연월 사전집계,
-    // 본방만 — ETL 처리 완료, js/core/metrics-data-loader.js의 programRatingsData). ①②(사업자/채널)
-    // 선택과 무관 — 원본이 13개 채널 전체를 담은 별도 데이터셋이라 그 selection을 걸러내지 않는다.
-    // 연/월 조회기간만 metricsSelectedPeriods()로 적용(다른 미니차트들과 같은 관례).
+    // 본방만 — ETL 처리 완료, js/core/metrics-data-loader.js의 programRatingsData). ①②(사업자/채널
+    // 체크박스) 선택과는 무관 — 원본이 13개 채널 전체를 담은 별도 데이터셋이라 그 selection을 걸러내지
+    // 않는다. 다만 "범위"(전체/유료방송/케이블) 토글은 적용한다(2026-09-17, 사용자 요청 — 아래
+    // PROGRAM_RATINGS_CHANNEL_SCOPE 참고). 연/월 조회기간은 metricsSelectedPeriods()로 적용(다른
+    // 미니차트들과 같은 관례).
     //
     // 그 달 그 프로그램(본방)의 평균 시청률 = rating_sum ÷ episode_count. 여러 달에 걸친 평균은
     // 월별 평균끼리 다시 평균내면 안 되고(회차 수 적은 달이 과대반영됨) rating_sum과 episode_count를
@@ -387,11 +389,27 @@
       return name.replace(/[\s-]*\d+부$/, '').trim();
     }
 
+    // 상단 "범위"(전체/유료방송/케이블) 토글을 이 채널에도 적용하기 위한 채널→스코프 매핑
+    // (2026-09-17, 사용자 요청 — "이거도 조회에서 유료방송, 지상파 등등 쫓아가게 해줘"). 기존
+    // METRICS_OPERATOR_SCOPE는 File1의 "사업자" 표기(예: 'MBC(전국)', 'SBS(민방포함)', 'TV조선')를
+    // 키로 쓰는데, program-ratings.xlsx의 "채널" 표기는 이와 다르다(예: 'MBC', 'SBS', 'TV CHOSUN') —
+    // 이름이 안 맞아 그대로는 못 씀. 세부채널까지 포함해 채널명 기준으로 다시 하드코딩한다(값 자체는
+    // METRICS_OPERATOR_SCOPE와 동일한 지상파/종편/케이블 분류).
+    const PROGRAM_RATINGS_CHANNEL_SCOPE = {
+      'KBS2': '지상파', 'MBC': '지상파', 'SBS': '지상파',
+      'JTBC': '종편', 'TV CHOSUN': '종편', '채널A': '종편', 'MBN': '종편',
+      'ENA': '케이블', 'tvN': '케이블', 'tvN STORY': '케이블',
+      'MBC every1': '케이블', 'SBS Plus': '케이블', 'KBS JOY': '케이블',
+    };
+    function metricsProgramRatingsScopeMatch(channel) {
+      return metricsScopeMatchRow({ scope: PROGRAM_RATINGS_CHANNEL_SCOPE[channel] || null }, metricsScopeMode);
+    }
+
     // 왼쪽 막대(채널별) — (channel, canonicalProgram, genre) 단위로 조회기간 내 rating_sum/episode_count를
     // 합산한 가중평균이 임계값 이상이면 그 프로그램을 "달성"으로 카운트한다.
     function computeGenreQualifyingByChannel() {
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
-      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month));
+      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
 
       const groups = new Map();
       rows.forEach(r => {
@@ -417,7 +435,7 @@
     // 한 프로그램이 어느 장르로 잡혔든 그 채널 카운트에 더해진다.
     function computeGenreQualifyingMonthlyTrend() {
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
-      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month));
+      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
 
       const merged = new Map();
       rows.forEach(r => {
@@ -489,8 +507,9 @@
       const labels = periods.map(metricsPeriodLabel);
       const counts = computeGenreQualifyingMonthlyTrend();
 
-      // 채널 목록 — 대상 장르(드라마&영화/오락) 데이터가 구조적으로 존재하는 채널 전부, ENA를 맨 앞으로.
-      const structuralChannels = [...new Set(programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre)).map(r => r.channel))];
+      // 채널 목록 — 대상 장르(드라마&영화/오락) 데이터가 구조적으로 존재하고 현재 "범위" 토글에
+      // 해당하는 채널 전부, ENA를 맨 앞으로.
+      const structuralChannels = [...new Set(programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && metricsProgramRatingsScopeMatch(r.channel)).map(r => r.channel))];
       const nonEnaChannels = structuralChannels.filter(ch => ch !== ENA_REPRESENTATIVE_CHANNEL);
       const channels = structuralChannels.includes(ENA_REPRESENTATIVE_CHANNEL) ? [ENA_REPRESENTATIVE_CHANNEL, ...nonEnaChannels] : nonEnaChannels;
 

@@ -627,7 +627,7 @@
       const momAll = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'all');
       const yoyAll = isMultiYear ? null : metricsMarketAndShareOverPeriods(yoyPeriods, 'all');
       document.getElementById('metricsKpiMarketSizeAllValue').innerText = metricsFmtNum(currAll.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 지상파+유료방송`;
+      document.getElementById('metricsKpiMarketSizeAllSub').innerText = `${periodLabel} · 지상파+유료방송`;
       metricsRenderBadge('metricsKpiMarketSizeAllMomBadge', '전월', momAll && metricsGrowthPct(currAll.market, momAll.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeAllYoyBadge', '전년', metricsGrowthPct(currAll.market, yoyAll && yoyAll.market), '%');
 
@@ -635,7 +635,7 @@
       const momPay = isRange ? null : metricsMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod), 'payTv');
       const yoyPay = isMultiYear ? null : metricsMarketAndShareOverPeriods(yoyPeriods, 'payTv');
       document.getElementById('metricsKpiMarketSizeValue').innerText = metricsFmtNum(currPay.market / 1e8, 2) + ' 억원';
-      document.getElementById('metricsKpiMarketSizeSub').innerText = `${periodLabel} · 경쟁채널 지표 현황 파일 · 종편+케이블`;
+      document.getElementById('metricsKpiMarketSizeSub').innerText = `${periodLabel} · 종편+케이블`;
       metricsRenderBadge('metricsKpiMarketSizeMomBadge', '전월', momPay && metricsGrowthPct(currPay.market, momPay.market), '%');
       metricsRenderBadge('metricsKpiMarketSizeYoyBadge', '전년', metricsGrowthPct(currPay.market, yoyPay && yoyPay.market), '%');
 
@@ -880,7 +880,7 @@
       // 어느 기간을 보고 있는지 화면에 안 보이면(범례도 꺼져 있다) 조회조건(위쪽 연도/월 선택)과
       // 맞는지 확인할 방법이 없다 — 제목에 실제 기준 기간을 박아 넣는다(사용자 지적, 2026-09-15).
       const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
-      if (titleEl) titleEl.innerText = periods.length ? `매출 랭킹 (${metricsPeriodRangeLabel(periods)})` : '매출 랭킹';
+      if (titleEl) titleEl.innerText = periods.length ? `광고매출 랭킹 (${metricsPeriodRangeLabel(periods)})` : '광고매출 랭킹';
       if (!periods.length) return;
 
       const sums = {};
