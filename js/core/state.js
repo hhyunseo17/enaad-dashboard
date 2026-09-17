@@ -315,8 +315,10 @@
     let expandedMetricsRatingTrendPivot = {}, expandedMetricsRatingTrendYearColumns = {};
     let expandedMetricsGrpTrendPivot = {}, expandedMetricsGrpTrendYearColumns = {};
     let expandedMetricsAdvCountTrendPivot = {}, expandedMetricsAdvCountTrendYearColumns = {};
-    // "1%↑ 시청률 프로그램 수" 피벗 상세 2종(2026-09-17 신규) — 위 CPRP 등과 같은 관례.
-    let expandedMetricsGenreQualifyingBarPivot = {}, expandedMetricsGenreQualifyingBarYearColumns = {};
+    // "1%↑ 시청률 프로그램 수" 월별 추이 피벗 상세(metricsGenreQualifyingTrendPivot) — 위 CPRP 등과
+    // 같은 관례(2026-09-17 신규). 자매 변수였던 expandedMetricsGenreQualifyingBarPivot/YearColumns는
+    // 채널별 막대차트 피벗이 시간 드릴다운 없는 단순 2차원 표(renderMetricsGenreRatingBandPivot(),
+    // metrics-ratings.js)로 교체되며 더 이상 쓰이지 않아 제거됨(2026-09-17).
     let expandedMetricsGenreQualifyingTrendPivot = {}, expandedMetricsGenreQualifyingTrendYearColumns = {};
 
     // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라

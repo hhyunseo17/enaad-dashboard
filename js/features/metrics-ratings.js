@@ -572,3 +572,81 @@
         }
       });
     }
+
+    // ------------------------------------------------------------
+    // "1%↑ 시청률 프로그램 수" 채널별 막대차트에 연결된 피벗을 "구간별 프로그램 개수 분포"로 교체
+    // (2026-09-17, 사용자가 실제 화면을 보고 요청: "여기 연결되는 피벗테이블은 구간 3% 이상, 2% 이상,
+    // 1% 이상, 0.5% 이상, 0.5% 미만 프로그램 개수로 하자"). 그룹핑은 computeGenreQualifyingByChannel()
+    // (위)과 완전히 동일 — 부(部) 분할 병합 → (channel, canonicalProgram, genre) 단위 조회기간
+    // 가중평균(rating_sum÷episode_count). 다른 점은 1% 미만이면 버리던 것을, 5개 구간에 상호배타적으로
+    // 전부 배정한다는 것뿐이다. 하한은 "이상", 상한은 그 위 구간 하한 직전까지: [3,∞)/[2,3)/[1,2)/
+    // [0.5,1)/(-∞,0.5) — 처음 임계값을 순서대로 검사하면 자연히 상호배타적이 된다.
+    //
+    // 시간(연/월) 드릴다운이 필요 없는 단순 2차원 표(채널×구간)라 pivot-builder.js의 PIVOT_PRESETS
+    // (드래그앤드롭 엔진)를 쓰지 않고, js/features/bucket.js의 renderBucketPivotTable()과 같은 원칙의
+    // 전용 렌더러를 쓴다 — 다만 그 함수와 달리 연도/월 축도 광고주 하위드릴다운도 없어 훨씬 단순하다.
+    // "월별 추이" 라인차트에 연결된 metricsGenreQualifyingTrendPivot(PIVOT_PRESETS, dd-layout)은 이
+    // 변경과 완전히 무관 — 그대로 유지.
+    // ------------------------------------------------------------
+    const METRICS_GENRE_RATING_BANDS = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
+    function metricsGenreRatingBandFor(avgRating) {
+      if (avgRating >= 3) return '3% 이상';
+      if (avgRating >= 2) return '2% 이상';
+      if (avgRating >= 1) return '1% 이상';
+      if (avgRating >= 0.5) return '0.5% 이상';
+      return '0.5% 미만';
+    }
+    function computeGenreRatingBandCountsByChannel() {
+      const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
+      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
+
+      const groups = new Map();
+      rows.forEach(r => {
+        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre;
+        const g = groups.get(key) || { channel: r.channel, genre: r.genre, ratingSum: 0, episodeCount: 0 };
+        g.ratingSum += r.ratingSum; g.episodeCount += r.episodeCount;
+        groups.set(key, g);
+      });
+
+      const counts = {}; // counts[channel][bandKey] = n
+      groups.forEach(g => {
+        if (g.episodeCount <= 0) return;
+        const band = metricsGenreRatingBandFor(g.ratingSum / g.episodeCount);
+        counts[g.channel] = counts[g.channel] || {};
+        counts[g.channel][band] = (counts[g.channel][band] || 0) + 1;
+      });
+      return counts;
+    }
+
+    // VIEW_CONFIG.metricsGenreQualifyingBarPivot.render()의 실제 진입점(js/core/view-router.js).
+    // 조회기간(연/월)은 metricsMain 컨트롤바에서 이미 고른 전역 선택(metricsSelectedYears/Months,
+    // metricsSelectedPeriods()가 읽음)을 그대로 쓴다 — 이 표는 그 기간 전체를 하나의 값으로 이미
+    // 합산했으므로 이 화면 자체에 별도 연/월 pill이 필요 없다(dashboard.html의 bucketPivotView와
+    // 같은 원칙). 채널 정렬은 합계(전 구간 합) 내림차순 — 막대차트(renderMetricsGenreQualifyingBarChart)
+    // 와 같은 관례. 값이 0인 칸은 '-'로 표기(bucket.js의 fmtBucketVal 관례).
+    function renderMetricsGenreRatingBandPivot() {
+      const counts = computeGenreRatingBandCountsByChannel();
+      const rowTotal = (ch) => METRICS_GENRE_RATING_BANDS.reduce((s, band) => s + (counts[ch][band] || 0), 0);
+      const channels = Object.keys(counts).sort((a, b) => rowTotal(b) - rowTotal(a));
+
+      const fmtVal = (v) => (!v || v <= 0) ? '-' : v.toLocaleString();
+
+      const headerHtml = `<th style="text-align:left;">채널</th>` +
+        METRICS_GENRE_RATING_BANDS.map(band => `<th style="text-align:right;">${band}</th>`).join('') +
+        `<th style="text-align:right; background:#1E40AF !important; color:#FFFFFF !important;">합계</th>`;
+      const headerEl = document.getElementById('metricsGenreQualifyingBandPivotHeaderRow');
+      if (headerEl) headerEl.innerHTML = mapPivotHtml(headerHtml);
+
+      let grandTotal = 0;
+      const bodyHtml = channels.map(ch => {
+        const total = rowTotal(ch);
+        grandTotal += total;
+        const cells = METRICS_GENRE_RATING_BANDS.map(band => `<td style="text-align:right;">${fmtVal(counts[ch][band] || 0)}</td>`).join('');
+        return `<tr><td style="text-align:left;">${ch}</td>${cells}<td style="text-align:right; font-weight:600; background:#1E293B; color:#93C5FD;">${fmtVal(total)}</td></tr>`;
+      }).join('') || `<tr><td colspan="${METRICS_GENRE_RATING_BANDS.length + 2}" style="text-align:center; color:var(--text-tertiary); padding:16px;">표시할 데이터가 없습니다</td></tr>`;
+      const bodyEl = document.getElementById('metricsGenreQualifyingBandPivotTableBody');
+      if (bodyEl) bodyEl.innerHTML = mapPivotHtml(bodyHtml);
+
+      const totalEl = document.getElementById('metricsGenreQualifyingBandPivotTotal');
+      if (totalEl) totalEl.innerText = grandTotal.toLocaleString() + '개';
+    }

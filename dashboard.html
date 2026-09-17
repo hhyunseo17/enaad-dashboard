@@ -2319,98 +2319,37 @@
       </section>
     </div>
 
-    <!-- "1%↑ 시청률 프로그램 수" 피벗 상세 2종(2026-09-17 신규) — 위 metricsAdvCountTrendPivotView와
-         같은 hero+dd-layout 템플릿. program_ratings_monthly 기반이라 배지 문구만 File1과 다르게 표기. -->
+    <!-- "1%↑ 시청률 프로그램 수" 채널별 막대차트의 피벗 상세 — "구간별 프로그램 개수 분포"로 교체
+         (2026-09-17 변경, 사용자 요청: "구간 3% 이상, 2% 이상, 1% 이상, 0.5% 이상, 0.5% 미만 프로그램
+         개수로 하자"). 조회기간을 이미 하나의 값으로 합산한 단순 2차원 표(채널×구간)라 dd-layout
+         드래그앤드롭 골격 없이 bucketPivotView(938~954행)와 같은 hero+table-container 템플릿을 쓴다.
+         연/월은 metricsMain 컨트롤바의 전역 선택을 그대로 읽어 이 화면엔 별도 pill이 없다. 렌더는
+         js/features/metrics-ratings.js의 renderMetricsGenreRatingBandPivot(). -->
     <div id="metricsGenreQualifyingBarPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">프로그램별 시청률 데이터</span>
-            <h2 class="hero-title">1%↑ 시청률 프로그램 수 (채널별) — 피벗 상세</h2>
+            <h2 class="hero-title">1%↑ 시청률 프로그램 수 (채널별) — 구간별 분포</h2>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 12px; color: var(--text-tertiary);">채널×프로그램 평균 시청률</div>
-            <div id="metricsGenreQualifyingBarPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsGenreQualifyingBarPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsGenreQualifyingBarPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsGenreQualifyingBarPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGenreQualifyingBarPivotOperator')">
-                <span id="metricsGenreQualifyingBarPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGenreQualifyingBarPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGenreQualifyingBarPivotCheckAllOperator">전체선택</label>
-                <div id="metricsGenreQualifyingBarPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsGenreQualifyingBarPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGenreQualifyingBarPivotChannel')">
-                <span id="metricsGenreQualifyingBarPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGenreQualifyingBarPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGenreQualifyingBarPivotCheckAllChannel">전체선택</label>
-                <div id="metricsGenreQualifyingBarPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">전체 프로그램 수</div>
+            <div id="metricsGenreQualifyingBandPivotTotal" class="hero-metric" style="color: var(--primary-blue);">0개</div>
           </div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">채널×프로그램 평균 시청률 피벗</h2>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button class="btn btn-sm" id="metricsGenreQualifyingBarPivotResetBtn" onclick="pvResetPivot('metricsGenreQualifyingBarPivot')" style="display:none;">↺ 원래대로</button>
-            <button class="btn btn-sm btn-toggle" id="metricsGenreQualifyingBarPivotBuilderBtn" onclick="pvToggleBuilder('metricsGenreQualifyingBarPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <h2 style="font-size: 16px; font-weight: 600;">채널별 시청률 구간 분포</h2>
           </div>
         </div>
-        <section class="dd-layout dd-layout-collapsed" id="metricsGenreQualifyingBarPivotSection">
-          <div class="dd-main">
-            <div class="dd-filter-bar" id="metricsGenreQualifyingBarDdFilterBar"></div>
-            <div class="table-wrapper" style="max-height: 650px;">
-              <table class="data-table pivot-tree-table">
-                <thead><tr id="metricsGenreQualifyingBarPivotHeaderRow1"></tr><tr id="metricsGenreQualifyingBarPivotHeaderRow2"></tr></thead>
-                <tbody id="metricsGenreQualifyingBarPivotTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <aside class="dd-sidebar">
-            <div class="dd-field-list" id="metricsGenreQualifyingBarDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
-            <div class="dd-wells">
-              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
-                <div class="dd-well-title">🏷 필터</div>
-                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellFilterBody"></div>
-              </div>
-              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
-                <div class="dd-well-title">▤ 열</div>
-                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellColumnsBody"></div>
-              </div>
-              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
-                <div class="dd-well-title">☰ 행</div>
-                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellRowsBody"></div>
-              </div>
-              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
-                <div class="dd-well-title">Σ 값</div>
-                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellValuesBody"></div>
-              </div>
-            </div>
-          </aside>
-        </section>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table">
+            <thead><tr id="metricsGenreQualifyingBandPivotHeaderRow"></tr></thead>
+            <tbody id="metricsGenreQualifyingBandPivotTableBody"></tbody>
+          </table>
+        </div>
       </section>
     </div>
 

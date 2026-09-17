@@ -76,7 +76,7 @@
       metricsAdvCountTrendPivot: { containerId: 'metricsAdvCountTrendPivotView', title: '광고주수 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsAdvCountTrendPivot') },
       // "1%↑ 시청률 프로그램 수" 채널별 막대 + 월별 추이 라인의 "카드 클릭 → 전용 피벗 화면"
       // (2026-09-17 신규) — 위 매출·CPRP 계열 8개와 같은 관례.
-      metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingBarPivot') },
+      metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsGenreRatingBandPivot() },
       metricsGenreQualifyingTrendPivot: { containerId: 'metricsGenreQualifyingTrendPivotView', title: '1%↑ 시청률 프로그램 수 (월별 추이) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingTrendPivot') },
     };
 

@@ -790,7 +790,7 @@
         rowFallbacks: ['(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
-        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1000, decimals: 0, suffix: ' 원' } }], // File1 원본 단위는 천원
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1000, decimals: 0, suffix: '' } }], // File1 원본 단위는 천원 — 단위 표기는 카드 제목으로 대체(피벗 표엔 셀마다 반복 안 함, 2026-09-17)
         sourceFilter: null,
         dataSource: () => metricsCprpDataForPivot(),
         channelCandidates: () => metricsCprpChannelCandidates(),
@@ -817,7 +817,7 @@
         rowFallbacks: ['(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
-        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 3, suffix: '%' } }], // 소수 3자리 — plan 확정사항, File1 원본 정밀도
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 3, suffix: '' } }], // 소수 3자리 — plan 확정사항, File1 원본 정밀도. 단위(%)는 셀마다 반복 안 함(2026-09-17)
         sourceFilter: null,
         dataSource: () => metricsRatingDataForPivot(),
         channelCandidates: () => metricsRatingChannelCandidates(),
@@ -871,7 +871,7 @@
         rowFallbacks: ['(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc' }, // 어느 테이블이나 ENA가 최상단(2026-09-16, 사용자 요청)
         columns: ['year', 'month'],
-        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 0, suffix: '개사' } }],
+        values: [{ field: 'value', agg: 'avg', format: { multiplier: 1, decimals: 0, suffix: '' } }], // 단위(개사)는 셀마다 반복 안 함(2026-09-17)
         sourceFilter: null,
         dataSource: () => metricsAdvCountDataForPivot(),
         channelCandidates: () => metricsAdvCountChannelCandidates(),
@@ -893,49 +893,24 @@
         parentView: 'metricsMain',
       },
 
-      // "1%↑ 시청률 프로그램 수" 채널별 막대 + 월별 추이 라인의 "피벗으로 보기"(2026-09-17 신규,
-      // 사용자 요청) — CPRP 계열 4개와 완전히 같은 방식(단일 지표 평균값 + {multiplier,decimals,suffix}
-      // 포맷). 다만 원본이 (channel,program,genre,year,month) 단위라 rows를 2단계(channel→program)로
-      // 둔다(metricsRevenueTrendPivot의 rows:['scope','channelGroup']과 같은 2단계 패턴) — CPRP 등은
+      // "1%↑ 시청률 프로그램 수" 월별 추이 라인차트의 "피벗으로 보기"(2026-09-17 신규, 사용자 요청) —
+      // CPRP 계열 4개와 완전히 같은 방식(단일 지표 평균값 + {multiplier,decimals,suffix} 포맷). 다만
+      // 원본이 (channel,program,genre,year,month) 단위라 rows를 2단계(channel→program)로 둔다
+      // (metricsRevenueTrendPivot의 rows:['scope','channelGroup']과 같은 2단계 패턴) — CPRP 등은
       // 채널 단일 지표라 1단계였지만 이건 프로그램별 시청률까지 내려가 봐야 "왜 이 채널이 몇 개
       // 카운트됐는지" 근거가 보인다. dataSource(metricsGenreQualifyingDataForPivot(), metrics-ratings.js)가
       // 이미 "부(部) 분할" 프로그램명을 병합하고 avgRating(가중평균) 필드를 얹어서 넘긴다 — rating_sum을
       // 그대로 avg 하면 "합의 평균"이 되어 틀리므로, 반드시 avgRating을 값 필드로 쓴다.
-      metricsGenreQualifyingBarPivot: {
-        rows: ['channel', 'program'],
-        rowFallbacks: ['(미지정)', '(미지정)'],
-        fieldSorters: { channel: 'enaFirstValueDesc' }, // program은 기본값(valueDesc, 시청률 높은 프로그램이 위로)
-        columns: ['year', 'month'],
-        values: [{ field: 'avgRating', agg: 'avg', format: { multiplier: 1, decimals: 2, suffix: '%' } }],
-        sourceFilter: null,
-        dataSource: () => metricsGenreQualifyingDataForPivot(),
-        channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
-        columnDefaultExpanded: true,
-        subtotalDepths: [],
-        toggleDepth: 0,
-        depthStyles: PV_STYLE_TREE,
-        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
-        totalStyle: PV_TOTAL_STYLE_TREE,
-        header: PV_HEADER_TREE,
-        grandTotal: PV_GRAND_TREE,
-        expandedRows: () => expandedMetricsGenreQualifyingBarPivot,
-        expandedCols: () => expandedMetricsGenreQualifyingBarYearColumns,
-        render: () => renderPresetPivot('metricsGenreQualifyingBarPivot'),
-        resetBtn: 'metricsGenreQualifyingBarPivotResetBtn',
-        layoutId: 'metricsGenreQualifyingBarPivotSection', builderBtn: 'metricsGenreQualifyingBarPivotBuilderBtn',
-        builderDom: { fieldList:'metricsGenreQualifyingBarDdFieldList', filterBar:'metricsGenreQualifyingBarDdFilterBar', filters:'metricsGenreQualifyingBarDdWellFilterBody', columns:'metricsGenreQualifyingBarDdWellColumnsBody', rows:'metricsGenreQualifyingBarDdWellRowsBody', values:'metricsGenreQualifyingBarDdWellValuesBody' },
-        dom: { head1: 'metricsGenreQualifyingBarPivotHeaderRow1', head2: 'metricsGenreQualifyingBarPivotHeaderRow2', body: 'metricsGenreQualifyingBarPivotTableBody', total: 'metricsGenreQualifyingBarPivotTotalAmount' },
-        parentView: 'metricsMain',
-      },
-
-      // 위와 완전히 같은 설정을 카드마다 하나씩 — metricsRevenueTrendPivot/metricsRevenueRankingPivot이
-      // 같은 값으로 두 프리셋을 등록해 카드별로 독립된 펼침 상태를 갖는 것과 같은 관례(2026-09-17).
+      // (채널별 막대차트에 연결됐던 자매 프리셋 metricsGenreQualifyingBarPivot은 2026-09-17 "구간별
+      // 프로그램 개수 분포" 요청으로 이 dd-layout 엔진 대신 metrics-ratings.js의
+      // renderMetricsGenreRatingBandPivot() 전용 렌더러로 교체되어 여기서 제거됨 — 이 Trend 프리셋은
+      // 그 변경과 무관하게 그대로 유지.)
       metricsGenreQualifyingTrendPivot: {
         rows: ['channel', 'program'],
         rowFallbacks: ['(미지정)', '(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc' },
         columns: ['year', 'month'],
-        values: [{ field: 'avgRating', agg: 'avg', format: { multiplier: 1, decimals: 2, suffix: '%' } }],
+        values: [{ field: 'avgRating', agg: 'avg', format: { multiplier: 1, decimals: 2, suffix: '' } }], // 단위(%)는 셀마다 반복 안 함(2026-09-17)
         sourceFilter: null,
         dataSource: () => metricsGenreQualifyingDataForPivot(),
         channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
@@ -984,8 +959,10 @@
     // (channel/year/month/value), metrics-ratings.js의 metricsXxxDataForPivot()이 이미 metricCode+
     // indexMode+채널선택+조회조건으로 좁혀서 넘겨준다.
     const PV_METRICS_RATINGS_FIELDS = ['channel', 'year', 'month', 'value'];
-    // "1%↑ 시청률 프로그램 수" 피벗 2종 전용(2026-09-17) — metricsGenreQualifyingDataForPivot()
-    // (metrics-ratings.js)이 만드는 파생 행의 실제 필드(channel/program/genre/year/month/avgRating).
+    // "1%↑ 시청률 프로그램 수" 월별 추이 피벗(metricsGenreQualifyingTrendPivot) 전용(2026-09-17) —
+    // metricsGenreQualifyingDataForPivot()(metrics-ratings.js)이 만드는 파생 행의 실제 필드
+    // (channel/program/genre/year/month/avgRating). 자매 프리셋이던 metricsGenreQualifyingBarPivot은
+    // 위 PIVOT_PRESETS에서 제거됨(전용 렌더러로 교체) — 이 상수는 Trend 프리셋만 계속 쓴다.
     const PV_METRICS_GENRE_QUALIFYING_FIELDS = ['channel', 'program', 'genre', 'year', 'month', 'avgRating'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
@@ -996,7 +973,7 @@
       metricsRevenueTrendPivot: PV_METRICS_REVENUE_FIELDS, metricsRevenueRankingPivot: PV_METRICS_REVENUE_FIELDS,
       metricsCprpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsRatingTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
-      metricsGenreQualifyingBarPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS, metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
+      metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
