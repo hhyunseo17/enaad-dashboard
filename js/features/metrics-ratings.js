@@ -494,12 +494,18 @@
       const nonEnaChannels = structuralChannels.filter(ch => ch !== ENA_REPRESENTATIVE_CHANNEL);
       const channels = structuralChannels.includes(ENA_REPRESENTATIVE_CHANNEL) ? [ENA_REPRESENTATIVE_CHANNEL, ...nonEnaChannels] : nonEnaChannels;
 
-      const datasets = channels.map(ch => {
-        const isEna = ch === ENA_REPRESENTATIVE_CHANNEL;
-        const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch));
-        const data = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c[ch] || 0) : 0; });
-        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, _isEna: isEna };
-      });
+      // 색상은 구조적 채널 순서(channels/nonEnaChannels) 기준으로 고정 배정한 뒤, 조회기간 내내
+      // 값이 전부 0인 채널(=이 기간엔 1%↑ 프로그램이 하나도 없던 사업자)만 범례/라인에서 뺀다
+      // (2026-09-17, 사용자 요청 — "없는 사업자는 범례에서 빼줘"). 색 배정을 필터링 전에 끝내야
+      // 조회기간이 바뀌어 어떤 채널이 나타났다 사라졌다 해도 같은 채널은 항상 같은 색을 유지한다.
+      const datasets = channels
+        .map(ch => {
+          const isEna = ch === ENA_REPRESENTATIVE_CHANNEL;
+          const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch));
+          const data = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c[ch] || 0) : 0; });
+          return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, _isEna: isEna };
+        })
+        .filter(ds => ds.data.some(v => v > 0));
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsGenreQualifyingTrend = new Chart(ctx, {
