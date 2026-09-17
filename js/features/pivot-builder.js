@@ -92,7 +92,14 @@
       // 채널 단위 4개) 전용 — 매출 대시보드의 channelOrder(PV_CHANNEL_ORDER, 전체 채널 고정순서)와는
       // 다르다(그건 값과 무관한 완전 고정순서, 이건 ENA만 예외로 빼고 나머지는 값순 유지).
       enaFirstValueDesc: pvPinFirst([ENA_CHANNEL_GROUP, ...ENA_CHANNELS], (a, b, ta, tb) => tb - ta),
+      // "1%↑ 시청률 프로그램 수" 구간별 분포 피벗(metricsGenreQualifyingBarPivot) 전용 — 구간(band)은
+      // 값 크기가 아니라 metrics-ratings.js의 METRICS_GENRE_RATING_BANDS와 같은 고정 순서(3%↑→0.5%
+      // 미만)로 나와야 한다(2026-09-17). 값이 같아야 할 두 상수를 pivot-builder.js가
+      // metrics-ratings.js를 로드 순서상 참조할 수 없어(dashboard.html에서 pivot-builder.js가 먼저
+      // 로드됨) 여기 독립적으로 하드코딩 — 값 하드코딩 중복이 로드순서 깨는 것보다 안전하다.
+      genreBandOrder: (a, b) => pvOrderListCompare(PV_GENRE_BAND_ORDER, a, b),
     };
+    const PV_GENRE_BAND_ORDER = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
     function pvPinFirst(names, baseSorter) {
       return (a, b, ta, tb) => {
         const aFirst = names.includes(a), bFirst = names.includes(b);
@@ -893,6 +900,48 @@
         parentView: 'metricsMain',
       },
 
+      // "1%↑ 시청률 프로그램 수" 채널별 막대차트의 "피벗으로 보기" — 구간(band)별 프로그램 개수 분포
+      // (2026-09-17, 사용자 재확정). 한 번은 "시간 드릴다운이 필요 없다"는 판단으로 이 드래그앤드롭
+      // 엔진을 버리고 정적 2차원 표(채널×구간)로 만들었으나, 그러면서 다른 8개 피벗과 달리 메인
+      // 조회 pill(연도/월)이 통째로 빠지는 문제가 생겨 사용자가 되돌렸다: "구간을 행으로 채널 아래에
+      // 넣고 열은 연/월이 나와야 한다. 피벗테이블은 메인 조회 내용은 그대로 가져다 쓰면서 그 바깥
+      // 내용만 표편집으로 바꾸는 거잖아?" — 그래서 CPRP 피벗과 처음 만들었던 방식(이 엔진) 그대로
+      // 되돌리되, 행만 채널→구간 2단 트리(metricsRevenueTrendPivot의 rows:['scope','channelGroup']과
+      // 같은 2단계 패턴)로 둔다. dataSource는 metricsGenreQualifyingBandDataForPivot()
+      // (metrics-ratings.js) — 자매 프리셋 아래 metricsGenreQualifyingTrendPivot과 같은
+      // metricsGenreQualifyingDataForPivot() 행에 band 필드만 얹은 것이다. 이 데이터는 이미
+      // (channel,program,genre,year,month) 단위로 유일해 — 한 행 = 그 달의 프로그램 하나 — band
+      // 필드에 agg:'count'를 걸면(값을 합산/평균하지 않고 그 노드의 rowCount를 그대로 반환,
+      // pvComputeMetric() 참고) "그 채널·그 구간·그 달의 프로그램 개수"가 정확히 나온다. 구간 순서는
+      // 값 크기가 아니라 3%↑→0.5%미만 고정순서라 fieldSorters에 전용 정렬자 genreBandOrder(위
+      // PV_ROW_SORTERS 참고)를 쓴다.
+      metricsGenreQualifyingBarPivot: {
+        rows: ['channel', 'band'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc', band: 'genreBandOrder' },
+        columns: ['year', 'month'],
+        values: [{ field: 'band', agg: 'count' }],
+        sourceFilter: null,
+        dataSource: () => metricsGenreQualifyingBandDataForPivot(),
+        channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [0], // 채널 depth에서 소계(구간 5개 합) — metricsRevenueTrendPivot과 같은 관례
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsGenreQualifyingBarPivot,
+        expandedCols: () => expandedMetricsGenreQualifyingBarYearColumns,
+        render: () => renderPresetPivot('metricsGenreQualifyingBarPivot'),
+        resetBtn: 'metricsGenreQualifyingBarPivotResetBtn',
+        layoutId: 'metricsGenreQualifyingBarPivotSection', builderBtn: 'metricsGenreQualifyingBarPivotBuilderBtn',
+        builderDom: { fieldList:'metricsGenreQualifyingBarDdFieldList', filterBar:'metricsGenreQualifyingBarDdFilterBar', filters:'metricsGenreQualifyingBarDdWellFilterBody', columns:'metricsGenreQualifyingBarDdWellColumnsBody', rows:'metricsGenreQualifyingBarDdWellRowsBody', values:'metricsGenreQualifyingBarDdWellValuesBody' },
+        dom: { head1: 'metricsGenreQualifyingBarPivotHeaderRow1', head2: 'metricsGenreQualifyingBarPivotHeaderRow2', body: 'metricsGenreQualifyingBarPivotTableBody', total: 'metricsGenreQualifyingBarPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
+
       // "1%↑ 시청률 프로그램 수" 월별 추이 라인차트의 "피벗으로 보기"(2026-09-17 신규, 사용자 요청) —
       // CPRP 계열 4개와 완전히 같은 방식(단일 지표 평균값 + {multiplier,decimals,suffix} 포맷). 다만
       // 원본이 (channel,program,genre,year,month) 단위라 rows를 2단계(channel→program)로 둔다
@@ -900,11 +949,9 @@
       // 채널 단일 지표라 1단계였지만 이건 프로그램별 시청률까지 내려가 봐야 "왜 이 채널이 몇 개
       // 카운트됐는지" 근거가 보인다. dataSource(metricsGenreQualifyingDataForPivot(), metrics-ratings.js)가
       // 이미 "부(部) 분할" 프로그램명을 병합하고 avgRating(가중평균) 필드를 얹어서 넘긴다 — rating_sum을
-      // 그대로 avg 하면 "합의 평균"이 되어 틀리므로, 반드시 avgRating을 값 필드로 쓴다.
-      // (채널별 막대차트에 연결됐던 자매 프리셋 metricsGenreQualifyingBarPivot은 2026-09-17 "구간별
-      // 프로그램 개수 분포" 요청으로 이 dd-layout 엔진 대신 metrics-ratings.js의
-      // renderMetricsGenreRatingBandPivot() 전용 렌더러로 교체되어 여기서 제거됨 — 이 Trend 프리셋은
-      // 그 변경과 무관하게 그대로 유지.)
+      // 그대로 avg 하면 "합의 평균"이 되어 틀리므로, 반드시 avgRating을 값 필드로 쓴다. 위
+      // metricsGenreQualifyingBarPivot(채널별 막대차트용, 구간별 카운트)과는 dataSource·rows·values가
+      // 다른 독립 프리셋 — 서로 무관하게 각자 유지.
       metricsGenreQualifyingTrendPivot: {
         rows: ['channel', 'program'],
         rowFallbacks: ['(미지정)', '(미지정)'],
@@ -961,9 +1008,12 @@
     const PV_METRICS_RATINGS_FIELDS = ['channel', 'year', 'month', 'value'];
     // "1%↑ 시청률 프로그램 수" 월별 추이 피벗(metricsGenreQualifyingTrendPivot) 전용(2026-09-17) —
     // metricsGenreQualifyingDataForPivot()(metrics-ratings.js)이 만드는 파생 행의 실제 필드
-    // (channel/program/genre/year/month/avgRating). 자매 프리셋이던 metricsGenreQualifyingBarPivot은
-    // 위 PIVOT_PRESETS에서 제거됨(전용 렌더러로 교체) — 이 상수는 Trend 프리셋만 계속 쓴다.
+    // (channel/program/genre/year/month/avgRating).
     const PV_METRICS_GENRE_QUALIFYING_FIELDS = ['channel', 'program', 'genre', 'year', 'month', 'avgRating'];
+    // "1%↑ 시청률 프로그램 수" 채널별 막대차트 피벗(metricsGenreQualifyingBarPivot) 전용 — 위와 같은
+    // 행에 metricsGenreQualifyingBandDataForPivot()(metrics-ratings.js)가 구간(band) 필드 하나만 얹어
+    // 넘긴다. avgRating 대신 band를 노출해 사용자가 표편집에서 구간을 행/열/필터로 옮길 수 있게 한다.
+    const PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS = ['channel', 'program', 'genre', 'band', 'year', 'month'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
@@ -974,6 +1024,7 @@
       metricsCprpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsRatingTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
+      metricsGenreQualifyingBarPivot: PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)

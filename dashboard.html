@@ -250,6 +250,108 @@
       </div>
     </section>
 
+    <!-- 지표 대시보드 전용 컨트롤바. filterBarSection과 같은 위상 — 모든 뷰의 형제로 최상위에 두고
+         family==='metrics'일 때만 보인다(switchView(), view-router.js). 예전엔 #metricsMainView
+         안에 갇혀 있어서 다른 피벗 상세 화면으로 넘어가면 통째로 사라졌고, 그걸 눈가림하려고
+         metrics-dashboard.js의 renderMetricsPivotView()가 화면마다 연도/월 pill과 ①②드롭다운을
+         복제해 그렸다(2026-09-16~17) — 매출 대시보드의 filter-bar가 15개 뷰 전부에서 하나로 계속
+         보이는 것과 구조가 달랐다. 사용자 지적(2026-09-17, 스크린샷 두 건: "매출 대시보드처럼 이런
+         식으로 피벗테이블 화면이 나와야지. 상세조건 조회 화면은 위에 남겨놓고")으로 여기로 옮기고,
+         각 피벗 히어로카드의 복제본은 전부 걷어냈다(dashboard.html의 metricsMain/metricsDetail +
+         8개 기존 피벗 + 신규 2개 피벗, 총 11개 화면이 이 바 하나를 공유).
+         자기만의 연도·일평균/프라임타임·범위·비교단위·사업자→채널 토글을 갖는다. 단, 취급고/회계
+         (매출기준)만은 이 탭 전용 상태를 따로 두지 않고 메인 대시보드의 전역 revenueBasisMode
+         (state.js)를 그대로 공유한다 — "취급고를 누르면 매출 대시보드의 취급고 숫자를, 회계를
+         누르면 회계 숫자를 가져와 KT ENA/ENA 채널 매출로 쓴다"는 개념(2026-09-15, 사용자 요청).
+         버튼은 이 탭에도 있어 탭을 오가지 않고 바로 바꿀 수 있지만, 누르면 전역값이 바뀌므로 매출
+         대시보드 쪽도 같이 바뀐다(setMetricsRevenueBasis(), metrics-dashboard.js — 내부적으로
+         data-loader.js의 setRevenueBasis()를 그대로 호출해 메인 대시보드 버튼/필터도 함께
+         동기화한다). 연도/월 pill·①②드롭다운이 전역 하나뿐이므로, 이걸 조작하면 "지금 보고 있는
+         화면"을 다시 그려야 한다 — rerenderCurrentMetricsView()(metrics-dashboard.js)가 그 역할. -->
+    <section class="metrics-control-bar" style="display:none;">
+      <div class="metrics-control-row">
+        <div class="filter-group">
+          <span class="filter-label">매출 기준</span>
+          <div class="revenue-basis-toggle">
+            <button class="revenue-basis-btn active" id="btnMetricsBasisPerformance" onclick="setMetricsRevenueBasis('performance')">취급고</button>
+            <button class="revenue-basis-btn" id="btnMetricsBasisAccounting" onclick="setMetricsRevenueBasis('accounting')">회계</button>
+          </div>
+        </div>
+      </div>
+      <div class="metrics-control-row">
+        <div class="filter-group">
+          <span class="filter-label">연도</span>
+          <div id="metricsYearPills" class="pills-group"></div>
+          <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">월 선택</span>
+          <div id="metricsMonthPills" class="pills-group">
+            <button class="pill-btn active" data-month="all">전체</button>
+            <button class="pill-btn" data-month="1">1월</button>
+            <button class="pill-btn" data-month="2">2월</button>
+            <button class="pill-btn" data-month="3">3월</button>
+            <button class="pill-btn" data-month="4">4월</button>
+            <button class="pill-btn" data-month="5">5월</button>
+            <button class="pill-btn" data-month="6">6월</button>
+            <button class="pill-btn" data-month="7">7월</button>
+            <button class="pill-btn" data-month="8">8월</button>
+            <button class="pill-btn" data-month="9">9월</button>
+            <button class="pill-btn" data-month="10">10월</button>
+            <button class="pill-btn" data-month="11">11월</button>
+            <button class="pill-btn" data-month="12">12월</button>
+          </div>
+          <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
+        </div>
+      </div>
+      <div class="metrics-control-row">
+        <div class="filter-group">
+          <span class="filter-label">범위</span>
+          <div class="pills-group">
+            <button class="pill-btn" id="btnMetricsScopeAll" onclick="setMetricsScopeMode('all')">지상파+유료방송</button>
+            <button class="pill-btn active" id="btnMetricsScopePayTv" onclick="setMetricsScopeMode('payTv')">유료방송</button>
+            <button class="pill-btn" id="btnMetricsScopeCable" onclick="setMetricsScopeMode('cable')">케이블</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">기준</span>
+          <div class="pills-group">
+            <button class="pill-btn active" id="btnMetricsIndexAll" onclick="setMetricsIndexMode('전체')">일평균</button>
+            <button class="pill-btn" id="btnMetricsIndexPrime" onclick="setMetricsIndexMode('프라임타임')">프라임타임</button>
+          </div>
+          <span class="filter-hint">CPRP·채널시청률·eq-GRPs에만 반영</span>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">사업자</span>
+          <div class="multi-dropdown" id="dropdownMetricsOperator">
+            <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsOperator')">
+              <span id="labelMetricsOperator">전체 사업자</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelMetricsOperator">
+              <label class="checkbox-item checkbox-item-all">
+                <input type="checkbox" id="checkAllMetricsOperator" onchange="toggleAllMetricsCheckboxes('Operator', this)">전체선택
+              </label>
+              <div id="listMetricsOperatorCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">채널</span>
+          <div class="multi-dropdown" id="dropdownMetricsChannel">
+            <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')">
+              <span id="labelMetricsChannel">대표채널 자동</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelMetricsChannel">
+              <label class="checkbox-item checkbox-item-all">
+                <input type="checkbox" id="checkAllMetricsChannel" onchange="toggleAllMetricsCheckboxes('Channel', this)">전체선택
+              </label>
+              <div id="listMetricsChannelCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ==========================================================================
        VIEW 1: MAIN DASHBOARD VIEW
        ========================================================================== -->
@@ -1245,98 +1347,6 @@
         <span id="metricsDataAsOfLabel" class="metrics-legend-chip"></span>
       </section>
 
-      <!-- 지표 대시보드 전용 컨트롤바. 메인 매출 대시보드의 filter-bar와 독립 — 자기만의
-           연도·일평균/프라임타임·범위·비교단위·사업자→채널 토글을 갖는다. 단, 취급고/회계(매출기준)만은
-           이 탭 전용 상태를 따로 두지 않고 메인 대시보드의 전역 revenueBasisMode(state.js)를 그대로
-           공유한다 — "취급고를 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를
-           가져와 KT ENA/ENA 채널 매출로 쓴다"는 개념(2026-09-15, 사용자 요청). 버튼은 이 탭에도 있어
-           탭을 오가지 않고 바로 바꿀 수 있지만, 누르면 전역값이 바뀌므로 매출 대시보드 쪽도 같이
-           바뀐다(setMetricsRevenueBasis(), metrics-dashboard.js — 내부적으로 data-loader.js의
-           setRevenueBasis()를 그대로 호출해 메인 대시보드 버튼/필터도 함께 동기화한다). -->
-      <section class="metrics-control-bar">
-        <div class="metrics-control-row">
-          <div class="filter-group">
-            <span class="filter-label">매출 기준</span>
-            <div class="revenue-basis-toggle">
-              <button class="revenue-basis-btn active" id="btnMetricsBasisPerformance" onclick="setMetricsRevenueBasis('performance')">취급고</button>
-              <button class="revenue-basis-btn" id="btnMetricsBasisAccounting" onclick="setMetricsRevenueBasis('accounting')">회계</button>
-            </div>
-          </div>
-        </div>
-        <div class="metrics-control-row">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsMonthPills" class="pills-group">
-              <button class="pill-btn active" data-month="all">전체</button>
-              <button class="pill-btn" data-month="1">1월</button>
-              <button class="pill-btn" data-month="2">2월</button>
-              <button class="pill-btn" data-month="3">3월</button>
-              <button class="pill-btn" data-month="4">4월</button>
-              <button class="pill-btn" data-month="5">5월</button>
-              <button class="pill-btn" data-month="6">6월</button>
-              <button class="pill-btn" data-month="7">7월</button>
-              <button class="pill-btn" data-month="8">8월</button>
-              <button class="pill-btn" data-month="9">9월</button>
-              <button class="pill-btn" data-month="10">10월</button>
-              <button class="pill-btn" data-month="11">11월</button>
-              <button class="pill-btn" data-month="12">12월</button>
-            </div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-        </div>
-        <div class="metrics-control-row">
-          <div class="filter-group">
-            <span class="filter-label">범위</span>
-            <div class="pills-group">
-              <button class="pill-btn" id="btnMetricsScopeAll" onclick="setMetricsScopeMode('all')">지상파+유료방송</button>
-              <button class="pill-btn active" id="btnMetricsScopePayTv" onclick="setMetricsScopeMode('payTv')">유료방송</button>
-              <button class="pill-btn" id="btnMetricsScopeCable" onclick="setMetricsScopeMode('cable')">케이블</button>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">기준</span>
-            <div class="pills-group">
-              <button class="pill-btn active" id="btnMetricsIndexAll" onclick="setMetricsIndexMode('전체')">일평균</button>
-              <button class="pill-btn" id="btnMetricsIndexPrime" onclick="setMetricsIndexMode('프라임타임')">프라임타임</button>
-            </div>
-            <span class="filter-hint">CPRP·채널시청률·eq-GRPs에만 반영</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsOperator')">
-                <span id="labelMetricsOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsOperator">
-                <label class="checkbox-item checkbox-item-all">
-                  <input type="checkbox" id="checkAllMetricsOperator" onchange="toggleAllMetricsCheckboxes('Operator', this)">전체선택
-                </label>
-                <div id="listMetricsOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" id="btnMetricsChannelDropdown" onclick="toggleMultiDropdown('MetricsChannel')">
-                <span id="labelMetricsChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsChannel">
-                <label class="checkbox-item checkbox-item-all">
-                  <input type="checkbox" id="checkAllMetricsChannel" onchange="toggleAllMetricsCheckboxes('Channel', this)">전체선택
-                </label>
-                <div id="listMetricsChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <div id="metricsLoadingMessage" style="display:none; padding: 60px 20px; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
         <div class="spinner"></div>
         <div id="metricsLoadingMessageText" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">경쟁채널 지표 데이터를 불러오는 중입니다…</div>
@@ -1530,17 +1540,6 @@
             <span style="font-size: 12px; color: var(--text-tertiary);">지표(16종) → 채널 · 연도별 월 열 · 단위는 지표마다 다르다(%, 원, GRP, 건 등)</span>
           </div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsDetailYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsDetailMonthPills" class="pills-group"></div>
-          </div>
-        </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
@@ -1585,41 +1584,6 @@
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">합계 : 매출 (백만원)</div>
             <div id="metricsMarketByScopePivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0 백만</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsMarketByScopePivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsMarketByScopePivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsMarketByScopePivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMarketByScopePivotOperator')">
-                <span id="metricsMarketByScopePivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsMarketByScopePivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsMarketByScopePivotCheckAllOperator">전체선택</label>
-                <div id="metricsMarketByScopePivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsMarketByScopePivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMarketByScopePivotChannel')">
-                <span id="metricsMarketByScopePivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsMarketByScopePivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsMarketByScopePivotCheckAllChannel">전체선택</label>
-                <div id="metricsMarketByScopePivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -1680,41 +1644,6 @@
             <div id="metricsMsTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
           </div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsMsTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsMsTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsMsTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMsTrendPivotOperator')">
-                <span id="metricsMsTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsMsTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsMsTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsMsTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsMsTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsMsTrendPivotChannel')">
-                <span id="metricsMsTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsMsTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsMsTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsMsTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
@@ -1771,41 +1700,6 @@
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">합계 : 매출 (백만원)</div>
             <div id="metricsRevenueTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0 백만</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsRevenueTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsRevenueTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsRevenueTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueTrendPivotOperator')">
-                <span id="metricsRevenueTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRevenueTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRevenueTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsRevenueTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsRevenueTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueTrendPivotChannel')">
-                <span id="metricsRevenueTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRevenueTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRevenueTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsRevenueTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -1866,41 +1760,6 @@
             <div id="metricsRevenueRankingPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0 백만</div>
           </div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsRevenueRankingPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsRevenueRankingPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsRevenueRankingPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueRankingPivotOperator')">
-                <span id="metricsRevenueRankingPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRevenueRankingPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRevenueRankingPivotCheckAllOperator">전체선택</label>
-                <div id="metricsRevenueRankingPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsRevenueRankingPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRevenueRankingPivotChannel')">
-                <span id="metricsRevenueRankingPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRevenueRankingPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRevenueRankingPivotCheckAllChannel">전체선택</label>
-                <div id="metricsRevenueRankingPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
@@ -1957,41 +1816,6 @@
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 CPRP (원) · 수도권 개인 2049 기준</div>
             <div id="metricsCprpTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0 원</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsCprpTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsCprpTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsCprpTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsCprpTrendPivotOperator')">
-                <span id="metricsCprpTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsCprpTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsCprpTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsCprpTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsCprpTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsCprpTrendPivotChannel')">
-                <span id="metricsCprpTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsCprpTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsCprpTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsCprpTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -2052,41 +1876,6 @@
             <div id="metricsRatingTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
           </div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsRatingTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsRatingTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsRatingTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRatingTrendPivotOperator')">
-                <span id="metricsRatingTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRatingTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRatingTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsRatingTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsRatingTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsRatingTrendPivotChannel')">
-                <span id="metricsRatingTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsRatingTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsRatingTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsRatingTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
@@ -2143,41 +1932,6 @@
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널별 평균 eq-GRPs · 수도권 개인 2049 기준</div>
             <div id="metricsGrpTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsGrpTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsGrpTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsGrpTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGrpTrendPivotOperator')">
-                <span id="metricsGrpTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGrpTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGrpTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsGrpTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsGrpTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGrpTrendPivotChannel')">
-                <span id="metricsGrpTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGrpTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGrpTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsGrpTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -2238,41 +1992,6 @@
             <div id="metricsAdvCountTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0개사</div>
           </div>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsAdvCountTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsAdvCountTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsAdvCountTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsAdvCountTrendPivotOperator')">
-                <span id="metricsAdvCountTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsAdvCountTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsAdvCountTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsAdvCountTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsAdvCountTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsAdvCountTrendPivotChannel')">
-                <span id="metricsAdvCountTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsAdvCountTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsAdvCountTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsAdvCountTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
@@ -2319,37 +2038,69 @@
       </section>
     </div>
 
-    <!-- "1%↑ 시청률 프로그램 수" 채널별 막대차트의 피벗 상세 — "구간별 프로그램 개수 분포"로 교체
-         (2026-09-17 변경, 사용자 요청: "구간 3% 이상, 2% 이상, 1% 이상, 0.5% 이상, 0.5% 미만 프로그램
-         개수로 하자"). 조회기간을 이미 하나의 값으로 합산한 단순 2차원 표(채널×구간)라 dd-layout
-         드래그앤드롭 골격 없이 bucketPivotView(938~954행)와 같은 hero+table-container 템플릿을 쓴다.
-         연/월은 metricsMain 컨트롤바의 전역 선택을 그대로 읽어 이 화면엔 별도 pill이 없다. 렌더는
-         js/features/metrics-ratings.js의 renderMetricsGenreRatingBandPivot(). -->
+    <!-- "1%↑ 시청률 프로그램 수" 채널별 막대차트의 피벗 상세 — 구간별 프로그램 개수 분포
+         (2026-09-17). 한 번은 이 화면을 "조회기간을 이미 하나의 값으로 합산한 단순 2차원 표"로 만들며
+         dd-layout 골격을 뺐으나, 그러면서 다른 8개 피벗과 달리 메인의 연/월 조회 pill이 통째로
+         사라지는 문제가 생겨(사용자 지적: "여기는 왜 메인에 있던 조회 내용들이 사라졌어") 자매 화면인
+         metricsGenreQualifyingTrendPivotView(바로 아래)와 같은 dd-layout 골격으로 되돌렸다 — 행은
+         채널→구간 2단 트리, 열은 연→월 트리(js/features/pivot-builder.js의
+         PIVOT_PRESETS.metricsGenreQualifyingBarPivot 참고). 렌더는 다른 8개와 동일하게
+         js/core/view-router.js → renderMetricsPivotView('metricsGenreQualifyingBarPivot'). -->
     <div id="metricsGenreQualifyingBarPivotView" class="view-section">
       <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">프로그램별 시청률 데이터</span>
-            <h2 class="hero-title">1%↑ 시청률 프로그램 수 (채널별) — 구간별 분포</h2>
+            <h2 class="hero-title">1%↑ 시청률 프로그램 수 (채널별) — 구간별 분포 — 피벗 상세</h2>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 12px; color: var(--text-tertiary);">전체 프로그램 수</div>
-            <div id="metricsGenreQualifyingBandPivotTotal" class="hero-metric" style="color: var(--primary-blue);">0개</div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">채널×구간 프로그램 개수</div>
+            <div id="metricsGenreQualifyingBarPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0개</div>
           </div>
         </div>
       </section>
       <section class="table-container">
         <div class="table-controls">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h2 style="font-size: 16px; font-weight: 600;">채널별 시청률 구간 분포</h2>
+            <h2 style="font-size: 16px; font-weight: 600;">채널×구간 프로그램 개수 월별 피벗</h2>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" id="metricsGenreQualifyingBarPivotResetBtn" onclick="pvResetPivot('metricsGenreQualifyingBarPivot')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="metricsGenreQualifyingBarPivotBuilderBtn" onclick="pvToggleBuilder('metricsGenreQualifyingBarPivot')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
           </div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;">
-          <table class="data-table pivot-tree-table">
-            <thead><tr id="metricsGenreQualifyingBandPivotHeaderRow"></tr></thead>
-            <tbody id="metricsGenreQualifyingBandPivotTableBody"></tbody>
-          </table>
-        </div>
+        <section class="dd-layout dd-layout-collapsed" id="metricsGenreQualifyingBarPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="metricsGenreQualifyingBarDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="metricsGenreQualifyingBarPivotHeaderRow1"></tr><tr id="metricsGenreQualifyingBarPivotHeaderRow2"></tr></thead>
+                <tbody id="metricsGenreQualifyingBarPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="metricsGenreQualifyingBarDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="metricsGenreQualifyingBarDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
 
@@ -2363,41 +2114,6 @@
           <div style="text-align: right;">
             <div style="font-size: 12px; color: var(--text-tertiary);">채널×프로그램 평균 시청률</div>
             <div id="metricsGenreQualifyingTrendPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0%</div>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-default);">
-          <div class="filter-group">
-            <span class="filter-label">연도</span>
-            <div id="metricsGenreQualifyingTrendPivotYearPills" class="pills-group"></div>
-            <span class="filter-hint">Ctrl+클릭 시 복수 선택</span>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">월 선택</span>
-            <div id="metricsGenreQualifyingTrendPivotMonthPills" class="pills-group"></div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">사업자</span>
-            <div class="multi-dropdown" id="dropdownMetricsGenreQualifyingTrendPivotOperator">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGenreQualifyingTrendPivotOperator')">
-                <span id="metricsGenreQualifyingTrendPivotLabelOperator">전체 사업자</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGenreQualifyingTrendPivotOperator">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGenreQualifyingTrendPivotCheckAllOperator">전체선택</label>
-                <div id="metricsGenreQualifyingTrendPivotOperatorCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">채널</span>
-            <div class="multi-dropdown" id="dropdownMetricsGenreQualifyingTrendPivotChannel">
-              <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('MetricsGenreQualifyingTrendPivotChannel')">
-                <span id="metricsGenreQualifyingTrendPivotLabelChannel">대표채널 자동</span> ▾
-              </button>
-              <div class="multi-dropdown-panel" id="panelMetricsGenreQualifyingTrendPivotChannel">
-                <label class="checkbox-item checkbox-item-all"><input type="checkbox" id="metricsGenreQualifyingTrendPivotCheckAllChannel">전체선택</label>
-                <div id="metricsGenreQualifyingTrendPivotChannelCheckboxes" class="checkbox-list"></div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

@@ -75,8 +75,10 @@
       metricsGrpTrendPivot: { containerId: 'metricsGrpTrendPivotView', title: 'eq-GRPs 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGrpTrendPivot') },
       metricsAdvCountTrendPivot: { containerId: 'metricsAdvCountTrendPivotView', title: '광고주수 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsAdvCountTrendPivot') },
       // "1%↑ 시청률 프로그램 수" 채널별 막대 + 월별 추이 라인의 "카드 클릭 → 전용 피벗 화면"
-      // (2026-09-17 신규) — 위 매출·CPRP 계열 8개와 같은 관례.
-      metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsGenreRatingBandPivot() },
+      // (2026-09-17 신규) — 위 매출·CPRP 계열 8개와 같은 관례. Bar 쪽은 한 번 전용 렌더러
+      // renderMetricsGenreRatingBandPivot()(정적 2차원 표)로 바뀌었다가, 메인 조회 pill이 사라지는
+      // 문제로 다른 8개와 동일한 renderMetricsPivotView() 경로로 되돌아왔다(2026-09-17).
+      metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 구간별 분포 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingBarPivot') },
       metricsGenreQualifyingTrendPivot: { containerId: 'metricsGenreQualifyingTrendPivotView', title: '1%↑ 시청률 프로그램 수 (월별 추이) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingTrendPivot') },
     };
 
@@ -91,13 +93,21 @@
       document.getElementById(cfg.containerId).classList.add('active');
       document.getElementById('breadcrumbBox').style.display = cfg.showBreadcrumb ? 'flex' : 'none';
       document.getElementById('headerMainTitle').innerText = cfg.title;
-      // 지표 탭은 자기 컨트롤바(.metrics-control-bar)를 쓰므로 매출 탭의 filter-bar를 숨긴다.
+      // 매출 탭은 filter-bar, 지표 탭은 .metrics-control-bar — 서로 반대로 토글한다.
       const filterBarSection = document.getElementById('filterBarSection');
       if (filterBarSection) filterBarSection.style.display = cfg.family === 'metrics' ? 'none' : '';
       // "실시간 연결/원본 수정"(매출 데이터 전용) — filter-bar와 같은 원칙으로 매출 쪽 전체(15개 뷰)에서
       // 계속 보이고, 지표 탭에서만 숨긴다(2026-09-16, 사용자: "이거까지는 매출대시보드 내에서는 고정").
       const salesStatusLegend = document.getElementById('salesStatusLegend');
       if (salesStatusLegend) salesStatusLegend.style.display = cfg.family === 'metrics' ? 'none' : '';
+      // 지표 탭 전용 컨트롤바(연도/월/①②/매출기준) — filter-bar와 정확히 반대로 토글한다. 예전엔
+      // #metricsMainView 안에 갇혀 있어서 metricsMain을 벗어나면(다른 view-section으로 바뀌면) 이
+      // hideAllViews()가 손대지 않아도 컨테이너 자체가 사라지며 같이 사라졌다 — 이제 dashboard.html에서
+      // 모든 view-section의 형제로 옮겨졌으므로 여기서 명시적으로 켜고 꺼야 한다(2026-09-17, 사용자
+      // 지적: "매출 대시보드처럼 이런 식으로 피벗테이블 화면이 나와야지. 상세조건 조회 화면은 위에
+      // 남겨놓고" — metricsMain/metricsDetail + 피벗 상세 10개 전부에서 이 바 하나를 공유한다).
+      const metricsControlBar = document.querySelector('.metrics-control-bar');
+      if (metricsControlBar) metricsControlBar.style.display = cfg.family === 'metrics' ? '' : 'none';
       syncDashboardTabs(cfg.family);
       // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
       // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.

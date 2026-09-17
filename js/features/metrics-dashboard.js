@@ -346,13 +346,18 @@
       setRevenueBasis(mode); // data-loader.js — 전역 revenueBasisMode + 메인 대시보드 버튼/필터
       document.getElementById('btnMetricsBasisPerformance').classList.toggle('active', mode === 'performance');
       document.getElementById('btnMetricsBasisAccounting').classList.toggle('active', mode === 'accounting');
-      renderMetricsDashboard();
+      // KT ENA 부분을 새 기준으로 재계산 — renderMetricsDashboard()가 매번 이걸 다시 부르므로
+      // metricsMain 안에서는 원래도 자동으로 됐지만, 이 버튼이 전역 컨트롤바로 옮겨진 뒤로는
+      // 피벗 상세 화면(rerenderCurrentMetricsView가 renderMetricsDashboard를 타지 않는 경우)에서
+      // 눌러도 매출/M-S 계열 피벗이 최신 기준을 반영해야 하므로 여기서 직접 부른다(2026-09-17).
+      rebuildMetricsSubstitution();
+      rerenderCurrentMetricsView();
     }
     function setMetricsIndexMode(mode) {
       metricsIndexMode = mode;
       document.getElementById('btnMetricsIndexAll').classList.toggle('active', mode === '전체');
       document.getElementById('btnMetricsIndexPrime').classList.toggle('active', mode === '프라임타임');
-      renderMetricsDashboard();
+      rerenderCurrentMetricsView();
     }
     function setMetricsScopeMode(mode) {
       metricsScopeMode = mode;
@@ -381,7 +386,7 @@
           if (!metricsSelectedOperators.includes(op)) metricsSelectedOperators.push(op);
         });
       }
-      renderMetricsDashboard();
+      rerenderCurrentMetricsView();
     }
     function setMetricsMarketByScopeMode(mode) {
       metricsMarketByScopeMode = mode;
@@ -466,25 +471,41 @@
       }
       metricsSyncMonthPillActive(containerId); // 다른 화면에서 바뀐 값과 동기화(예: 상세에서 바꾸고 metricsMain으로 복귀)
     }
-    function setupMetricsYearPills() { metricsSetupYearPills('metricsYearPills', renderMetricsDashboard); }
-    function setupMetricsMonthPills() { metricsSetupMonthPills('metricsMonthPills', renderMetricsDashboard); }
+    function setupMetricsYearPills() { metricsSetupYearPills('metricsYearPills', rerenderCurrentMetricsView); }
+    function setupMetricsMonthPills() { metricsSetupMonthPills('metricsMonthPills', rerenderCurrentMetricsView); }
     function syncMetricsMonthPillActive() { metricsSyncMonthPillActive('metricsMonthPills'); }
 
-    // 매출 4개 + 지표 4개 피벗 상세 화면(view-router.js VIEW_CONFIG)의 공통 진입점 — 조회조건 pill과
-    // ①②선택 체크박스를 전부 그 화면 전용 컨테이너(viewKey+'YearPills' 등)에 붙이고 프리셋을 그린다
-    // (2026-09-16, 사용자 지적: "각 피벗테이블에서 이 상단조회는 메인 페이지에 있는 걸 같이 써야지.
-    // 채널 확장하려고 해도 할 수가 없네" — 예전엔 연도/월 pill만 있고 ①②는 metricsMain에만 있어서
-    // 피벗 화면 안에서는 채널 선택을 못 바꿨다).
+    // 연도/월 pill·①②드롭다운·매출기준/범위/기준 버튼이 이제 전역 컨트롤바 하나뿐이라(dashboard.html,
+    // 모든 지표 화면의 형제 — 2026-09-17, 사용자 지적: "매출 대시보드처럼 이런 식으로 피벗테이블
+    // 화면이 나와야지. 상세조건 조회 화면은 위에 남겨놓고"), 조작 시 그 값을 쓰는 "지금 보고 있는
+    // 화면"을 다시 그려야 한다. VIEW_CONFIG[currentView].render()를 그대로 재사용하면 metricsMain일
+    // 땐 renderMetricsDashboard(), 피벗 상세일 땐 그 피벗의 renderMetricsPivotView(viewKey)/
+    // renderMetricsDetailView()가 자동으로 불린다 — 화면마다 다른 rerender 콜백을 따로 만들 필요가
+    // 없다(예전엔 이 pill들이 metricsMain에만 있어서 renderMetricsDashboard 고정 콜백으로 충분했다).
+    function rerenderCurrentMetricsView() {
+      const cfg = VIEW_CONFIG[currentView];
+      if (cfg && cfg.family === 'metrics' && cfg.render) cfg.render();
+    }
+
+    // 매출 4개 + 지표 4개 + "1%↑ 시청률" 2개, 총 10개 피벗 상세 화면(view-router.js VIEW_CONFIG)의
+    // 공통 진입점. 연도/월 pill과 ①②선택 체크박스는 이제 전역 컨트롤바 하나(위 rerenderCurrentMetricsView
+    // 참고)가 담당하므로 여기서는 프리셋만 그린다 — 예전엔 이 화면 전용 컨테이너(viewKey+'YearPills' 등,
+    // dashboard.html의 각 히어로카드)에 매번 새로 pill/체크박스를 그렸었다(2026-09-16~17에 걸쳐 추가됐다가
+    // 2026-09-17에 전역 컨트롤바로 통합되며 제거됨). 부수효과 — CPRP/채널시청률/eq-GRPs/광고주수/
+    // "1%↑" 2종 피벗이 갖고 있던 channelCandidates(그 지표에 실제 값이 있는 채널만 후보로 좁히는 기능,
+    // PIVOT_PRESETS의 channelCandidates 필드)는 채널 체크박스가 전역 하나로 합쳐지며 더는 호출되지
+    // 않는다 — metricsMain의 ②채널 후보(범위 안 사업자 전체의 모든 하위 채널)를 전 화면이 공유한다.
     function renderMetricsPivotView(viewKey) {
-      const rerender = () => renderMetricsPivotView(viewKey);
-      metricsSetupYearPills(viewKey + 'YearPills', rerender);
-      metricsSetupMonthPills(viewKey + 'MonthPills', rerender);
-      metricsSetupOperatorCheckboxes(viewKey + 'OperatorCheckboxes', viewKey + 'CheckAllOperator', viewKey + 'LabelOperator', rerender);
-      // channelCandidates(선택) — CPRP/채널시청률/eq-GRPs/광고주수 피벗은 이 지표에 실제 값이 있는
-      // 채널만 후보로 좁힌 함수를 프리셋에 등록해 둔다(metrics-ratings.js) — 나머지(매출/M-S 4종)는
-      // 미지정이라 기존처럼 "범위 안 사업자 전체의 모든 하위 채널"을 그대로 쓴다.
-      const preset = PIVOT_PRESETS[viewKey];
-      metricsSetupChannelCheckboxes(viewKey + 'ChannelCheckboxes', viewKey + 'CheckAllChannel', viewKey + 'LabelChannel', rerender, preset && preset.channelCandidates);
+      // 새로고침·해시 딥링크로 metricsMain을 거치지 않고 피벗 상세로 직행하는 경로 대비
+      // (2026-09-17, reviewer가 실제로 재현·확인) — 컨트롤바 setup*() 호출이 이제
+      // renderMetricsDashboard() 안에만 있어서, 그 함수가 이번 세션에 한 번도 안 돌면
+      // 전역 pill/드롭다운이 빈 채로 남는다. dataset.wired 가드가 이미 있어 중복 호출은 안전하다.
+      metricsEnsureDefaultSelections();
+      setupMetricsYearPills();
+      setupMetricsMonthPills();
+      syncMetricsMonthPillActive();
+      setupMetricsOperatorCheckboxes();
+      setupMetricsChannelCheckboxes();
       renderPresetPivot(viewKey);
     }
 
@@ -532,7 +553,7 @@
         label.innerText = sel.length === 0 ? '선택 없음' : sel.length <= 2 ? sel.join(', ') : `${sel.length}개 선택됨`;
       }
     }
-    function setupMetricsOperatorCheckboxes() { metricsSetupOperatorCheckboxes('listMetricsOperatorCheckboxes', 'checkAllMetricsOperator', 'labelMetricsOperator', renderMetricsDashboard); }
+    function setupMetricsOperatorCheckboxes() { metricsSetupOperatorCheckboxes('listMetricsOperatorCheckboxes', 'checkAllMetricsOperator', 'labelMetricsOperator', rerenderCurrentMetricsView); }
 
     // candidatesFn(선택) — 지정 없으면 기존과 동일하게 "범위 안 사업자 전체의 모든 하위 채널"
     // (metricsChannelsForOperators(metricsAllOperatorGroups())). CPRP/채널시청률/eq-GRPs/광고주수
@@ -573,13 +594,20 @@
         label.innerText = sel.length === 0 ? '대표채널 자동' : sel.length <= 2 ? sel.join(', ') : `${sel.length}개 선택됨`;
       }
     }
-    // onChange가 renderMetricsDashboard()(전체 재렌더)가 아니라 renderMetricsChannelDependentCharts()
-    // (metrics-ratings.js, ②에 실제로 의존하는 미니차트 4개만)인 이유는 그 함수 주석 참고 — ②는
-    // KPI·시장규모·M/S·매출 트렌드/랭킹 어느 것도 안 바꾸는데 전체를 다시 그리면 안 바뀐 차트까지
-    // Chart.js가 destroy+재생성돼 인트로 애니메이션이 돌아 "값이 바뀐 줄" 헷갈리게 했다(2026-09-16,
-    // 사용자 지적). 최초 렌더(페이지 진입 시 renderMetricsDashboard()가 이 함수를 호출하는 그 순간)는
-    // onChange를 안 타므로 영향 없다 — 사용자가 실제로 ②를 조작할 때만 이 좁은 재렌더가 쓰인다.
-    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', renderMetricsChannelDependentCharts); }
+    // metricsMain 안에서는 onChange가 renderMetricsDashboard()(전체 재렌더)가 아니라
+    // renderMetricsChannelDependentCharts()(metrics-ratings.js, ②에 실제로 의존하는 미니차트 4개만)인
+    // 이유는 그 함수 주석 참고 — ②는 KPI·시장규모·M/S·매출 트렌드/랭킹 어느 것도 안 바꾸는데 전체를
+    // 다시 그리면 안 바뀐 차트까지 Chart.js가 destroy+재생성돼 인트로 애니메이션이 돌아 "값이 바뀐 줄"
+    // 헷갈리게 했다(2026-09-16, 사용자 지적). ②가 전역 컨트롤바로 옮겨진 뒤로는 피벗 상세 화면에서도
+    // 조작할 수 있으므로, metricsMain에 있을 때만 이 좁은 재렌더를 쓰고 그 밖(피벗 상세)에서는
+    // rerenderCurrentMetricsView()로 그 피벗 자신을 다시 그린다(2026-09-17). 최초 렌더(페이지 진입 시
+    // renderMetricsDashboard()가 이 함수를 호출하는 그 순간)는 onChange를 안 타므로 영향 없다 —
+    // 사용자가 실제로 ②를 조작할 때만 이 분기가 쓰인다.
+    function metricsOnChannelSelectionChange() {
+      if (currentView === 'metricsMain') renderMetricsChannelDependentCharts();
+      else rerenderCurrentMetricsView();
+    }
+    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', metricsOnChannelSelectionChange); }
 
     // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)만 아직 이 범용 함수를 쓴다 — ①②는
     // 위 metricsSetupXxxCheckboxes()가 각자 처리하므로 더 이상 여기서 다루지 않는다.

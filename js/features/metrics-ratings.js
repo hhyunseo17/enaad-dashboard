@@ -270,13 +270,21 @@
       renderMetricsDetailPivot();
     }
 
-    // VIEW_CONFIG.metricsDetail.render()의 실제 진입점 — 다른 8개 피벗 상세 화면(renderMetricsPivotView)
-    // 과 같은 원칙으로, 그리기 전에 이 화면 전용 연도/월 pill부터 세팅한다(2026-09-16, 사용자 지적:
-    // "경쟁채널 지표 상세 페이지도 조회조건은 메인 페이지에 있는 걸 써야지" — 이전엔 pill 자체가 없어
-    // 조회조건과 무관하게 File1이 갖고 있는 연도 전체가 항상 나왔다).
+    // VIEW_CONFIG.metricsDetail.render()의 실제 진입점. 연도/월 조회조건은 이제 전역 컨트롤바
+    // 하나(dashboard.html, metricsMain/metricsDetail/피벗 상세 10개가 공유)가 담당하므로 이 화면
+    // 전용 pill은 없다(2026-09-17 — 예전엔 이 화면 전용 컨테이너 metricsDetailYearPills/
+    // metricsDetailMonthPills를 따로 두었으나, 전역 컨트롤바로 통합되며 그 마크업 자체를 제거했다.
+    // 그 pill을 조작하면 rerenderCurrentMetricsView()(metrics-dashboard.js)가 VIEW_CONFIG[currentView]
+    // .render()를 다시 불러 이 함수를 호출한다).
     function renderMetricsDetailView() {
-      metricsSetupYearPills('metricsDetailYearPills', renderMetricsDetailView);
-      metricsSetupMonthPills('metricsDetailMonthPills', renderMetricsDetailView);
+      // renderMetricsPivotView()와 같은 이유(2026-09-17) — 새로고침·해시 딥링크로 metricsMain을
+      // 거치지 않고 바로 들어오면 전역 컨트롤바가 안 채워진 채로 남는다.
+      metricsEnsureDefaultSelections();
+      setupMetricsYearPills();
+      setupMetricsMonthPills();
+      syncMetricsMonthPillActive();
+      setupMetricsOperatorCheckboxes();
+      setupMetricsChannelCheckboxes();
       renderMetricsDetailPivot();
     }
     function renderMetricsDetailPivot() {
@@ -482,6 +490,17 @@
       const periodSet = new Set(metricsSelectedPeriods(rows).map(p => p.year + '-' + p.month));
       return rows.filter(r => periodSet.has(r.year + '-' + r.month));
     }
+    // 채널별 막대차트에 연결된 metricsGenreQualifyingBarPivot 전용 dataSource(2026-09-17, 사용자가
+    // "구간을 행으로 채널 아래에 넣고 열은 연/월이 나와야 한다"고 재정정 — 한 번은 이 피벗을 시간
+    // 드릴다운 없는 정적 2차원 표로 만들었다가, 다른 8개 피벗과 달리 메인의 연/월 조회 pill이 통째로
+    // 사라지는 문제로 되돌렸다). metricsGenreQualifyingDataForPivot()이 이미 부(部) 분할 병합+범위
+    // 토글+장르필터를 끝낸 행을 주므로, 그 행 각각에 구간(band)만 얹는다. 반환 행은 여전히
+    // (channel,program,genre,year,month) 단위로 유일해 — 한 행 = 그 달의 프로그램 하나 — band 필드에
+    // agg:'count'를 걸면 "그 채널·그 구간·그 달의 프로그램 개수"가 그대로 나온다(pvComputeMetric의
+    // count는 metrics.rowCount를 그대로 반환, 필드값을 합산/평균하지 않는다).
+    function metricsGenreQualifyingBandDataForPivot() {
+      return metricsGenreQualifyingDataForPivot().map(r => ({ ...r, band: metricsGenreRatingBandFor(r.avgRating) }));
+    }
     // 피벗 상세 화면 "② 채널" 드롭다운 후보 — 이 장르 2종+범위 토글 조건에서 구조적으로 데이터가
     // 있는 채널만 남긴다(위 4개 피벗의 channelCandidates와 같은 원칙).
     function metricsGenreQualifyingChannelCandidates() {
@@ -574,7 +593,7 @@
     }
 
     // ------------------------------------------------------------
-    // "1%↑ 시청률 프로그램 수" 채널별 막대차트에 연결된 피벗을 "구간별 프로그램 개수 분포"로 교체
+    // "1%↑ 시청률 프로그램 수" 채널별 막대차트에 연결된 피벗 — 구간(band)별 프로그램 개수 분포
     // (2026-09-17, 사용자가 실제 화면을 보고 요청: "여기 연결되는 피벗테이블은 구간 3% 이상, 2% 이상,
     // 1% 이상, 0.5% 이상, 0.5% 미만 프로그램 개수로 하자"). 그룹핑은 computeGenreQualifyingByChannel()
     // (위)과 완전히 동일 — 부(部) 분할 병합 → (channel, canonicalProgram, genre) 단위 조회기간
@@ -582,11 +601,19 @@
     // 전부 배정한다는 것뿐이다. 하한은 "이상", 상한은 그 위 구간 하한 직전까지: [3,∞)/[2,3)/[1,2)/
     // [0.5,1)/(-∞,0.5) — 처음 임계값을 순서대로 검사하면 자연히 상호배타적이 된다.
     //
-    // 시간(연/월) 드릴다운이 필요 없는 단순 2차원 표(채널×구간)라 pivot-builder.js의 PIVOT_PRESETS
-    // (드래그앤드롭 엔진)를 쓰지 않고, js/features/bucket.js의 renderBucketPivotTable()과 같은 원칙의
-    // 전용 렌더러를 쓴다 — 다만 그 함수와 달리 연도/월 축도 광고주 하위드릴다운도 없어 훨씬 단순하다.
-    // "월별 추이" 라인차트에 연결된 metricsGenreQualifyingTrendPivot(PIVOT_PRESETS, dd-layout)은 이
-    // 변경과 완전히 무관 — 그대로 유지.
+    // 한 번은 이 피벗을 "시간 드릴다운이 필요 없다"고 판단해 pivot-builder.js의 PIVOT_PRESETS
+    // (드래그앤드롭 엔진)를 버리고 js/features/bucket.js 스타일의 정적 2차원 표(채널×구간, 연/월 없음)
+    // 로 만들었으나, 사용자가 다시 정정: "구간을 행으로 채널 아래에 넣고 열은 연/월이 나와야 한다.
+    // 그리고 여기는 왜 메인에 있던 조회 내용들이 사라졌어 — 피벗테이블은 기본적으로 메인 조회 내용은
+    // 그대로 가져다 쓰면서 그 바깥 내용만 표편집으로 바꾸는 거잖아?"(2026-09-17). 다른 8개 피벗과
+    // 같은 이유다 — `renderMetricsPivotView(viewKey)`(metrics-dashboard.js)가 metricsMain과 공유하는
+    // 전역 조회 상태(metricsSelectedYears/Months)를 pill로 그려주는 레이어이고, PIVOT_PRESETS의
+    // rows/columns/values는 그 조회 결과를 어떻게 늘어놓을지만 정하는 별개 레이어다 — 이 피벗도
+    // 그 레이어 분리를 그대로 따라야 한다. 그래서 metricsGenreQualifyingTrendPivot(자매 프리셋,
+    // 아래 참고)과 같은 PIVOT_PRESETS 드래그앤드롭 엔진으로 되돌리되, 행을 채널→구간 2단 트리로,
+    // 열을 연→월 트리로 구성한다(js/features/pivot-builder.js의 PIVOT_PRESETS.metricsGenreQualifyingBarPivot
+    // 참고). "월별 추이" 라인차트에 연결된 metricsGenreQualifyingTrendPivot은 이 변경과 완전히 무관 —
+    // 그대로 유지.
     // ------------------------------------------------------------
     const METRICS_GENRE_RATING_BANDS = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
     function metricsGenreRatingBandFor(avgRating) {
@@ -595,58 +622,4 @@
       if (avgRating >= 1) return '1% 이상';
       if (avgRating >= 0.5) return '0.5% 이상';
       return '0.5% 미만';
-    }
-    function computeGenreRatingBandCountsByChannel() {
-      const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
-      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
-
-      const groups = new Map();
-      rows.forEach(r => {
-        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre;
-        const g = groups.get(key) || { channel: r.channel, genre: r.genre, ratingSum: 0, episodeCount: 0 };
-        g.ratingSum += r.ratingSum; g.episodeCount += r.episodeCount;
-        groups.set(key, g);
-      });
-
-      const counts = {}; // counts[channel][bandKey] = n
-      groups.forEach(g => {
-        if (g.episodeCount <= 0) return;
-        const band = metricsGenreRatingBandFor(g.ratingSum / g.episodeCount);
-        counts[g.channel] = counts[g.channel] || {};
-        counts[g.channel][band] = (counts[g.channel][band] || 0) + 1;
-      });
-      return counts;
-    }
-
-    // VIEW_CONFIG.metricsGenreQualifyingBarPivot.render()의 실제 진입점(js/core/view-router.js).
-    // 조회기간(연/월)은 metricsMain 컨트롤바에서 이미 고른 전역 선택(metricsSelectedYears/Months,
-    // metricsSelectedPeriods()가 읽음)을 그대로 쓴다 — 이 표는 그 기간 전체를 하나의 값으로 이미
-    // 합산했으므로 이 화면 자체에 별도 연/월 pill이 필요 없다(dashboard.html의 bucketPivotView와
-    // 같은 원칙). 채널 정렬은 합계(전 구간 합) 내림차순 — 막대차트(renderMetricsGenreQualifyingBarChart)
-    // 와 같은 관례. 값이 0인 칸은 '-'로 표기(bucket.js의 fmtBucketVal 관례).
-    function renderMetricsGenreRatingBandPivot() {
-      const counts = computeGenreRatingBandCountsByChannel();
-      const rowTotal = (ch) => METRICS_GENRE_RATING_BANDS.reduce((s, band) => s + (counts[ch][band] || 0), 0);
-      const channels = Object.keys(counts).sort((a, b) => rowTotal(b) - rowTotal(a));
-
-      const fmtVal = (v) => (!v || v <= 0) ? '-' : v.toLocaleString();
-
-      const headerHtml = `<th style="text-align:left;">채널</th>` +
-        METRICS_GENRE_RATING_BANDS.map(band => `<th style="text-align:right;">${band}</th>`).join('') +
-        `<th style="text-align:right; background:#1E40AF !important; color:#FFFFFF !important;">합계</th>`;
-      const headerEl = document.getElementById('metricsGenreQualifyingBandPivotHeaderRow');
-      if (headerEl) headerEl.innerHTML = mapPivotHtml(headerHtml);
-
-      let grandTotal = 0;
-      const bodyHtml = channels.map(ch => {
-        const total = rowTotal(ch);
-        grandTotal += total;
-        const cells = METRICS_GENRE_RATING_BANDS.map(band => `<td style="text-align:right;">${fmtVal(counts[ch][band] || 0)}</td>`).join('');
-        return `<tr><td style="text-align:left;">${ch}</td>${cells}<td style="text-align:right; font-weight:600; background:#1E293B; color:#93C5FD;">${fmtVal(total)}</td></tr>`;
-      }).join('') || `<tr><td colspan="${METRICS_GENRE_RATING_BANDS.length + 2}" style="text-align:center; color:var(--text-tertiary); padding:16px;">표시할 데이터가 없습니다</td></tr>`;
-      const bodyEl = document.getElementById('metricsGenreQualifyingBandPivotTableBody');
-      if (bodyEl) bodyEl.innerHTML = mapPivotHtml(bodyHtml);
-
-      const totalEl = document.getElementById('metricsGenreQualifyingBandPivotTotal');
-      if (totalEl) totalEl.innerText = grandTotal.toLocaleString() + '개';
     }

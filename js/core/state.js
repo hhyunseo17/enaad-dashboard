@@ -315,10 +315,12 @@
     let expandedMetricsRatingTrendPivot = {}, expandedMetricsRatingTrendYearColumns = {};
     let expandedMetricsGrpTrendPivot = {}, expandedMetricsGrpTrendYearColumns = {};
     let expandedMetricsAdvCountTrendPivot = {}, expandedMetricsAdvCountTrendYearColumns = {};
-    // "1%↑ 시청률 프로그램 수" 월별 추이 피벗 상세(metricsGenreQualifyingTrendPivot) — 위 CPRP 등과
-    // 같은 관례(2026-09-17 신규). 자매 변수였던 expandedMetricsGenreQualifyingBarPivot/YearColumns는
-    // 채널별 막대차트 피벗이 시간 드릴다운 없는 단순 2차원 표(renderMetricsGenreRatingBandPivot(),
-    // metrics-ratings.js)로 교체되며 더 이상 쓰이지 않아 제거됨(2026-09-17).
+    // "1%↑ 시청률 프로그램 수" 채널별 막대차트 + 월별 추이 피벗 상세 — 위 CPRP 등과 같은 관례
+    // (2026-09-17 신규). Bar 쪽은 한 번 "시간 드릴다운 불필요" 판단으로 정적 2차원 표로 바뀌며 이 두
+    // 변수가 제거됐었으나, 사용자가 "메인 조회 pill이 사라지면 안 된다"며 PIVOT_PRESETS 드래그앤드롭
+    // 엔진으로 되돌려 다시 필요해졌다(2026-09-17, pivot-builder.js의 PIVOT_PRESETS.metricsGenreQualifyingBarPivot
+    // 참고) — 채널→구간 2단 행 트리 + 연→월 열 트리라 다른 트리 피벗들과 같은 두 변수 쌍이 필요하다.
+    let expandedMetricsGenreQualifyingBarPivot = {}, expandedMetricsGenreQualifyingBarYearColumns = {};
     let expandedMetricsGenreQualifyingTrendPivot = {}, expandedMetricsGenreQualifyingTrendYearColumns = {};
 
     // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라
