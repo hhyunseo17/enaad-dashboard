@@ -882,9 +882,6 @@
       const titleEl = document.getElementById('metricsRevenueRankingChartTitle');
       if (titleEl) titleEl.innerText = periods.length ? `매출 랭킹 (${metricsPeriodRangeLabel(periods)})` : '매출 랭킹';
       if (!periods.length) return;
-      // 매출은 사업자 단위로만 존재한다 — "비교단위" 토글과 무관하게 항상 ①선택 사업자 기준(위 트렌드
-      // 차트와 동일한 이유, 2026-09-16).
-      const selected = new Set(metricsSelectedOperators);
 
       const sums = {};
       periods.forEach(p => {
@@ -895,7 +892,9 @@
       const names = entries.map(e => e[0]);
       const labels = names.map(metricsOperatorDisplayName);
       const values = entries.map(e => e[1] / 1e8);
-      const colors = names.map(name => (metricsIsEnaName(name) || selected.has(name)) ? RC('curr') : RC('ref'));
+      // KT ENA만 강조색, 나머지는 전부 중립색 — 기본적으로 ①선택 사업자에 전부 포함돼(metricsEnsureDefaultSelections())
+      // selected.has(name)가 항상 참이 되면서 모든 막대가 강조색으로 찍히던 문제 수정(2026-09-17, 사용자 지적).
+      const colors = names.map(name => metricsIsEnaName(name) ? RC('curr') : RC('ref'));
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsRevRank = new Chart(ctx, {
