@@ -360,11 +360,34 @@
     // 그 달 그 프로그램(본방)의 평균 시청률 = rating_sum ÷ episode_count. 여러 달에 걸친 평균은
     // 월별 평균끼리 다시 평균내면 안 되고(회차 수 적은 달이 과대반영됨) rating_sum과 episode_count를
     // 각각 합산한 뒤 나누는 가중평균이어야 한다 — 왼쪽 채널별 막대가 이 방식.
+    //
+    // 오른쪽 월별 추이는 원래 "전체 채널 합산, 장르별 2개 선"이었으나 사용자 요청으로 "채널별 선,
+    // 장르는 드라마&영화+오락 통합 기준"으로 변경(2026-09-17, "이거는 사업자별로 해야지 드라마+오락
+    // 기준으로"). 장르 2종은 이제 별도 계열이 아니라 카운트 대상을 고르는 필터일 뿐이다 — 한
+    // 프로그램이 두 장르 중 어느 쪽이든 임계값을 넘기면 그 채널의 그 달 카운트에 더해진다. 색상은
+    // renderMetricsMiniTrendChart()와 같은 관례(ENA만 강조색, 나머지는 metricsCompetitorColor()
+    // 서수 팔레트)를 그대로 따른다.
     // ------------------------------------------------------------
     const METRICS_GENRE_QUALIFYING_GENRES = ['드라마&영화', '오락'];
-    const METRICS_GENRE_QUALIFYING_THRESHOLD = 0.01; // 평균 시청률 1%
+    // program_ratings_monthly의 rating_sum/episode_count는 원본 "개인2049" 값을 그대로 합산한 것 —
+    // 이 값은 0~1 소수(fraction)가 아니라 **이미 %단위 숫자**다(예: 1.1395 = 1.1395%). 기존 지표
+    // 대시보드의 채널시청률도 같은 관례(renderMetricsRatingTrendChart()가 valueMultiplier=1로 그대로
+    // '%' 붙여 표시, ×100 안 함— metrics-ratings.js:150). 그래서 "1% 이상"의 임계값은 1(그 자체)이지
+    // 0.01이 아니다 — 처음에 0.01로 뒀다가 사실상 0.01%(거의 모든 프로그램이 통과)로 기준이 풀려서
+    // ENA가 27개로 과다 집계됐던 것을 사용자가 직접 만든 피벗(실측 6개)과 대조해 발견, 수정함
+    // (2026-09-17).
+    const METRICS_GENRE_QUALIFYING_THRESHOLD = 1; // 평균 시청률 1%(원본 단위 그대로 1 = 1%)
 
-    // 왼쪽 막대(채널별) — (channel, program, genre) 단위로 조회기간 내 rating_sum/episode_count를
+    // "N부" 분할 방영을 하나의 프로그램으로 합친다(2026-09-17, 사용자 확인: "부 프로그램은 1개로
+    // 보는 게 맞고"). 원본 시청률 리포트가 방송사 편성 관행상 "현역가왕3 1부/2부/3부"처럼 부(部)
+    // 단위를 별도 프로그램명으로 기록해서, 그대로 세면 한 방송이 여러 개로 부풀려 잡힌다(Supabase
+    // 실데이터 확인 — MBN '오락'만 53건 중 39건이 15개 방송의 부 분할). 말미의 "(구분자)+숫자+부"
+    // 패턴만 제거 — 제목 중간의 숫자(시즌 번호 등)는 건드리지 않는다.
+    function metricsCanonicalProgramName(name) {
+      return name.replace(/[\s-]*\d+부$/, '').trim();
+    }
+
+    // 왼쪽 막대(채널별) — (channel, canonicalProgram, genre) 단위로 조회기간 내 rating_sum/episode_count를
     // 합산한 가중평균이 임계값 이상이면 그 프로그램을 "달성"으로 카운트한다.
     function computeGenreQualifyingByChannel() {
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
@@ -372,7 +395,7 @@
 
       const groups = new Map();
       rows.forEach(r => {
-        const key = r.channel + '|' + r.program + '|' + r.genre;
+        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre;
         const g = groups.get(key) || { channel: r.channel, genre: r.genre, ratingSum: 0, episodeCount: 0 };
         g.ratingSum += r.ratingSum; g.episodeCount += r.episodeCount;
         groups.set(key, g);
@@ -388,17 +411,29 @@
       return counts;
     }
 
-    // 오른쪽 라인(월별, 전체 채널 합산) — program_ratings_monthly가 이미 월 단위라 그 달 행 자체가
-    // "그 프로그램의 그 달 평균"이다. 채널 무관하게 (year,month,genre) 단위로 카운트만 합산한다.
+    // 오른쪽 라인(월별, 채널별) — program_ratings_monthly는 "부" 단위 프로그램명을 그대로 쓰므로
+    // (channel, canonicalProgram, genre, year, month) 단위로 먼저 합산(같은 달의 여러 부를 병합)한
+    // 뒤 임계값을 판정한다. 장르 2종은 필터로만 쓰고 (year,month,channel) 단위로 카운트를 합산한다 —
+    // 한 프로그램이 어느 장르로 잡혔든 그 채널 카운트에 더해진다.
     function computeGenreQualifyingMonthlyTrend() {
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
-      const counts = {}; // counts['2026-3'] = { '드라마&영화': n, '오락': n }
-      programRatingsData
-        .filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && r.episodeCount > 0 && (r.ratingSum / r.episodeCount) >= METRICS_GENRE_QUALIFYING_THRESHOLD)
+      const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month));
+
+      const merged = new Map();
+      rows.forEach(r => {
+        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre + '|' + r.year + '|' + r.month;
+        const m = merged.get(key) || { channel: r.channel, year: r.year, month: r.month, ratingSum: 0, episodeCount: 0 };
+        m.ratingSum += r.ratingSum; m.episodeCount += r.episodeCount;
+        merged.set(key, m);
+      });
+
+      const counts = {}; // counts['2026-3'] = { channel: n }
+      Array.from(merged.values())
+        .filter(m => m.episodeCount > 0 && (m.ratingSum / m.episodeCount) >= METRICS_GENRE_QUALIFYING_THRESHOLD)
         .forEach(r => {
           const key = r.year + '-' + r.month;
           counts[key] = counts[key] || {};
-          counts[key][r.genre] = (counts[key][r.genre] || 0) + 1;
+          counts[key][r.channel] = (counts[key][r.channel] || 0) + 1;
         });
       return counts;
     }
@@ -442,8 +477,10 @@
       });
     }
 
-    // 오른쪽: 월별 추이 라인(전체 채널 합산, 장르별 2개 선). x축은 metricsSelectedPeriods() 시간순 —
-    // 여러 연도가 섞이면 metricsPeriodLabel()이 "25.9" 형식으로, 한 연도뿐이면 "9월"로 표기한다.
+    // 오른쪽: 월별 추이 라인(채널별, 드라마&영화+오락 통합 기준). x축은 metricsSelectedPeriods()
+    // 시간순 — 여러 연도가 섞이면 metricsPeriodLabel()이 "25.9" 형식으로, 한 연도뿐이면 "9월"로 표기.
+    // 채널 색은 renderMetricsMiniTrendChart()와 같은 관례: ENA만 강조색, 나머지는 metricsCompetitorColor()
+    // 서수 팔레트(ENA는 0번 색을 쓰지 않도록 nonEnaChannels 인덱스로 조회).
     function renderMetricsGenreQualifyingTrendChart() {
       const canvas = document.getElementById('chartMetricsGenreQualifyingTrend'); if (!canvas) return;
       if (chartInstances.metricsGenreQualifyingTrend) { chartInstances.metricsGenreQualifyingTrend.destroy(); chartInstances.metricsGenreQualifyingTrend = null; }
@@ -452,21 +489,22 @@
       const labels = periods.map(metricsPeriodLabel);
       const counts = computeGenreQualifyingMonthlyTrend();
 
-      const dramaColor = seriesColor(0);
-      const varietyColor = seriesColor(1);
-      const dramaData = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c['드라마&영화'] || 0) : 0; });
-      const varietyData = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c['오락'] || 0) : 0; });
+      // 채널 목록 — 대상 장르(드라마&영화/오락) 데이터가 구조적으로 존재하는 채널 전부, ENA를 맨 앞으로.
+      const structuralChannels = [...new Set(programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre)).map(r => r.channel))];
+      const nonEnaChannels = structuralChannels.filter(ch => ch !== ENA_REPRESENTATIVE_CHANNEL);
+      const channels = structuralChannels.includes(ENA_REPRESENTATIVE_CHANNEL) ? [ENA_REPRESENTATIVE_CHANNEL, ...nonEnaChannels] : nonEnaChannels;
+
+      const datasets = channels.map(ch => {
+        const isEna = ch === ENA_REPRESENTATIVE_CHANNEL;
+        const color = isEna ? RC('curr') : metricsCompetitorColor(nonEnaChannels.indexOf(ch));
+        const data = periods.map(p => { const c = counts[p.year + '-' + p.month]; return c ? (c[ch] || 0) : 0; });
+        return { label: ch, data, borderColor: color, backgroundColor: color, fill: false, tension: 0.3, borderWidth: isEna ? 3 : 2, pointRadius: 2.5, _isEna: isEna };
+      });
 
       const ctx = canvas.getContext('2d');
       chartInstances.metricsGenreQualifyingTrend = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: '드라마&영화', data: dramaData, borderColor: dramaColor, backgroundColor: dramaColor, fill: false, tension: 0.3, borderWidth: 2, pointRadius: 2.5 },
-            { label: '오락', data: varietyData, borderColor: varietyColor, backgroundColor: varietyColor, fill: false, tension: 0.3, borderWidth: 2, pointRadius: 2.5 },
-          ]
-        },
+        data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
           plugins: { legend: { display: true, position: 'top', labels: { color: CH('#B0B8C1'), font: { size: 13, weight: FW() }, generateLabels: metricsLegendGenerateLabels } },
