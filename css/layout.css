@@ -169,7 +169,10 @@
     .badge-growth.down { background: var(--accent-red-bg); color: var(--accent-red); }
 
     .grid-2col { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    @media (min-width: 1024px) { .grid-zone3 { grid-template-columns: 65% 35%; } .grid-zone5 { grid-template-columns: 50% 50%; } }
+    /* %는 gap을 감안하지 않는다(fr과 다름) — 50%+50%+gap(20px)이 그대로 더해져 컨테이너 폭을
+       20px 초과했다(2026-09-17, 사용자 지적: "가로 폭 길이가 안 맞아" — .metrics-mini-grid의
+       repeat(2,1fr)은 gap을 자동으로 고려해 문제가 없었다). fr로 바꿔 동일하게 gap-aware하게 만든다. */
+    @media (min-width: 1024px) { .grid-zone3 { grid-template-columns: 65fr 35fr; } .grid-zone5 { grid-template-columns: 1fr 1fr; } }
 
     /* ==========================================================================
        피벗 히어로 카드 — 다색 대각 그라데이션이 제자리를 찾는 유일한 곳.
