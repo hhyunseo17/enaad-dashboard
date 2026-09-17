@@ -892,6 +892,70 @@
         dom: { head1: 'metricsAdvCountTrendPivotHeaderRow1', head2: 'metricsAdvCountTrendPivotHeaderRow2', body: 'metricsAdvCountTrendPivotTableBody', total: 'metricsAdvCountTrendPivotTotalAmount' },
         parentView: 'metricsMain',
       },
+
+      // "1%↑ 시청률 프로그램 수" 채널별 막대 + 월별 추이 라인의 "피벗으로 보기"(2026-09-17 신규,
+      // 사용자 요청) — CPRP 계열 4개와 완전히 같은 방식(단일 지표 평균값 + {multiplier,decimals,suffix}
+      // 포맷). 다만 원본이 (channel,program,genre,year,month) 단위라 rows를 2단계(channel→program)로
+      // 둔다(metricsRevenueTrendPivot의 rows:['scope','channelGroup']과 같은 2단계 패턴) — CPRP 등은
+      // 채널 단일 지표라 1단계였지만 이건 프로그램별 시청률까지 내려가 봐야 "왜 이 채널이 몇 개
+      // 카운트됐는지" 근거가 보인다. dataSource(metricsGenreQualifyingDataForPivot(), metrics-ratings.js)가
+      // 이미 "부(部) 분할" 프로그램명을 병합하고 avgRating(가중평균) 필드를 얹어서 넘긴다 — rating_sum을
+      // 그대로 avg 하면 "합의 평균"이 되어 틀리므로, 반드시 avgRating을 값 필드로 쓴다.
+      metricsGenreQualifyingBarPivot: {
+        rows: ['channel', 'program'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' }, // program은 기본값(valueDesc, 시청률 높은 프로그램이 위로)
+        columns: ['year', 'month'],
+        values: [{ field: 'avgRating', agg: 'avg', format: { multiplier: 1, decimals: 2, suffix: '%' } }],
+        sourceFilter: null,
+        dataSource: () => metricsGenreQualifyingDataForPivot(),
+        channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsGenreQualifyingBarPivot,
+        expandedCols: () => expandedMetricsGenreQualifyingBarYearColumns,
+        render: () => renderPresetPivot('metricsGenreQualifyingBarPivot'),
+        resetBtn: 'metricsGenreQualifyingBarPivotResetBtn',
+        layoutId: 'metricsGenreQualifyingBarPivotSection', builderBtn: 'metricsGenreQualifyingBarPivotBuilderBtn',
+        builderDom: { fieldList:'metricsGenreQualifyingBarDdFieldList', filterBar:'metricsGenreQualifyingBarDdFilterBar', filters:'metricsGenreQualifyingBarDdWellFilterBody', columns:'metricsGenreQualifyingBarDdWellColumnsBody', rows:'metricsGenreQualifyingBarDdWellRowsBody', values:'metricsGenreQualifyingBarDdWellValuesBody' },
+        dom: { head1: 'metricsGenreQualifyingBarPivotHeaderRow1', head2: 'metricsGenreQualifyingBarPivotHeaderRow2', body: 'metricsGenreQualifyingBarPivotTableBody', total: 'metricsGenreQualifyingBarPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
+
+      // 위와 완전히 같은 설정을 카드마다 하나씩 — metricsRevenueTrendPivot/metricsRevenueRankingPivot이
+      // 같은 값으로 두 프리셋을 등록해 카드별로 독립된 펼침 상태를 갖는 것과 같은 관례(2026-09-17).
+      metricsGenreQualifyingTrendPivot: {
+        rows: ['channel', 'program'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { channel: 'enaFirstValueDesc' },
+        columns: ['year', 'month'],
+        values: [{ field: 'avgRating', agg: 'avg', format: { multiplier: 1, decimals: 2, suffix: '%' } }],
+        sourceFilter: null,
+        dataSource: () => metricsGenreQualifyingDataForPivot(),
+        channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
+        columnDefaultExpanded: true,
+        subtotalDepths: [],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedMetricsGenreQualifyingTrendPivot,
+        expandedCols: () => expandedMetricsGenreQualifyingTrendYearColumns,
+        render: () => renderPresetPivot('metricsGenreQualifyingTrendPivot'),
+        resetBtn: 'metricsGenreQualifyingTrendPivotResetBtn',
+        layoutId: 'metricsGenreQualifyingTrendPivotSection', builderBtn: 'metricsGenreQualifyingTrendPivotBuilderBtn',
+        builderDom: { fieldList:'metricsGenreQualifyingTrendDdFieldList', filterBar:'metricsGenreQualifyingTrendDdFilterBar', filters:'metricsGenreQualifyingTrendDdWellFilterBody', columns:'metricsGenreQualifyingTrendDdWellColumnsBody', rows:'metricsGenreQualifyingTrendDdWellRowsBody', values:'metricsGenreQualifyingTrendDdWellValuesBody' },
+        dom: { head1: 'metricsGenreQualifyingTrendPivotHeaderRow1', head2: 'metricsGenreQualifyingTrendPivotHeaderRow2', body: 'metricsGenreQualifyingTrendPivotTableBody', total: 'metricsGenreQualifyingTrendPivotTotalAmount' },
+        parentView: 'metricsMain',
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -920,6 +984,9 @@
     // (channel/year/month/value), metrics-ratings.js의 metricsXxxDataForPivot()이 이미 metricCode+
     // indexMode+채널선택+조회조건으로 좁혀서 넘겨준다.
     const PV_METRICS_RATINGS_FIELDS = ['channel', 'year', 'month', 'value'];
+    // "1%↑ 시청률 프로그램 수" 피벗 2종 전용(2026-09-17) — metricsGenreQualifyingDataForPivot()
+    // (metrics-ratings.js)이 만드는 파생 행의 실제 필드(channel/program/genre/year/month/avgRating).
+    const PV_METRICS_GENRE_QUALIFYING_FIELDS = ['channel', 'program', 'genre', 'year', 'month', 'avgRating'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
@@ -929,6 +996,7 @@
       metricsRevenueTrendPivot: PV_METRICS_REVENUE_FIELDS, metricsRevenueRankingPivot: PV_METRICS_REVENUE_FIELDS,
       metricsCprpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsRatingTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
+      metricsGenreQualifyingBarPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS, metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)

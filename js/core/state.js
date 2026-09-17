@@ -315,6 +315,9 @@
     let expandedMetricsRatingTrendPivot = {}, expandedMetricsRatingTrendYearColumns = {};
     let expandedMetricsGrpTrendPivot = {}, expandedMetricsGrpTrendYearColumns = {};
     let expandedMetricsAdvCountTrendPivot = {}, expandedMetricsAdvCountTrendYearColumns = {};
+    // "1%↑ 시청률 프로그램 수" 피벗 상세 2종(2026-09-17 신규) — 위 CPRP 등과 같은 관례.
+    let expandedMetricsGenreQualifyingBarPivot = {}, expandedMetricsGenreQualifyingBarYearColumns = {};
+    let expandedMetricsGenreQualifyingTrendPivot = {}, expandedMetricsGenreQualifyingTrendYearColumns = {};
 
     // chartColors(11색)와 colorPaletteList(10색)가 여기 있었다. 둘 다 Tailwind 계보라
     // 나머지 팔레트(Apple HIG 계보)와 회색·초록의 색조가 미세하게 어긋났고 — 예를 들어

@@ -62,7 +62,7 @@
       const ratingCode = metricsFindMetricCode(METRICS_LABEL.rating, idx, true); // exact — "채널시청률 1%당 eq-GRPs"(08)와 접두어 충돌 방지
       const rating = metricsRatingsKpiOf(ratingCode, channel, idx, isMultiYear);
       document.getElementById('metricsKpiRatingValue').innerText = rating.curr !== null ? rating.curr.toFixed(3) + ' %' : '- %';
-      document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균 · 수도권 개인 2049 기준` : '수도권 개인 2049 기준';
+      document.getElementById('metricsKpiRatingSub').innerText = rating.periods.length ? `${metricsPeriodRangeLabel(rating.periods)}(${idx}) 평균\n수도권 개인 2049 기준` : '수도권 개인 2049 기준';
       // 원값 자체가 0.1%대라 %p 배지도 기본 소수 1자리로는 실제 변화가 "+0.0%p"로 뭉개진다 —
       // 메인 값과 같은 3자리로(metricsRenderBadge decimals 인자, 2026-09-16).
       metricsRenderBadge('metricsKpiRatingMomBadge', '전월', metricsPointDiff(rating.curr, rating.mom), '%p', 3);
@@ -454,6 +454,36 @@
           counts[key][r.channel] = (counts[key][r.channel] || 0) + 1;
         });
       return counts;
+    }
+
+    // ------------------------------------------------------------
+    // "1%↑ 시청률 프로그램 수" 2개 차트의 피벗 dataSource(2026-09-17, 사용자 요청: "이 2개 차트에
+    // 피벗테이블을 만들어서 연결해줘") — CPRP 등 4종 피벗과 같은 원칙이되, pivot 엔진은 셀 하나에
+    // 값 하나만 기대하므로 위 computeGenreQualifyingByChannel()/computeGenreQualifyingMonthlyTrend()의
+    // "카운트" 결과가 아니라 그 카운트의 근거가 되는 원본 평균 시청률을 보여준다. 부(部) 분할 병합
+    // (metricsCanonicalProgramName())은 미리 해 두고, rating_sum(합)을 그대로 avg 하면 "합의 평균"이
+    // 되어 틀리므로 avgRating(가중평균) 필드를 얹어 넘긴다.
+    // ------------------------------------------------------------
+    function metricsGenreQualifyingDataForPivot() {
+      const merged = new Map();
+      programRatingsData
+        .filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && metricsProgramRatingsScopeMatch(r.channel))
+        .forEach(r => {
+          const program = metricsCanonicalProgramName(r.program);
+          const key = r.channel + '|' + program + '|' + r.genre + '|' + r.year + '|' + r.month;
+          const m = merged.get(key) || { channel: r.channel, genre: r.genre, program, year: r.year, month: r.month, ratingSum: 0, episodeCount: 0 };
+          m.ratingSum += r.ratingSum; m.episodeCount += r.episodeCount;
+          merged.set(key, m);
+        });
+      const rows = Array.from(merged.values()).map(m => ({ ...m, avgRating: m.episodeCount > 0 ? m.ratingSum / m.episodeCount : 0 }));
+      const periodSet = new Set(metricsSelectedPeriods(rows).map(p => p.year + '-' + p.month));
+      return rows.filter(r => periodSet.has(r.year + '-' + r.month));
+    }
+    // 피벗 상세 화면 "② 채널" 드롭다운 후보 — 이 장르 2종+범위 토글 조건에서 구조적으로 데이터가
+    // 있는 채널만 남긴다(위 4개 피벗의 channelCandidates와 같은 원칙).
+    function metricsGenreQualifyingChannelCandidates() {
+      const rows = metricsGenreQualifyingDataForPivot();
+      return [...new Set(rows.map(r => r.channel))];
     }
 
     // 왼쪽: 채널별 그룹 막대(드라마&영화/오락 나란히). x축은 (합계) 내림차순 — 랭킹차트류와 같은 관례.

@@ -74,6 +74,10 @@
       metricsRatingTrendPivot: { containerId: 'metricsRatingTrendPivotView', title: '채널시청률 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsRatingTrendPivot') },
       metricsGrpTrendPivot: { containerId: 'metricsGrpTrendPivotView', title: 'eq-GRPs 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGrpTrendPivot') },
       metricsAdvCountTrendPivot: { containerId: 'metricsAdvCountTrendPivotView', title: '광고주수 트렌드 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsAdvCountTrendPivot') },
+      // "1%↑ 시청률 프로그램 수" 채널별 막대 + 월별 추이 라인의 "카드 클릭 → 전용 피벗 화면"
+      // (2026-09-17 신규) — 위 매출·CPRP 계열 8개와 같은 관례.
+      metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingBarPivot') },
+      metricsGenreQualifyingTrendPivot: { containerId: 'metricsGenreQualifyingTrendPivotView', title: '1%↑ 시청률 프로그램 수 (월별 추이) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingTrendPivot') },
     };
 
     function switchView(viewKey, pushHistory) {
@@ -155,6 +159,8 @@
     function openMetricsRatingTrendPivotView() { switchView('metricsRatingTrendPivot'); }
     function openMetricsGrpTrendPivotView() { switchView('metricsGrpTrendPivot'); }
     function openMetricsAdvCountTrendPivotView() { switchView('metricsAdvCountTrendPivot'); }
+    function openMetricsGenreQualifyingBarPivotView() { switchView('metricsGenreQualifyingBarPivot'); }
+    function openMetricsGenreQualifyingTrendPivotView() { switchView('metricsGenreQualifyingTrendPivot'); }
 
     function toggleYearColumn(viewType, yr) {
       if (viewType === 'channel') { expandedYearColumns[yr] = !expandedYearColumns[yr]; renderChannelPivotTable(); }

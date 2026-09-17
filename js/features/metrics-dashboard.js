@@ -645,7 +645,7 @@
       const momSel = isRange ? null : metricsSelectionMarketAndShareAt(metricsPrevMonthPeriod(latestPeriod));
       const yoySel = isMultiYear ? null : metricsSelectionMarketAndShareOverPeriods(yoyPeriods);
       document.getElementById('metricsKpiShareValue').innerText = currSel.share.toFixed(1) + ' %';
-      document.getElementById('metricsKpiShareSub').innerText = `KT ENA(치환값) ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 ÷ 선택 사업자 ${metricsSelectedOperators.length}개 합 ${metricsFmtNum(currSel.market / 1e8, 2)}억원 · ${periodLabel}`;
+      document.getElementById('metricsKpiShareSub').innerText = `KT ENA ${metricsFmtNum(currSel.ena / 1e8, 2)}억원 / 선택 사업자 ${metricsFmtNum(currSel.market / 1e8, 2)}억원\n${periodLabel}`;
       metricsRenderBadge('metricsKpiShareMomBadge', '전월', momSel && metricsPointDiff(currSel.share, momSel.share), '%p');
       metricsRenderBadge('metricsKpiShareYoyBadge', '전년', metricsPointDiff(currSel.share, yoySel && yoySel.share), '%p');
     }
