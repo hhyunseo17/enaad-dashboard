@@ -24,6 +24,15 @@
     // 지표 대시보드 컨트롤바가 전역으로 바뀌면서 channelGroup/scope도 이 목록에 추가). 대행사/광고주는
     // 전역 검색이 부분일치라 별도로 더 좁히고 싶을 수 있어 필터 well에서도 허용.
     const DD_FILTER_BAR_COVERED_FIELDS = new Set(['year', 'month', 'dept', 'channel', 'broadDigital', 'categoryReclassified', 'channelGroup', 'scope']);
+    // 'channel'은 대부분의 화면에선 ②채널 체크박스가 커버하지만, "1%↑ 시청률 프로그램 수" 2개
+    // 피벗처럼 그 데이터셋 자체가 ①②선택과 무관한 경우엔 아무 효과가 없다 — 그런 프리셋은
+    // pvBuilderCtxFor()에서 filterBarUncoveredFields(pivot-builder.js)로 예외를 선언해 여기서
+    // 다시 필터 well을 쓸 수 있게 한다(2026-09-17, 코드 리뷰로 발견 — 채널로 좁힐 방법이 아예 없었음).
+    function ddFilterBarCovers(fieldKey) {
+      const ctx = ddCtx();
+      if (ctx && ctx.filterBarUncoveredFields && ctx.filterBarUncoveredFields.has(fieldKey)) return false;
+      return DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey);
+    }
 
     const DETAIL_DATA_AGG_LABELS = { sum: '합계', avg: '평균', count: '개수', distinct: '고유 개수' };
 
@@ -417,7 +426,7 @@
       if (wellName === 'list') { removeDetailDataFieldEverywhere(fieldKey); ddRerender(); return; }
       if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
       if (DD_VALUE_ONLY_FIELDS.has(fieldKey) && wellName !== 'values') return; // amount/revenue는 값 well 전용
-      if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
+      if (wellName === 'filters' && ddFilterBarCovers(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
         if (payload.valueId != null) {
           // 값 영역 내 기존 항목을 빈 공간에 드롭 — 새로 추가하지 않고 맨 뒤로 이동만
@@ -444,7 +453,7 @@
       const fieldKey = payload.field;
       if (!ddFieldAllowed(fieldKey)) return; // 이 패널이 받지 않는 필드(목표 피벗)
       if (DD_VALUE_ONLY_FIELDS.has(fieldKey) && wellName !== 'values') return;
-      if (wellName === 'filters' && DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey)) return; // 상단 전역 필터바에서만 조정
+      if (wellName === 'filters' && ddFilterBarCovers(fieldKey)) return; // 상단 전역 필터바에서만 조정
       if (wellName === 'values') {
         const arr = ddCfg().values;
         if (payload.valueId != null) {
@@ -514,7 +523,7 @@
         const activeClass = placed.has(f.key) ? ' dd-field-chip-active' : '';
         // 화이트리스트가 있는 패널(목표 피벗)에는 필터 well 자체가 없으므로 이 안내를 붙이지 않는다 —
         // 게다가 그 표는 좌측 상세필터를 반영하지 않아(달성률 왜곡 방지) 문구가 사실과 어긋난다.
-        const title = (!allowed && DD_FILTER_BAR_COVERED_FIELDS.has(f.key)) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
+        const title = (!allowed && ddFilterBarCovers(f.key)) ? ' title="필터는 상단 전역 필터바에서 조정 (행/열/값에는 배치 가능)"' : '';
         return `<div class="dd-field-chip${activeClass}" draggable="true" data-field="${f.key}"${title} ondragstart="onDetailDataDragStart(event,'${f.key}')" ondragend="onDetailDataDragEnd(event)">${f.label}</div>`;
       }).join('');
     }

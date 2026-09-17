@@ -275,6 +275,13 @@ File1(`변환용취합`)은 ENA/ENA DRAMA/ENA PLAY/ENA STORY 4개 개별 채널�
 
 68. **"1%↑ 시청률 프로그램 수" 차트 2종 신설(2026-09-17)** — 신규 데이터셋 `program_ratings_monthly`(채널×프로그램×장르×연월 사전집계, 본방만 — ETL 처리 완료, `/api/program-ratings`, `js/core/metrics-data-loader.js`의 `programRatingsData`)를 소스로, 드라마&영화/오락 장르 기준 평균 시청률 1%(`rating_sum ÷ episode_count ≥ 0.01`) 이상인 프로그램 수를 보여준다. 왼쪽은 채널별 그룹막대(조회기간 전체 가중평균 — 월별 평균끼리 재평균하지 않고 rating_sum·episode_count를 각각 합산 후 나눔), 오른쪽은 전체 채널 합산 월별 추이 라인(그 달 행 자체가 그 달 평균이라 가중평균 불필요). 계산 함수 `computeGenreQualifyingByChannel()`/`computeGenreQualifyingMonthlyTrend()`, 렌더 함수 `renderMetricsGenreQualifyingBarChart()`/`renderMetricsGenreQualifyingTrendChart()`(전부 `js/features/metrics-ratings.js`), `renderMetricsDashboard()` 오케스트레이션 끝에서 호출. ①②(사업자/채널) 선택과 무관 — 원본이 13개 채널 전체를 담은 별도 데이터셋이라 그 selection을 걸러내지 않고 `metricsSelectedPeriods()`(연/월 조회기간)만 적용. 장르 2종 색은 5대분류가 아니라서 `catColor()` 대신 서수 팔레트 `seriesColor(0)`/`seriesColor(1)` 고정. UI 위치는 CPRP/채널시청률/eq-GRPs/광고주수 미니차트 섹션 바로 다음(`dashboard.html`), 피벗 드릴다운은 1차 범위 밖.
 
+69. **[68번 정정] 위 68번 서술이 같은 날 안에서 전부 뒤집혔다(2026-09-17)** — 68번을 쓴 뒤 실제 화면으로 확인하는 과정에서 사용자 피드백이 연달아 들어와 아래 4가지가 전부 바뀌었다. 이 문서(68번)는 최초 설계 기록으로 남겨두되, **실제 동작은 이 69번 기준**이다.
+    - **임계값 단위 버그**: `rating_sum ÷ episode_count ≥ 0.01`이 아니라 **`≥ 1`**이 맞다. 원본 시청률 값(개인2049)이 0~1 소수가 아니라 이미 %단위 숫자라(기존 채널시청률과 같은 관례, `renderMetricsRatingTrendChart()`가 valueMultiplier=1로 그대로 '%' 붙여 표시) 0.01은 사실상 0.01%라는 터무니없이 낮은 기준이었다 — ENA 기준 27개→6개로 정정, 사용자가 직접 만든 피벗과 대조해 확인. `METRICS_GENRE_QUALIFYING_THRESHOLD`(metrics-ratings.js).
+    - **"부(部)" 분할 병합**: "현역가왕3 1부/2부/3부"처럼 방송사 편성 관행상 한 방송이 여러 program 값으로 쪼개져 있어, 말미의 "숫자+부" 패턴을 제거하고 합쳐서 센다(`metricsCanonicalProgramName()`).
+    - **오른쪽 월별 추이는 "전체 채널 합산, 장르별 2개 선"이 아니라 "채널별 선, 장르는 드라마&영화+오락 통합 기준"** — 매출 랭킹처럼 사업자별 흐름을 보고 싶다는 요청. ENA만 강조색, 나머지는 `metricsCompetitorColor()` 서수 팔레트(`renderMetricsGenreQualifyingTrendChart()`).
+    - **①②(사업자/채널) 선택과는 여전히 무관하지만, "범위"(전체/유료방송/케이블) 토글은 이제 적용된다** — program-ratings.xlsx 채널명이 File1 사업자 표기와 달라(`TV CHOSUN` vs `TV조선` 등) 채널명 기준 스코프 맵 `PROGRAM_RATINGS_CHANNEL_SCOPE`를 별도로 신설.
+    - **피벗 드릴다운도 결국 추가됐다** — 채널별 막대는 "3%↑/2%↑/1%↑/0.5%↑/0.5%미만" 구간별 프로그램 수 교차표(채널→구간 2단 행, 연→월 열, 다른 8개 피벗과 같은 `PIVOT_PRESETS` 드래그앤드롭 엔진), 월별 추이는 채널×프로그램 평균 시청률 월별 피벗 — 둘 다 카드 클릭으로 연결.
+
 ## 남은 확인 필요
 1. 상세표(`metricsDetail`)의 16개 지표 중 03/08/09/11 외 나머지(01/02는 미사용, 04/05/06/07/10/12~16)는 라벨 자체에 단위가 괄호로 적혀 있다(예: "13. 광고주 당 매출(백만원)") — `metricsFormatRatingValue()`의 최종 `else` 분기는 지금 전부 "숫자만" 표기라 이 단위 텍스트를 반영하지 않는다. 틀린 값은 아니지만(원본 숫자 그대로 표기) 단위 표기가 빠져 있다 — 필요하면 라벨의 괄호 안 텍스트를 그대로 읽어 접미사로 붙이는 개선을 나중에 추가.
 2. SBS미디어넷→SBS Plus 근사(위 6번) — 실제 화면에서 이 근사가 괜찮은지 사람 확인 필요.

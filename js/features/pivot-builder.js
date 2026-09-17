@@ -93,10 +93,11 @@
       // 다르다(그건 값과 무관한 완전 고정순서, 이건 ENA만 예외로 빼고 나머지는 값순 유지).
       enaFirstValueDesc: pvPinFirst([ENA_CHANNEL_GROUP, ...ENA_CHANNELS], (a, b, ta, tb) => tb - ta),
       // "1%↑ 시청률 프로그램 수" 구간별 분포 피벗(metricsGenreQualifyingBarPivot) 전용 — 구간(band)은
-      // 값 크기가 아니라 metrics-ratings.js의 METRICS_GENRE_RATING_BANDS와 같은 고정 순서(3%↑→0.5%
-      // 미만)로 나와야 한다(2026-09-17). 값이 같아야 할 두 상수를 pivot-builder.js가
-      // metrics-ratings.js를 로드 순서상 참조할 수 없어(dashboard.html에서 pivot-builder.js가 먼저
-      // 로드됨) 여기 독립적으로 하드코딩 — 값 하드코딩 중복이 로드순서 깨는 것보다 안전하다.
+      // 값 크기가 아니라 metrics-ratings.js의 metricsGenreRatingBandFor()가 매기는 것과 같은 고정
+      // 순서(3%↑→0.5%미만)로 나와야 한다(2026-09-17). pivot-builder.js가 metrics-ratings.js를 로드
+      // 순서상 참조할 수 없어(dashboard.html에서 pivot-builder.js가 먼저 로드됨) 여기 독립적으로
+      // 하드코딩 — 값 하드코딩 중복이 로드순서 깨는 것보다 안전하다. **둘 중 하나만 고치면 조용히
+      // 어긋나니 라벨 문자열을 바꿀 땐 반드시 metricsGenreRatingBandFor()도 같이 고칠 것.**
       genreBandOrder: (a, b) => pvOrderListCompare(PV_GENRE_BAND_ORDER, a, b),
     };
     const PV_GENRE_BAND_ORDER = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
@@ -924,6 +925,11 @@
         sourceFilter: null,
         dataSource: () => metricsGenreQualifyingBandDataForPivot(),
         channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
+        // 상단 ②채널 체크박스는 이 데이터셋(programRatingsData)엔 아무 효과가 없다(metrics-ratings.js의
+        // computeGenreQualifyingByChannel() 등 주석 — "①②선택과 무관"). DD_FILTER_BAR_COVERED_FIELDS가
+        // 'channel'을 전역으로 가리는 바람에 이 피벗에서 채널로 좁힐 방법이 아예 없어졌던 것을 코드
+        // 리뷰로 발견 — 이 프리셋만 필터 well에서 'channel'을 다시 허용한다(2026-09-17).
+        filterBarUncoveredFields: ['channel'],
         columnDefaultExpanded: true,
         subtotalDepths: [0], // 채널 depth에서 소계(구간 5개 합) — metricsRevenueTrendPivot과 같은 관례
         toggleDepth: 0,
@@ -961,6 +967,9 @@
         sourceFilter: null,
         dataSource: () => metricsGenreQualifyingDataForPivot(),
         channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
+        // 위 metricsGenreQualifyingBarPivot과 같은 이유 — ②채널 체크박스가 이 데이터셋엔 효과가 없어
+        // 필터 well에서 'channel'을 다시 허용한다(2026-09-17, 코드 리뷰로 발견).
+        filterBarUncoveredFields: ['channel'],
         columnDefaultExpanded: true,
         subtotalDepths: [],
         toggleDepth: 0,
@@ -1224,7 +1233,10 @@
     //   지표마다 단위·소수자리·환산배율이 다 달라 metricsFormatRatingValue()와 같은 원칙을 pvFormatCell에도
     //   여는 범용 경로 — value * multiplier를 decimals 자리로 반올림해 toLocaleString() + suffix.
     function pvFormatCell(value, agg, format) {
-      if (agg === 'count' || agg === 'distinct') return value ? value.toLocaleString() : '-';
+      // count/distinct는 0도 항상 유효한 답이다(예: 그 채널의 그 구간 프로그램 수가 진짜 0개) —
+      // sum/avg의 "0=값 없음" 관례를 그대로 물려받으면 진짜 0과 데이터 없음이 똑같이 '-'로 찍힌다
+      // (metricsGenreQualifyingBarPivot의 agg:'count' 셀에서 코드 리뷰로 발견, 2026-09-17).
+      if (agg === 'count' || agg === 'distinct') return (value === null || value === undefined) ? '-' : value.toLocaleString();
       if (format === 'percent') return (value === null || value === undefined || !isFinite(value)) ? '-' : value.toFixed(1) + '%';
       if (format && typeof format === 'object') {
         if (value === null || value === undefined || !isFinite(value)) return '-';
@@ -1345,6 +1357,9 @@
         // 필터 well의 값 목록(getDetailDataFieldUniqueValues, detail-data.js)이 읽을 데이터셋.
         // 지정 없는 나머지 여섯 피벗은 null이라 기존과 동일하게 rawData를 그대로 쓴다.
         dataSource: p.dataSource || null,
+        // 전역 필터바/컨트롤바가 가리는 필드 중, 이 프리셋에서만은 실제로 안 가려지는 것들
+        // (DD_FILTER_BAR_COVERED_FIELDS, detail-data.js — ddFilterBarCovers()가 참조).
+        filterBarUncoveredFields: new Set(p.filterBarUncoveredFields || []),
       };
     }
     function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }

@@ -277,8 +277,16 @@
     // 그 pill을 조작하면 rerenderCurrentMetricsView()(metrics-dashboard.js)가 VIEW_CONFIG[currentView]
     // .render()를 다시 불러 이 함수를 호출한다).
     function renderMetricsDetailView() {
-      // renderMetricsPivotView()와 같은 이유(2026-09-17) — 새로고침·해시 딥링크로 metricsMain을
-      // 거치지 않고 바로 들어오면 전역 컨트롤바가 안 채워진 채로 남는다.
+      // renderMetricsPivotView()(metrics-dashboard.js)와 같은 이유(2026-09-17, 코드 리뷰로 발견) —
+      // 새로고침·해시 딥링크로 metricsMain을 거치지 않고 바로 들어오면 fetchMetricsDataHttp()가 이
+      // 세션에 한 번도 안 불려 데이터가 영영 비어있다.
+      if (!metricsDataLoaded) {
+        fetchMetricsDataHttp()
+          .then(() => { if (currentView === 'metricsDetail') renderMetricsDetailView(); })
+          .catch(err => console.error('[metrics-ratings] 상세표 데이터 로드 실패:', err));
+        return;
+      }
+      // 컨트롤바 setup*() 호출도 같은 이유로 여기 필요 — 안 그러면 전역 pill/드롭다운이 빈 채로 남는다.
       metricsEnsureDefaultSelections();
       setupMetricsYearPills();
       setupMetricsMonthPills();
@@ -397,7 +405,11 @@
     // 실데이터 확인 — MBN '오락'만 53건 중 39건이 15개 방송의 부 분할). 말미의 "(구분자)+숫자+부"
     // 패턴만 제거 — 제목 중간의 숫자(시즌 번호 등)는 건드리지 않는다.
     function metricsCanonicalProgramName(name) {
-      return name.replace(/[\s-]*\d+부$/, '').trim();
+      // 원본이 "2부"처럼 본제목 없이 부(部) 표기만 담고 있으면 전체가 지워져 빈 문자열이 된다 —
+      // 그러면 서로 무관한 프로그램들이 같은 '' 키로 뭉쳐 rating_sum/episode_count가 섞인다
+      // (코드 리뷰로 발견, 2026-09-17). 지워서 빈 문자열이 되는 경우엔 원본을 그대로 쓴다.
+      const stripped = name.replace(/[\s-]*\d+부$/, '').trim();
+      return stripped || name;
     }
 
     // 상단 "범위"(전체/유료방송/케이블) 토글을 이 채널에도 적용하기 위한 채널→스코프 매핑
@@ -412,8 +424,36 @@
       'ENA': '케이블', 'tvN': '케이블', 'tvN STORY': '케이블',
       'MBC every1': '케이블', 'SBS Plus': '케이블', 'KBS JOY': '케이블',
     };
+    // 이 맵에 없는 채널명이 들어오면(원본 표기 변경 등) scope가 null이 되어 '전체' 외 모든 범위에서
+    // 조용히 빠진다 — 콘솔에 한 번만 경고해 원인 추적이 가능하게 한다(코드 리뷰로 발견, 2026-09-17).
+    const metricsUnknownProgramRatingsChannels = new Set();
     function metricsProgramRatingsScopeMatch(channel) {
-      return metricsScopeMatchRow({ scope: PROGRAM_RATINGS_CHANNEL_SCOPE[channel] || null }, metricsScopeMode);
+      const scope = PROGRAM_RATINGS_CHANNEL_SCOPE[channel];
+      if (scope === undefined && !metricsUnknownProgramRatingsChannels.has(channel)) {
+        metricsUnknownProgramRatingsChannels.add(channel);
+        console.warn(`[metrics-ratings] PROGRAM_RATINGS_CHANNEL_SCOPE에 없는 채널 "${channel}" — '전체' 범위 외에는 제외됩니다. 맵에 추가가 필요할 수 있습니다.`);
+      }
+      return metricsScopeMatchRow({ scope: scope || null }, metricsScopeMode);
+    }
+
+    // 4개 함수(이 둘 + 아래 피벗 dataSource 2개)가 전부 "(채널,프로그램,장르[,연,월]) 키로 그룹핑해
+    // rating_sum/episode_count 합산"을 각자 손으로 반복하고 있었다(코드 리뷰 지적, 2026-09-17) — 부(部)
+    // 분할 병합 규칙이나 병합 키가 나중에 바뀌면 네 곳 중 하나만 고치고 지나치기 쉬웠다. keyFields로
+    // 병합 단위만 고르는 공용 함수로 뺀다. 'program'은 항상 metricsCanonicalProgramName()으로 정규화한다.
+    function metricsMergeProgramRatingsRows(rows, keyFields) {
+      const merged = new Map();
+      rows.forEach(r => {
+        const values = keyFields.map(f => f === 'program' ? metricsCanonicalProgramName(r.program) : r[f]);
+        const key = values.join('|');
+        let m = merged.get(key);
+        if (!m) {
+          m = { ratingSum: 0, episodeCount: 0 };
+          keyFields.forEach((f, i) => { m[f] = values[i]; });
+          merged.set(key, m);
+        }
+        m.ratingSum += r.ratingSum; m.episodeCount += r.episodeCount;
+      });
+      return Array.from(merged.values());
     }
 
     // 왼쪽 막대(채널별) — (channel, canonicalProgram, genre) 단위로 조회기간 내 rating_sum/episode_count를
@@ -422,13 +462,7 @@
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
       const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
 
-      const groups = new Map();
-      rows.forEach(r => {
-        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre;
-        const g = groups.get(key) || { channel: r.channel, genre: r.genre, ratingSum: 0, episodeCount: 0 };
-        g.ratingSum += r.ratingSum; g.episodeCount += r.episodeCount;
-        groups.set(key, g);
-      });
+      const groups = metricsMergeProgramRatingsRows(rows, ['channel', 'program', 'genre']);
 
       const counts = {}; // counts[channel] = { '드라마&영화': n, '오락': n }
       groups.forEach(g => {
@@ -448,16 +482,10 @@
       const periodSet = new Set(metricsSelectedPeriods(programRatingsData).map(p => p.year + '-' + p.month));
       const rows = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && periodSet.has(r.year + '-' + r.month) && metricsProgramRatingsScopeMatch(r.channel));
 
-      const merged = new Map();
-      rows.forEach(r => {
-        const key = r.channel + '|' + metricsCanonicalProgramName(r.program) + '|' + r.genre + '|' + r.year + '|' + r.month;
-        const m = merged.get(key) || { channel: r.channel, year: r.year, month: r.month, ratingSum: 0, episodeCount: 0 };
-        m.ratingSum += r.ratingSum; m.episodeCount += r.episodeCount;
-        merged.set(key, m);
-      });
+      const merged = metricsMergeProgramRatingsRows(rows, ['channel', 'program', 'genre', 'year', 'month']);
 
       const counts = {}; // counts['2026-3'] = { channel: n }
-      Array.from(merged.values())
+      merged
         .filter(m => m.episodeCount > 0 && (m.ratingSum / m.episodeCount) >= METRICS_GENRE_QUALIFYING_THRESHOLD)
         .forEach(r => {
           const key = r.year + '-' + r.month;
@@ -476,17 +504,9 @@
     // 되어 틀리므로 avgRating(가중평균) 필드를 얹어 넘긴다.
     // ------------------------------------------------------------
     function metricsGenreQualifyingDataForPivot() {
-      const merged = new Map();
-      programRatingsData
-        .filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && metricsProgramRatingsScopeMatch(r.channel))
-        .forEach(r => {
-          const program = metricsCanonicalProgramName(r.program);
-          const key = r.channel + '|' + program + '|' + r.genre + '|' + r.year + '|' + r.month;
-          const m = merged.get(key) || { channel: r.channel, genre: r.genre, program, year: r.year, month: r.month, ratingSum: 0, episodeCount: 0 };
-          m.ratingSum += r.ratingSum; m.episodeCount += r.episodeCount;
-          merged.set(key, m);
-        });
-      const rows = Array.from(merged.values()).map(m => ({ ...m, avgRating: m.episodeCount > 0 ? m.ratingSum / m.episodeCount : 0 }));
+      const filtered = programRatingsData.filter(r => METRICS_GENRE_QUALIFYING_GENRES.includes(r.genre) && metricsProgramRatingsScopeMatch(r.channel));
+      const merged = metricsMergeProgramRatingsRows(filtered, ['channel', 'program', 'genre', 'year', 'month']);
+      const rows = merged.map(m => ({ ...m, avgRating: m.episodeCount > 0 ? m.ratingSum / m.episodeCount : 0 }));
       const periodSet = new Set(metricsSelectedPeriods(rows).map(p => p.year + '-' + p.month));
       return rows.filter(r => periodSet.has(r.year + '-' + r.month));
     }
@@ -615,7 +635,11 @@
     // 참고). "월별 추이" 라인차트에 연결된 metricsGenreQualifyingTrendPivot은 이 변경과 완전히 무관 —
     // 그대로 유지.
     // ------------------------------------------------------------
-    const METRICS_GENRE_RATING_BANDS = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
+    // 라벨 문자열은 js/features/pivot-builder.js의 PV_GENRE_BAND_ORDER와 정확히 같아야 한다(그 배열이
+    // 피벗 행 정렬 순서를 정한다) — pivot-builder.js가 이 파일보다 먼저 로드돼 그 배열을 직접 참조할
+    // 수 없어 부득이 문자열을 중복 정의한다. 둘 중 하나만 고치면 조용히 어긋나니 항상 같이 고칠 것
+    // (코드 리뷰로 지적, 2026-09-17 — 이전엔 여기 METRICS_GENRE_RATING_BANDS라는 죽은 배열까지 따로
+    // 있어 혼란을 더했다, 삭제함).
     function metricsGenreRatingBandFor(avgRating) {
       if (avgRating >= 3) return '3% 이상';
       if (avgRating >= 2) return '2% 이상';

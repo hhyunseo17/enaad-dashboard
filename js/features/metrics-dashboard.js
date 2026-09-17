@@ -488,14 +488,24 @@
     }
 
     // 매출 4개 + 지표 4개 + "1%↑ 시청률" 2개, 총 10개 피벗 상세 화면(view-router.js VIEW_CONFIG)의
-    // 공통 진입점. 연도/월 pill과 ①②선택 체크박스는 이제 전역 컨트롤바 하나(위 rerenderCurrentMetricsView
+    // 공통 진입점. 연도/월 pill과 ①사업자 체크박스는 이제 전역 컨트롤바 하나(위 rerenderCurrentMetricsView
     // 참고)가 담당하므로 여기서는 프리셋만 그린다 — 예전엔 이 화면 전용 컨테이너(viewKey+'YearPills' 등,
     // dashboard.html의 각 히어로카드)에 매번 새로 pill/체크박스를 그렸었다(2026-09-16~17에 걸쳐 추가됐다가
-    // 2026-09-17에 전역 컨트롤바로 통합되며 제거됨). 부수효과 — CPRP/채널시청률/eq-GRPs/광고주수/
-    // "1%↑" 2종 피벗이 갖고 있던 channelCandidates(그 지표에 실제 값이 있는 채널만 후보로 좁히는 기능,
-    // PIVOT_PRESETS의 channelCandidates 필드)는 채널 체크박스가 전역 하나로 합쳐지며 더는 호출되지
-    // 않는다 — metricsMain의 ②채널 후보(범위 안 사업자 전체의 모든 하위 채널)를 전 화면이 공유한다.
+    // 2026-09-17에 전역 컨트롤바로 통합되며 제거됨). ②채널 체크박스만은 preset.channelCandidates를
+    // 그대로 전달해 CPRP/채널시청률/eq-GRPs/광고주수/"1%↑" 2종 피벗마다 실제 값이 있는 채널로 후보를
+    // 좁히던 기능을 유지한다(통합 직후 한 번 빠뜨렸다가 코드 리뷰로 발견해 원복, 2026-09-17).
     function renderMetricsPivotView(viewKey) {
+      // 새로고침·해시 딥링크로 metricsMain을 거치지 않고 피벗 상세로 직행하면 fetchMetricsDataHttp()가
+      // 이 세션에 한 번도 안 불려 데이터가 영영 비어있는 채로 남는 문제(코드 리뷰로 발견) — metricsMain과
+      // 같은 지연로딩 가드를 여기도 둔다. 로딩 UI는 metricsMain 전용 DOM(#metricsLoadingMessage 등)이라
+      // 재사용 안 하고, 로딩 중엔 그냥 이번 렌더를 건너뛴다(직후 프리셋 표는 비어 보이다가 fetch 완료
+      // 시 재렌더로 채워짐 — "영영 빈 화면"보다는 훨씬 낫다).
+      if (!metricsDataLoaded) {
+        fetchMetricsDataHttp()
+          .then(() => { if (currentView === viewKey) renderMetricsPivotView(viewKey); })
+          .catch(err => console.error('[metrics-dashboard] 피벗 상세 데이터 로드 실패:', err));
+        return;
+      }
       // 새로고침·해시 딥링크로 metricsMain을 거치지 않고 피벗 상세로 직행하는 경로 대비
       // (2026-09-17, reviewer가 실제로 재현·확인) — 컨트롤바 setup*() 호출이 이제
       // renderMetricsDashboard() 안에만 있어서, 그 함수가 이번 세션에 한 번도 안 돌면
@@ -505,7 +515,8 @@
       setupMetricsMonthPills();
       syncMetricsMonthPillActive();
       setupMetricsOperatorCheckboxes();
-      setupMetricsChannelCheckboxes();
+      const preset = PIVOT_PRESETS[viewKey];
+      setupMetricsChannelCheckboxes(preset && preset.channelCandidates);
       renderPresetPivot(viewKey);
     }
 
@@ -607,7 +618,11 @@
       if (currentView === 'metricsMain') renderMetricsChannelDependentCharts();
       else rerenderCurrentMetricsView();
     }
-    function setupMetricsChannelCheckboxes() { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', metricsOnChannelSelectionChange); }
+    // candidatesFn(선택) — 지정하면 metricsMain의 기본 후보(범위 안 사업자 전체) 대신 그 화면 전용
+    // 목록을 쓴다. CPRP/채널시청률/eq-GRPs/광고주수/"1%↑" 2종 피벗이 각자 preset.channelCandidates를
+    // 넘긴다(2026-09-17 재도입 — 컨트롤바를 전역으로 합치면서 이 인자 전달이 한 번 빠졌었다: 코드
+    // 리뷰로 발견, "그 지표에 실제 값이 있는 채널만 후보로 좁히는" 기능이 죽어 있던 걸 원복).
+    function setupMetricsChannelCheckboxes(candidatesFn) { metricsSetupChannelCheckboxes('listMetricsChannelCheckboxes', 'checkAllMetricsChannel', 'labelMetricsChannel', metricsOnChannelSelectionChange, candidatesFn); }
 
     // metricsDetail 상세표 "③ 지표 선택"(metrics-ratings.js)만 아직 이 범용 함수를 쓴다 — ①②는
     // 위 metricsSetupXxxCheckboxes()가 각자 처리하므로 더 이상 여기서 다루지 않는다.
