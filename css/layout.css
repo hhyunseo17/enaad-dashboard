@@ -265,11 +265,11 @@
        라이트에서 흰 카드 위에 놓이므로 위의 텍스트 토큰만 적용되면 된다 — 예전에는
        제목이 #FFFFFF로 박혀 있어 이 카드에서 글자가 통째로 사라져 있었다. */
 
-    .card-box { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; transition: all 0.2s ease; }
+    .card-box { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 380px; min-width: 0; transition: all 0.2s ease; }
     .card-box.clickable { cursor: pointer; }
     .card-box.clickable:hover { border-color: var(--primary-blue); background: var(--bg-card-hover); }
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
-    .card-box-title { display: flex; align-items: center; gap: 8px; }
+    .card-box-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
     .card-box-title h2 { font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
     .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
     .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-tertiary); }
