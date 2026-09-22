@@ -43,7 +43,7 @@ function canonicalizeRatingsChannelName(val) {
 }
 
 export function parseCompetitorRevenueWorkbook(buffer) {
-  const wb = XLSX.read(buffer, { type: 'buffer' });
+  const wb = XLSX.read(buffer, { type: 'buffer', sheets: [REVENUE_SHEET_NAME] });
   const sheet = wb.Sheets[REVENUE_SHEET_NAME];
   if (!sheet) throw new Error(`File2 "${REVENUE_SHEET_NAME}" 시트를 찾을 수 없습니다. 시트 목록: ${wb.SheetNames.join(', ')}`);
   const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
@@ -80,7 +80,9 @@ export function parseCompetitorRevenueWorkbook(buffer) {
 }
 
 export function parseCompetitorRatingsWorkbook(buffer) {
-  const wb = XLSX.read(buffer, { type: 'buffer' });
+  // sheets 필터 필수 — File1에는 광고주Raw 등 수십만 행짜리 무관 시트가 같이 들어있어
+  // 전체 파싱 시 OOM(46MB 파일 기준 힙 8GB로도 부족, 2026-09-22 실측)이 난다.
+  const wb = XLSX.read(buffer, { type: 'buffer', sheets: [RATINGS_SHEET_NAME] });
   const sheet = wb.Sheets[RATINGS_SHEET_NAME];
   if (!sheet) throw new Error(`File1 "${RATINGS_SHEET_NAME}" 시트를 찾을 수 없습니다. 시트 목록: ${wb.SheetNames.join(', ')}`);
   const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
@@ -178,7 +180,7 @@ function parseReportAsOfDate(buffer, maxYear) {
   }
   const sheetName = `${maxYear % 100}년`;
   try {
-    const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+    const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true, sheets: [sheetName] });
     const sheet = wb.Sheets[sheetName];
     if (!sheet) {
       console.warn(`[경쟁채널 지표 as-of 날짜] "${sheetName}" 시트를 찾을 수 없습니다(시트 목록: ${wb.SheetNames.join(', ')}) — 이 값 없이 계속 진행합니다.`);
