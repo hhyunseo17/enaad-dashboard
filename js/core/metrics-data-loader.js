@@ -113,6 +113,17 @@
     // Authorization 헤더에 실어 /api/* 프록시를 부른다(credentials:'include'는 이제 불필요 — R2
     // 직접 서빙 때 쓰던 방식). idempotent: 이미 진행 중이거나 끝난 fetch가 있으면 그 프라미스를
     // 그대로 돌려준다(중복 fetch 방지). 실패하면 캐시를 비워서 다음 호출(탭 재진입 등)이 재시도할 수 있게 한다.
+    // 지표 탭 "실시간 연결" 칩(dashboard.html #metricsDataAsOfBar) — data-loader.js가 매출 쪽
+    // statusDot/statusModeText를 채우는 것과 같은 패턴. 지표 데이터는 xlsx 수동 업로드 폴백이 없어
+    // 상태가 성공/실패 둘뿐이다(매출 쪽의 'manual'/수동 업로드 상태에 대응하는 개념이 없음).
+    function setMetricsConnectionStatus(ok) {
+      const dot = document.getElementById('metricsStatusDot');
+      const text = document.getElementById('metricsStatusModeText');
+      if (!dot || !text) return;
+      dot.className = ok ? 'status-dot' : 'status-dot manual';
+      text.innerText = ok ? '실시간 연결' : '연결 실패';
+    }
+
     function fetchMetricsDataHttp() {
       if (metricsDataFetchPromise) return metricsDataFetchPromise;
 
@@ -168,10 +179,12 @@
       // ratingsPromise가 실패했을 때뿐이다 — 부가 조회가 핵심 데이터 로드를 절대 막지 않는다.
       metricsDataFetchPromise = Promise.all([ratingsPromise, metaPromise, programRatingsPromise]).then(() => {
         metricsDataLoaded = true;
+        setMetricsConnectionStatus(true);
         return { ratings: metricsRatingsData, revenue: metricsRevenueData };
       }).catch(err => {
         metricsDataFetchPromise = null; // 재시도 가능하도록 캐시 해제
         metricsDataLoaded = false;
+        setMetricsConnectionStatus(false);
         console.error('[metrics-data-loader] 지표 대시보드 데이터 로드 실패:', err);
         throw err;
       });

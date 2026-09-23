@@ -250,6 +250,22 @@
       </div>
     </section>
 
+    <!-- 데이터 기준 날짜 — 지표 대시보드 전용, 컨트롤바 바로 위. 매출 대시보드의 salesStatusLegend와
+         같은 위상(필터바 위, family 반대 조건으로 토글)으로 맞춤(2026-09-23, 사용자 요청). 예전엔
+         #metricsMainView 안에 갇혀 있어 metricsMain을 벗어나면(피벗 상세 10개 등) 사라졌다 —
+         metrics-control-bar와 같은 이유로 여기로 뺐다.
+         "실시간 연결" 칩도 매출 쪽(statusDot/statusModeText)과 같은 형태로 추가(2026-09-23,
+         사용자 요청 — "지표 대시보드에도 실시간 연결 칩 추가"). 지표 데이터는 xlsx 수동 업로드
+         폴백이 없는 Supabase 전용 fetch라 상태가 성공/실패 둘뿐이다 — fetchMetricsDataHttp()
+         (metrics-data-loader.js)가 이 두 엘리먼트를 직접 채운다. -->
+    <section class="metrics-source-legend" id="metricsDataAsOfBar" style="display:none;">
+      <span class="metrics-legend-chip status-badge">
+        <span id="metricsStatusDot" class="status-dot"></span>
+        <span id="metricsStatusModeText">실시간 연결</span>
+      </span>
+      <span id="metricsDataAsOfLabel" class="metrics-legend-chip"></span>
+    </section>
+
     <!-- 지표 대시보드 전용 컨트롤바. filterBarSection과 같은 위상 — 모든 뷰의 형제로 최상위에 두고
          family==='metrics'일 때만 보인다(switchView(), view-router.js). 예전엔 #metricsMainView
          안에 갇혀 있어서 다른 피벗 상세 화면으로 넘어가면 통째로 사라졌고, 그걸 눈가림하려고
@@ -1340,12 +1356,6 @@
        VIEW: 지표 대시보드 (경쟁채널 벤치마크) — docs/features/metrics-dashboard.md 참고
        ========================================================================== -->
     <div id="metricsMainView" class="view-section">
-
-      <!-- 데이터 기준 날짜 — 경쟁채널 지표 현황(File1)에 실제로 있는 최신 연/월(2026-09-16, 사용자
-           요청으로 출처 설명 대신 이 한 줄만 남김). -->
-      <section class="metrics-source-legend">
-        <span id="metricsDataAsOfLabel" class="metrics-legend-chip"></span>
-      </section>
 
       <div id="metricsLoadingMessage" style="display:none; padding: 60px 20px; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
         <div class="spinner"></div>

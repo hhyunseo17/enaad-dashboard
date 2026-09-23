@@ -108,6 +108,11 @@
       // 남겨놓고" — metricsMain/metricsDetail + 피벗 상세 10개 전부에서 이 바 하나를 공유한다).
       const metricsControlBar = document.querySelector('.metrics-control-bar');
       if (metricsControlBar) metricsControlBar.style.display = cfg.family === 'metrics' ? '' : 'none';
+      // 지표 탭 "데이터 기준" — 컨트롤바와 같은 이유로 같은 위상(전역, 컨트롤바 바로 위)으로 옮겨져
+      // 있으므로 컨트롤바와 똑같이 토글한다(2026-09-23, 사용자 요청 — 매출 대시보드의 salesStatusLegend
+      // 위치와 맞춤).
+      const metricsDataAsOfBar = document.getElementById('metricsDataAsOfBar');
+      if (metricsDataAsOfBar) metricsDataAsOfBar.style.display = cfg.family === 'metrics' ? '' : 'none';
       syncDashboardTabs(cfg.family);
       // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
       // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.
