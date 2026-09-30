@@ -220,15 +220,38 @@ async function main() {
 
   console.log(`[1/5] File1 읽는 중: ${ratingsPath}`);
   const ratingsBuffer = readFileSync(ratingsPath);
-  const ratingsRows = parseCompetitorRatingsWorkbook(ratingsBuffer);
-  console.log(`  ${ratingsRows.length}행 파싱 완료`);
+  const parsedRows = parseCompetitorRatingsWorkbook(ratingsBuffer);
+  console.log(`  ${parsedRows.length}행 파싱 완료`);
+
+  // 리포트 as-of 날짜를 upsert보다 먼저 구해 "아직 안 끝난 달"을 걸러낸다(2026-09-30, 사용자 지적:
+  // "9/28 기준이니까 10월 데이터는 일단 뺄 수 없나?"). File1은 "값 없음(빈 셀)"을 미보고로 두는 게
+  // 원칙인데도(파일 헤더 주석의 "미보고 placeholder" 설명), 실 샘플(2026-09-30)에서 리포트가 9/28
+  // 기준인데도 10월 컬럼에 KBS/MBC/SBS 등 14개 사업자 중 일부가 이미 반올림된 추정치(예: 11500,
+  // 20000 — 실측이라기엔 너무 딱 떨어짐)를 채워둔 걸 확인했다. 0이 아니라서 기존 "값===0 제외" 필터로는
+  // 안 걸러진다 — 리포트 자체가 "이 날짜까지의 실측"이라고 못박은 이상, 그 날짜가 속한 달보다 뒤의
+  // 모든 (연,월)은 무조건 미완성으로 보고 통째로 제외한다(사업자별로 다르게 판단하지 않음 — 리포트
+  // 전체에 적용되는 단일 기준일이라서).
+  const maxYear = determineMaxYear(parsedRows);
+  const reportAsOfDate = parseReportAsOfDate(ratingsBuffer, maxYear);
+  let ratingsRows = parsedRows;
+  if (reportAsOfDate) {
+    const m = reportAsOfDate.match(/^(\d{4})-(\d{2})/);
+    if (m) {
+      const asOfYear = Number(m[1]);
+      const asOfMonth = Number(m[2]);
+      const before = ratingsRows.length;
+      ratingsRows = ratingsRows.filter(r => r.year < asOfYear || (r.year === asOfYear && r.month <= asOfMonth));
+      const dropped = before - ratingsRows.length;
+      if (dropped > 0) console.log(`  리포트 기준일(${reportAsOfDate}) 이후 달 ${dropped}행 제외(미완성 추정치)`);
+    }
+  } else {
+    console.warn('  report_as_of_date를 못 구해 "미완성 달" 필터를 건너뜁니다 — 이번 회차는 미보고(값===0) 필터에만 의존합니다.');
+  }
 
   console.log('[2/5] competitor_ratings upsert');
   await upsertAll(supabase, 'competitor_ratings', ratingsRows, 'year,index_mode,metric_code,channel,month');
 
-  console.log('[3/5] 리포트 as-of 날짜(File1 "{연도}년" 시트 H2) 확인 후 competitor_ratings_meta upsert');
-  const maxYear = determineMaxYear(ratingsRows);
-  const reportAsOfDate = parseReportAsOfDate(ratingsBuffer, maxYear);
+  console.log('[3/5] competitor_ratings_meta upsert');
   if (reportAsOfDate) {
     const { error } = await supabase.from('competitor_ratings_meta')
       .upsert({ id: 1, report_as_of_date: reportAsOfDate, updated_at: new Date().toISOString() }, { onConflict: 'id' });
