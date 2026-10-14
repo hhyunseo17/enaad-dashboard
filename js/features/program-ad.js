@@ -478,15 +478,16 @@
         }
       });
 
-      // 4) 장르별 매출 집행 현황 (가로 바) — 드라마&영화 → 오락 → 정보 → 나머지 가나다. 장르마다 서로 다른 색(2026-10-14,
-      //    사용자 요청) — programAdGenreColor() 참고.
+      // 4) 장르별 매출 집행 현황 (가로 바) — 매출이 큰 장르부터(2026-10-14, 사용자 요청). 색은 이 대시보드의 기존
+      //    서수 팔레트(seriesColor)를 순위 순서대로 쓴다 — 부서·채널 같은 다른 차트의 계열색과 같은 방식이라 색이
+      //    장르 이름이 아니라 순위에 붙는다(필터로 장르가 빠지거나 순위가 바뀌면 색도 따라 바뀐다).
       const genreMap = {};
       rows.forEach(r => { genreMap[r.genre] = (genreMap[r.genre] || 0) + r.revTotal; });
-      const genres = Object.entries(genreMap).sort((a, b) => programAdCompareGenre(a[0], b[0]));
+      const genres = Object.entries(genreMap).sort((a, b) => b[1] - a[1]);
       programAdMakeChart('programAdGenre', 'chartProgramAdGenre', {
         type: 'bar',
         data: { labels: genres.map(g => programAdLabel(g[0])), datasets: [{
-          label: '매출액', data: genres.map(g => g[1] / 1e8), backgroundColor: genres.map(g => programAdGenreColor(g[0])), borderRadius: 0,
+          label: '매출액', data: genres.map(g => g[1] / 1e8), backgroundColor: genres.map((g, i) => seriesColor(i)), borderRadius: 0,
           datalabels: { display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0, anchor: 'end', align: 'right', offset: 4, color: dataLabelTextColor(), font: { size: 11, weight: FW() }, formatter: (v) => v > 0 ? v.toFixed(1) + '억' : '' }
         }] },
         options: {
@@ -499,18 +500,6 @@
           }
         }
       });
-    }
-
-    // 장르별 막대 색 — 장르마다 서로 다르고 필터로 일부 장르가 빠져도 색이 바뀌지 않게 이름으로 고정한다.
-    // 값은 theme-system.js의 서수 팔레트(seriesColor — 라이트/다크 값이 각각 따로 적혀 있다, 절대원칙 9)에서 고르고
-    // 새 색은 만들지 않는다(절대원칙 10). 파랑(0번)·초록(2번)·청록(4번 — GRPs기여 하늘색과 가깝다)은 다른 차트에서 매출
-    // 항목 색으로 쓰이고 빨강(5번)은 IMC라 장르에는 쓰지 않는다 — 한 화면에서 같은 색이 다른 뜻으로 보이지 않게 하기
-    // 위해서다. 주황(1번)과 노랑(7번)은 색상차가 13°뿐이라 막대 순서에서 멀리 떨어진 장르에 나눠 줬다(드라마&영화 ↔ 스포츠).
-    // 기타는 무채(9번). 목록에 없는 장르가 원본에 새로 들어오면 5번으로 떨어진다.
-    const PROGRAM_AD_GENRE_PALETTE_INDEX = { '드라마&영화': 1, '오락': 3, '정보': 6, '교육': 8, '스포츠': 7, '기타': 9 };
-    function programAdGenreColor(genre) {
-      const i = PROGRAM_AD_GENRE_PALETTE_INDEX[genre];
-      return seriesColor(i === undefined ? 5 : i);
     }
 
     // ------------------------------------------------------------
