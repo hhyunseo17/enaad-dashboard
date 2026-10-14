@@ -554,6 +554,12 @@
           o.info += d.revInfomercial; o.imc += d.revImc; o.oth += d.revOther; o.tot += d.revTotal;
         });
       });
+      // 채널은 매출(전체매출)이 큰 순서로 — 부모 행의 대표 채널("ENA 등")도 매출 1위 채널이다. 처음 만난 채널을 쓰면
+      // 원본 행 순서에 따라 매출이 작은 채널이 대표로 뜬다(2026-10-14, 사용자 지적: "기타 등"). 동률이면 채널명 순.
+      map.forEach(p => {
+        p.chList = Array.from(p.chs.values()).sort((a, b) => (b.tot - a.tot) || a.ch.localeCompare(b.ch, 'ko'));
+        p.channel = p.chList[0].ch;
+      });
       return Array.from(map.values());
     }
 
@@ -592,16 +598,16 @@
       let html = '';
       if (!pageData.length) html = `<tr><td colspan="${PROGRAM_AD_TABLE_COLS.length}" style="text-align:center; padding:24px;">데이터가 없습니다.</td></tr>`;
       else pageData.forEach((row, i) => {
-        const chList = Array.from(row.chs.values());
+        const chList = row.chList; // 매출 큰 순(programAdAggregateByProgram)
         const chText = chList.length > 1 ? `${chList[0].ch} 등` : chList[0].ch;
         // 부모 행: 맨 왼쪽 프로그램 셀에 ▶ 아이콘. 데이터 문자열은 전부 programAdEscapeHtml, onclick 인자는 숫자(i)뿐.
         html += `<tr class="programad-parent-row" onclick="toggleProgramAdRow(${i})">
           <td><span class="toggle-icon" id="programAdToggleIcon${i}">▶</span><strong>${programAdEscapeHtml(programAdLabel(row.prog))}</strong></td>
           <td>${programAdEscapeHtml(programAdLabel(chText))}</td><td>${programAdEscapeHtml(programAdLabel(row.genre))}</td>${numCells(row, true)}</tr>`;
-        // 펼침 행: 프로그램 칸은 비우고(부모 행 바로 아래 소속이 드러나게) 채널 칸에 `└ 채널명`.
+        // 펼침 행: 프로그램 칸은 비우고 채널 칸에 채널명(매출 큰 순). 들여쓰기 기호는 쓰지 않는다(2026-10-14, 사용자 요청).
         chList.forEach(ch => {
           html += `<tr class="programad-child-row" data-pa-row="${i}">
-            <td></td><td style="color:var(--text-secondary);">└ ${programAdEscapeHtml(programAdLabel(ch.ch))}</td><td></td>${numCells(ch, false)}</tr>`;
+            <td></td><td style="color:var(--text-secondary);">${programAdEscapeHtml(programAdLabel(ch.ch))}</td><td></td>${numCells(ch, false)}</tr>`;
         });
       });
       document.getElementById('programAdTableBody').innerHTML = html;
