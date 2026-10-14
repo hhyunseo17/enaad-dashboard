@@ -118,14 +118,14 @@
     function programAdResetToDefault() {
       const dy = programAdDefaultYear();
       programAdFilterStates.year = dy ? [dy] : [];
-      programAdFilterStates.month = [...programAdAvailableMonths()].sort((a, b) => a - b);
+      programAdFilterStates.month = []; // 빈 배열 = 전체 (매출 대시보드와 동일)
       programAdSetAllCheckboxes(true);
       const search = document.getElementById('inputProgramAdSearch');
       if (search) search.value = '';
       renderProgramAdPills();
     }
 
-    // 로고 클릭 — 최초 로드와 동일한 기본 상태(최신 연도, 월/채널/장르 전체)로 되돌린다. "필터 초기화"(전체 선택)와 다르다.
+    // 로고 클릭 — 최초 로드와 동일한 기본 상태(최신 연도, 월/채널/장르 전체)로 되돌린다. "필터 초기화"(연도도 전체)와 다르다.
     function applyProgramAdDefaultFilters() {
       if (!programAdDataLoaded || !programAdFiltersInitialized) return;
       programAdResetToDefault();
@@ -133,11 +133,11 @@
       applyProgramAdFilters();
     }
 
-    // "필터 초기화" 버튼 — 전체 연도·전체 월·전체 채널/장르.
+    // "필터 초기화" 버튼 — 전체 연도·전체 월·전체 채널/장르. 연·월은 빈 배열 = 전체.
     function resetProgramAdFilters() {
       if (!programAdDataLoaded) return;
-      programAdFilterStates.year = programAdAllYears();
-      programAdFilterStates.month = [...programAdAvailableMonths()].sort((a, b) => a - b);
+      programAdFilterStates.year = [];
+      programAdFilterStates.month = [];
       programAdSetAllCheckboxes(true);
       const search = document.getElementById('inputProgramAdSearch');
       if (search) search.value = '';
@@ -145,18 +145,18 @@
       applyProgramAdFilters();
     }
 
+    // 연/월 pill — 매출·지표 대시보드와 같은 규칙(js/core/filters.js의 setupYearPills 참고).
+    // 선택 배열이 비어 있으면 "전체"이고, "전체" 버튼은 그때만 켜진다(개별 pill은 켜지지 않는다).
+    // 클릭 = 교체, 같은 pill 재클릭 = 해제(→ 전체), Ctrl(⌘)/Shift+클릭 = 가감.
     function renderProgramAdPills() {
       const years = programAdAllYears().slice().reverse();
       const sel = programAdFilterStates;
-      const allYearSel = years.length > 0 && sel.year.length === years.length;
-      let yh = `<button class="pill-btn ${allYearSel ? 'active' : ''}" data-value="all">전체</button>`;
+      let yh = `<button class="pill-btn ${sel.year.length === 0 ? 'active' : ''}" data-value="all">전체</button>`;
       years.forEach(y => { yh += `<button class="pill-btn ${sel.year.includes(y) ? 'active' : ''}" data-value="${y}">${y}년</button>`; });
       document.getElementById('programAdYearPills').innerHTML = yh;
 
       const avail = programAdAvailableMonths();
-      const availList = [...avail].sort((a, b) => a - b);
-      const allMonthSel = availList.length > 0 && availList.every(m => sel.month.includes(m));
-      let mh = `<button class="pill-btn ${allMonthSel ? 'active' : ''}" data-value="all">전체</button>`;
+      let mh = `<button class="pill-btn ${sel.month.length === 0 ? 'active' : ''}" data-value="all">전체</button>`;
       for (let m = 1; m <= 12; m++) {
         if (!avail.has(m)) mh += `<button class="pill-btn disabled" disabled title="해당 연도에 데이터가 없습니다" data-value="${m}">${m}월</button>`;
         else mh += `<button class="pill-btn ${sel.month.includes(m) ? 'active' : ''}" data-value="${m}">${m}월</button>`;
@@ -164,41 +164,25 @@
       document.getElementById('programAdMonthPills').innerHTML = mh;
     }
 
-    // 일반 클릭 = 단일 선택(대체), Ctrl(⌘)+클릭 = 가감.
     function programAdTogglePill(type, val, evt) {
       if (type === 'month' && !programAdAvailableMonths().has(val)) return;
-      const additive = !!(evt && (evt.ctrlKey || evt.metaKey));
-      const list = programAdFilterStates[type];
-      if (additive) {
-        const idx = list.indexOf(val);
-        if (idx > -1) list.splice(idx, 1); else list.push(val);
-      } else {
-        programAdFilterStates[type] = [val];
-      }
+      programAdFilterStates[type] = nextPillSelection(programAdFilterStates[type], val, isAdditiveClick(evt || {})); // filters.js
       if (type === 'year') programAdPruneMonths();
       renderProgramAdPills();
       applyProgramAdFilters();
     }
 
     function programAdToggleAllPills(type) {
-      if (type === 'year') {
-        const all = programAdAllYears();
-        programAdFilterStates.year = programAdFilterStates.year.length === all.length ? [] : [...all];
-        programAdPruneMonths();
-      } else {
-        const avail = [...programAdAvailableMonths()].sort((a, b) => a - b);
-        const allSel = avail.every(m => programAdFilterStates.month.includes(m));
-        programAdFilterStates.month = allSel ? [] : avail;
-      }
+      programAdFilterStates[type] = [];
+      if (type === 'year') programAdPruneMonths();
       renderProgramAdPills();
       applyProgramAdFilters();
     }
 
-    // 연도를 바꾼 뒤 데이터 없는 월은 선택에서 빼고, 하나도 안 남으면 가능한 월 전체를 고른다.
+    // 연도를 바꾼 뒤 데이터 없는 월은 선택에서 뺀다(비면 "전체"가 된다 — 매출 대시보드와 동일).
     function programAdPruneMonths() {
       const avail = programAdAvailableMonths();
       programAdFilterStates.month = programAdFilterStates.month.filter(m => avail.has(m));
-      if (programAdFilterStates.month.length === 0 && avail.size > 0) programAdFilterStates.month = [...avail].sort((a, b) => a - b);
     }
 
     function buildProgramAdDropdowns() {
