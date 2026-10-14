@@ -307,6 +307,8 @@
           <div id="programAdYearPills" class="pills-group"></div>
           <span class="filter-hint">Ctrl(⌘)+클릭 시 복수 선택</span>
         </div>
+      </div>
+      <div class="programad-control-row">
         <div class="filter-group">
           <span class="filter-label">월 선택</span>
           <div id="programAdMonthPills" class="pills-group"></div>
@@ -2295,13 +2297,13 @@
             <div class="card-box-header">
               <div class="card-box-title"><h2>5대 광고매출 항목별 비중</h2><span class="programad-card-sub">억원 · 항목 클릭 시 상세 피벗으로 이동</span></div>
             </div>
-            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdRevenueMix"></canvas></div>
+            <div class="chart-container"><canvas id="chartProgramAdRevenueMix"></canvas></div>
           </div>
           <div class="card-box">
             <div class="card-box-header">
               <div class="card-box-title"><h2>TOP 10 프로그램별 매출 세부 구성</h2><span class="programad-card-sub">억원 · 항목 클릭 시 상세 피벗으로 이동</span></div>
             </div>
-            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdBreakdown"></canvas></div>
+            <div class="chart-container"><canvas id="chartProgramAdBreakdown"></canvas></div>
           </div>
         </section>
 
@@ -2310,56 +2312,125 @@
             <div class="card-box-header">
               <div class="card-box-title"><h2>프로그램별 2049 vs 가구 GRPs 비교</h2><span class="programad-card-sub">상위 10개 프로그램 · 항목 클릭 시 상세 피벗으로 이동</span></div>
             </div>
-            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdGrps"></canvas></div>
+            <div class="chart-container"><canvas id="chartProgramAdGrps"></canvas></div>
           </div>
           <div class="card-box">
             <div class="card-box-header">
               <div class="card-box-title"><h2>장르별 매출 집행 현황</h2><span class="programad-card-sub">억원 · 클릭 시 장르별 상세 피벗으로 이동</span></div>
             </div>
-            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdGenre"></canvas></div>
+            <div class="chart-container"><canvas id="chartProgramAdGenre"></canvas></div>
           </div>
         </section>
 
         <section class="table-container">
           <div class="table-controls">
-            <div>
-              <h2 style="font-size: 16px; font-weight: 600;">프로그램별 상세 매출 &amp; GRPs 실적 (피벗 합산)</h2>
-              <span class="programad-card-sub">행을 클릭하면 프로그램의 채널별 세부 실적이 펼쳐집니다. 컬럼 제목을 클릭하면 정렬됩니다. 매출 단위: 백만원</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <h2 style="font-size: 16px; font-weight: 600;">프로그램별 상세 매출 &amp; GRPs 실적</h2>
+                <span class="tag-badge"><span id="programAdMainPivotTotalLabel">합계</span> : <span id="programAdMainPivotTotalAmount">0</span></span>
+              </div>
+              <span class="programad-card-sub">장르 → 프로그램 → 채널 순으로 +를 눌러 펼칩니다. 보는 값은 ⚙ 표 편집의 Σ 값에서 바꿉니다(매출 5종·전체매출·GRPs). 위 조회조건이 그대로 적용됩니다.</span>
             </div>
-            <button class="btn btn-sm" onclick="exportProgramAdToExcel()">📥 Excel 다운로드</button>
-          </div>
-          <div class="table-wrapper" style="max-height: 700px;">
-            <table class="data-table pivot-tree-table" id="programAdTable">
-              <thead id="programAdTableHead"></thead>
-              <tbody id="programAdTableBody"></tbody>
-            </table>
-          </div>
-          <div class="pagination-bar">
-            <span id="programAdPageInfo" class="page-info">0 - 0 / 총 0건</span>
-            <div style="display:flex; gap:6px;">
-              <button id="btnProgramAdPrevPage" class="btn btn-sm" onclick="changeProgramAdPage(-1)">이전</button>
-              <button id="btnProgramAdNextPage" class="btn btn-sm" onclick="changeProgramAdPage(1)">다음</button>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-sm" id="programAdMainPivotResetBtn" onclick="pvResetPivot('programAdMain')" style="display:none;">↺ 원래대로</button>
+              <button class="btn btn-sm btn-toggle" id="programAdMainPivotBuilderBtn" onclick="pvToggleBuilder('programAdMain')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+              <button class="btn btn-primary btn-sm" onclick="exportProgramAdToExcel()">📥 엑셀 다운로드</button>
             </div>
           </div>
+        <section class="dd-layout dd-layout-collapsed" id="programAdMainPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="programAdMainDdFilterBar"></div>
+            <div class="table-wrapper">
+              <table class="data-table pivot-tree-table programad-fill-table">
+                <thead><tr id="programAdMainPivotHeaderRow1"></tr><tr id="programAdMainPivotHeaderRow2"></tr></thead>
+                <tbody id="programAdMainPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="programAdMainDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="programAdMainDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="programAdMainDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="programAdMainDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="programAdMainDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
         </section>
 
       </div><!-- /programAdContentBody -->
     </div><!-- /programAdMainView -->
 
     <div id="programAdDetailView" class="view-section">
+      <section class="card-box pivot-hero-card hero-blue" style="min-height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="tag-badge" style="background: rgba(71,149,255,0.2); color: var(--primary-blue); font-size: 12px; margin-bottom: 6px;">프로그램별 광고매출</span>
+            <h2 id="programAdDetailTitle" class="hero-title">매출 상세 분석</h2>
+          </div>
+          <div style="text-align: right;">
+            <div id="programAdDetailPivotTotalLabel" style="font-size: 12px; color: var(--text-tertiary);">합계</div>
+            <div id="programAdDetailPivotTotalAmount" class="hero-metric" style="color: var(--primary-blue);">0</div>
+          </div>
+        </div>
+      </section>
       <section class="table-container">
         <div class="table-controls">
-          <div>
-            <h2 id="programAdDetailTitle" style="font-size: 17px; font-weight: 600;">매출 상세 분석</h2>
-            <span class="programad-card-sub">연도 머리글의 [+]를 눌러 연도별 월 값을 펼칩니다. 연간합계는 각 연도 오른쪽에 표시됩니다. 매출 단위: 백만원 (GRPs는 소수 2자리)</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 style="font-size: 16px; font-weight: 600;">장르 / 프로그램별 월별 피벗</h2>
+            <span class="programad-card-sub">연도 머리글의 +/−로 월을 펼치고 접습니다. 위 조회조건이 그대로 적용됩니다.</span>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <button class="btn btn-sm" onclick="exportProgramAdDetailToExcel()">📥 피벗 엑셀 다운로드</button>
+            <button class="btn btn-sm" id="programAdDetailPivotResetBtn" onclick="pvResetPivot('programAdDetail')" style="display:none;">↺ 원래대로</button>
+            <button class="btn btn-sm btn-toggle" id="programAdDetailPivotBuilderBtn" onclick="pvToggleBuilder('programAdDetail')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
+            <button class="btn btn-sm" onclick="exportProgramAdToExcel()">📥 Excel 다운로드</button>
           </div>
         </div>
-        <div class="table-wrapper" style="max-height: 700px;">
-          <table class="data-table pivot-tree-table" id="programAdDetailTable"></table>
-        </div>
+        <section class="dd-layout dd-layout-collapsed" id="programAdDetailPivotSection">
+          <div class="dd-main">
+            <div class="dd-filter-bar" id="programAdDetailDdFilterBar"></div>
+            <div class="table-wrapper" style="max-height: 650px;">
+              <table class="data-table pivot-tree-table">
+                <thead><tr id="programAdDetailPivotHeaderRow1"></tr><tr id="programAdDetailPivotHeaderRow2"></tr></thead>
+                <tbody id="programAdDetailPivotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="dd-sidebar">
+            <div class="dd-field-list" id="programAdDetailDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
+            <div class="dd-wells">
+              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
+                <div class="dd-well-title">🏷 필터</div>
+                <div class="dd-well-body" id="programAdDetailDdWellFilterBody"></div>
+              </div>
+              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
+                <div class="dd-well-title">▤ 열</div>
+                <div class="dd-well-body" id="programAdDetailDdWellColumnsBody"></div>
+              </div>
+              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
+                <div class="dd-well-title">☰ 행</div>
+                <div class="dd-well-body" id="programAdDetailDdWellRowsBody"></div>
+              </div>
+              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
+                <div class="dd-well-title">Σ 값</div>
+                <div class="dd-well-body" id="programAdDetailDdWellValuesBody"></div>
+              </div>
+            </div>
+          </aside>
+        </section>
       </section>
     </div>
   </div>

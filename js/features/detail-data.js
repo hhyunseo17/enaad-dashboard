@@ -31,6 +31,7 @@
     function ddFilterBarCovers(fieldKey) {
       const ctx = ddCtx();
       if (ctx && ctx.filterBarUncoveredFields && ctx.filterBarUncoveredFields.has(fieldKey)) return false;
+      if (ctx && ctx.filterBarCoveredFields && ctx.filterBarCoveredFields.has(fieldKey)) return true; // 프리셋 전용 추가 (programAd 장르·프로그램)
       return DD_FILTER_BAR_COVERED_FIELDS.has(fieldKey);
     }
 
@@ -61,7 +62,10 @@
     // 필드 목록이 그 화면에서만 의미 있는 항목으로 길어지지 않게 하기 위함이다.
     // scope/channelGroup/revenue는 지표 대시보드 매출 4종 피벗(metricsMarketByScopePivot 등, pivot-builder.js
     // PV_FIELD_WHITELIST)에서만 쓴다 — metricsRevenueData(File1 사업자별 매출) 전용 필드라 공용 DETAIL_DATA_FIELDS엔 없다.
-    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출', program: '프로그램', genre: '장르', band: '구간', avgRating: '평균 시청률', value: '값' };
+    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출', program: '프로그램', genre: '장르', band: '구간', avgRating: '평균 시청률', value: '값',
+      // 프로그램별 광고매출(programAd) 피벗의 값 필드 — 화면 항목 이름과 같게 적는다
+      revTotal: '전체매출', revPackage: '일반광고(패키지)', revGeneralGrps: '일반광고(GRPs기여)', revInfomercial: '인포머셜',
+      revImc: 'IMC', revOther: '기타광고', grp2049: 'GRPs(2049)', grpHousehold: 'GRPs(가구)' };
     function detailDataFieldLabel(key) {
       const f = DETAIL_DATA_FIELDS.find(x => x.key === key);
       return f ? f.label : (DD_EXTRA_FIELD_LABELS[key] || key);
@@ -70,7 +74,9 @@
     // amount(매출 대시보드)와 revenue(지표 대시보드 metricsRevenueData)는 각 데이터셋에서 유일한 금액
     // 필드라 축(행/열/필터)에 놓을 이유가 없다 — 값 well 전용이고, 기본 집계도 합계다. 나머지는 개수/고유
     // 개수만 의미가 있다(예: 대분류 개수를 세는 건 되지만 대분류를 더하는 건 안 된다).
-    const DD_VALUE_ONLY_FIELDS = new Set(['amount', 'revenue']);
+    // programAd 값 필드 8종(매출 5종·전체매출·GRPs 2종)도 같은 성격이다 — 합산하는 수치라 축에 놓을 이유가 없다.
+    const DD_VALUE_ONLY_FIELDS = new Set(['amount', 'revenue',
+      'revTotal', 'revPackage', 'revGeneralGrps', 'revInfomercial', 'revImc', 'revOther', 'grp2049', 'grpHousehold']);
     function getDetailDataAggOptions(field) { return DD_VALUE_ONLY_FIELDS.has(field) ? ['sum', 'avg', 'count', 'distinct'] : ['count', 'distinct']; }
     function getDetailDataValueLabel(v) { return `${DETAIL_DATA_AGG_LABELS[v.agg] || v.agg} : ${detailDataFieldLabel(v.field)}`; }
 
@@ -413,7 +419,10 @@
     }
 
     function makeDetailDataValueEntry(fieldKey) {
-      return { id: detailDataValueIdCounter++, field: fieldKey, agg: DD_VALUE_ONLY_FIELDS.has(fieldKey) ? 'sum' : 'count' };
+      const entry = { id: detailDataValueIdCounter++, field: fieldKey, agg: DD_VALUE_ONLY_FIELDS.has(fieldKey) ? 'sum' : 'count' };
+      // 필드 고유 서식(programAd 매출=백만원 소수1자리, GRPs=소수2자리). 표에 없는 필드는 기존대로 서식 없음.
+      if (typeof PV_VALUE_FORMAT_BY_FIELD !== 'undefined' && PV_VALUE_FORMAT_BY_FIELD[fieldKey]) entry.format = PV_VALUE_FORMAT_BY_FIELD[fieldKey];
+      return entry;
     }
 
     function onDetailDataWellDrop(ev, wellName) {

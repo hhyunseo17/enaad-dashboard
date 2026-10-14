@@ -268,12 +268,11 @@
     let programAdFilterStates = { year: [], month: [], channel: [], genre: [] };
     let programAdProgramSearch = '';
     let programAdFiltersInitialized = false;
-    let programAdCurrentPage = 1;
-    const PROGRAM_AD_PAGE_SIZE = 15;
-    let programAdSortCol = 'tot';
-    let programAdSortDir = 'desc';
-    let programAdDetailMetric = 'pkg';       // programAdDetail 화면이 보여주는 지표 키
-    let programAdExpandedYears = {};         // programAdDetail 화면: 연도 열 펼침 상태
+    let programAdDetailMetric = 'pkg';       // programAdDetail 화면이 보여주는 지표 키 (PIVOT_PRESETS.programAdDetail의 값 필드를 정한다)
+    // 두 피벗(programAdMain 본표 / programAdDetail 상세)의 행(장르→프로그램→채널) 접힘·연도 열 펼침 상태.
+    // 키 형식은 다른 엔진 피벗과 같다(`l1`, `l1||l2`) — 접힘이 기본.
+    let expandedProgramAdMainPivot = {}, expandedProgramAdMainYearColumns = {};
+    let expandedProgramAdDetailPivot = {}, expandedProgramAdDetailYearColumns = {};
 
     // ============================================================
     // 지표 대시보드(경쟁채널 벤치마크) 전용 UI 상태 — js/features/metrics-dashboard*.js가 사용.

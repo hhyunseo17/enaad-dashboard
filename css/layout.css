@@ -274,7 +274,11 @@
     .card-box-header { display: flex; align-items: center; justify-content: space-between; }
     .card-box-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
     .card-box-title h2 { font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.015em; }
-    .chart-container { position: relative; flex: 1; width: 100%; min-height: 280px; }
+    /* 차트 영역 기본 높이는 340px — 전 탭 공통(매출·지표·프로그램별). 원래 매출 탭은 280px였고 지표 탭만 340px로
+       키워 썼는데, 사용자 요청(2026-10-14: "전체적으로 차트 박스 사이즈는 지표 기준으로 하자")으로 지표 값을 기본으로
+       올렸다. 인라인 height는 이 flex:1 컨테이너에서 먹지 않으므로(flex-basis가 우선) 높이는 반드시 여기서 정한다.
+       박스(.card-box)는 min-height 380px이고 차트 영역이 340px이면 헤더·여백을 더해 약 425~437px가 된다. */
+    .chart-container { position: relative; flex: 1; width: 100%; min-height: 340px; }
     .chart-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-tertiary); }
 
     .table-container { background: var(--bg-elevated); border: 1px solid var(--border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -516,16 +520,12 @@
 /* CPRP/채널시청률/eq-GRPs/광고주수 미니 트렌드 4종 — 폭은 화면 절반(2열×2행, 좁으면 1열)이지만
    높이는 더 이상 줄이지 않는다(2026-09-15, 사용자 요청 — 타사 비교용 선 여러 개가 겹치는
    차트라 낮으면 알아보기 어렵다, 적어도 "매출 트렌드" 카드 크기만큼은 필요) — 그래서 세로 크기는
-   `.card-box`/`.chart-container` 기본값(380px/280px)을 그대로 물려받도록 자체 min-height 재정의를
+   `.card-box`/`.chart-container` 기본값(380px/340px)을 그대로 물려받도록 자체 min-height 재정의를
    없앴다(과거엔 260px/220px로 더 낮게 잡아 "화면 절반 무게"를 표현했었다). */
 .metrics-mini-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 900px) { .metrics-mini-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* 지표 대시보드 차트는 전부 매출 대시보드보다 낮게 느껴진다는 지적(2026-09-16, 사용자: "매출
-   대시보드보다 안 보이니까") — 매출 대시보드 차트는 .chart-container 기본 min-height(280px)를
-   그대로 쓰는데, 지표 쪽은 컨트롤 pill이 카드 헤더에 하나 더 얹혀 있어 상대적으로 차트 영역이
-   좁아 보인다. #metricsMainView 안의 .chart-container만 기본값보다 키운다(매출 대시보드는 그대로). */
-#metricsMainView .chart-container { min-height: 340px; }
+/* (차트 영역 높이는 위의 .chart-container 기본값 340px 하나로 전 탭 공통이다 — 지표·프로그램별 전용 재정의는 없앴다.) */
 
 /* ① 사업자 · ② 채널 독립 멀티셀렉트(2026-09-16 — 더 이상 캐스케이딩 아님). 기존 .multi-dropdown
    패턴을 그대로 쓰되, 두 팝오버가 나란히 있을 때 버튼 폭이 라벨 텍스트에 맞춰 늘어나도록 min-width만 낮춘다. */
@@ -550,11 +550,9 @@
 /* "어드레서블/큐톤 미반영" 안내 — 오류가 아니라 확인 신호라 notice-banner와 같은 주황 계열(토큰)을 칩으로 쓴다. */
 .programad-notice-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--radius-full); background: var(--accent-orange-bg); border: 1px solid var(--accent-orange); color: var(--text-primary); font-size: 12px; font-weight: 500; white-space: nowrap; }
 .programad-card-sub { font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
-/* 표 머리글의 항목 색 점 — 색은 인라인(PAC(), theme-system.js)으로 준다. 글자색은 건드리지 않는다. */
+/* 본표는 매출 대시보드 맨 아래 "상세 매출 내역" 표처럼 카드 폭을 꽉 채운다. 엔진 피벗은 기본이 내용 폭(pivot-table.css
+   `table.data-table.pivot-tree-table { min-width: 0 }`)이라 오른쪽이 비는데, 이 표만 min-width를 100%로 되돌린다.
+   특정도를 맞추려고 선택자를 그대로 이어 붙였다(떼면 위 규칙에 진다). 넘치면 .table-wrapper 안에서만 가로 스크롤된다. */
+table.data-table.pivot-tree-table.programad-fill-table { min-width: 100%; }
+/* 상세 피벗 제목의 항목 색 점 — 색은 인라인(PAC(), theme-system.js)으로 준다. 글자색은 건드리지 않는다. */
 .programad-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }
-/* 아코디언 하위(채널) 행은 접어 두고 부모 행 클릭 때만 편다. */
-.programad-child-row { display: none; }
-.programad-child-row.open { display: table-row; }
-.programad-parent-row { cursor: pointer; }
-.programad-num { text-align: right; }
-#btnProgramAdPrevPage:disabled, #btnProgramAdNextPage:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }

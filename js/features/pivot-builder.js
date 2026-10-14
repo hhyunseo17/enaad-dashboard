@@ -43,6 +43,10 @@
     const PV_ALLCOL = '__TOTAL__';        // 열 필드가 없을 때의 단일 버킷
 
     function pvEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+    // 프리셋 옵트인(escapeLabels) 전용 — 데이터 문자열(프로그램명 등)이 라벨·onclick 속성에 들어가는 프리셋이 쓴다.
+    // pvEsc는 `"`·`&`·`<`를 처리하지 않아 속성이 깨지거나 마크업으로 렌더되므로, 그 위에 HTML 이스케이프를 얹는다.
+    // 기존 프리셋은 이 함수를 지나지 않는다(출력 불변).
+    function pvEscHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
     // 행·열 값 표시. 연/월은 숫자 그대로가 아니라 "2026년"/"1월"로, 업프론트여부는 true/false 대신
     // 사람이 읽는 말로 적는다. **표시만 바꾼다** — 접힘 상태 키와 필터 선택값은 원래 값 그대로여야 한다.
@@ -99,6 +103,10 @@
       // 하드코딩 — 값 하드코딩 중복이 로드순서 깨는 것보다 안전하다. **둘 중 하나만 고치면 조용히
       // 어긋나니 라벨 문자열을 바꿀 땐 반드시 metricsGenreRatingBandFor()도 같이 고칠 것.**
       genreBandOrder: (a, b) => pvOrderListCompare(PV_GENRE_BAND_ORDER, a, b),
+      // 프로그램별 광고매출(programAdMain/programAdDetail)의 장르 고정 순서 — 드라마&영화 → 오락 → 정보 → 나머지
+      // 가나다. 장르 차트·드롭다운과 같은 규칙이라 program-ad.js의 programAdCompareGenre()를 그대로 쓴다
+      // (로드 순서상 호출 시점에 해석되므로 지연 참조로 충분하다).
+      genreOrder: (a, b) => programAdCompareGenre(a, b),
     };
     const PV_GENRE_BAND_ORDER = ['3% 이상', '2% 이상', '1% 이상', '0.5% 이상', '0.5% 미만'];
     function pvPinFirst(names, baseSorter) {
@@ -415,6 +423,19 @@
         getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
       });
     }
+
+    // 프로그램별 광고매출(programAd) 값 서식. 매출은 원 단위 필드를 백만원 소수 1자리로(CLAUDE.md 절대원칙 8),
+    // GRPs는 기존 화면의 소수 2자리 그대로. zeroDash — 0은 '-'(엔진 기본 금액 서식과 같은 관례. 이 서식을 안 쓰는
+    // 지표 피벗은 0도 숫자로 찍으므로 켜지 않으면 월×프로그램 희소 표가 0.0 투성이가 된다).
+    // 값 well에 필드를 새로 끌어다 놓을 때도 같은 서식이 붙도록 필드 키별 표를 함께 둔다(detail-data.js
+    // makeDetailDataValueEntry가 읽는다).
+    const PV_FMT_PROGRAM_AD_MONEY = { multiplier: 1e-6, decimals: 1, suffix: '', zeroDash: true };
+    const PV_FMT_PROGRAM_AD_GRPS = { multiplier: 1, decimals: 2, suffix: '', zeroDash: true };
+    const PV_VALUE_FORMAT_BY_FIELD = {
+      revTotal: PV_FMT_PROGRAM_AD_MONEY, revPackage: PV_FMT_PROGRAM_AD_MONEY, revGeneralGrps: PV_FMT_PROGRAM_AD_MONEY,
+      revInfomercial: PV_FMT_PROGRAM_AD_MONEY, revImc: PV_FMT_PROGRAM_AD_MONEY, revOther: PV_FMT_PROGRAM_AD_MONEY,
+      grp2049: PV_FMT_PROGRAM_AD_GRPS, grpHousehold: PV_FMT_PROGRAM_AD_GRPS,
+    };
 
     const PIVOT_PRESETS = {
       category: {
@@ -987,6 +1008,75 @@
         dom: { head1: 'metricsGenreQualifyingTrendPivotHeaderRow1', head2: 'metricsGenreQualifyingTrendPivotHeaderRow2', body: 'metricsGenreQualifyingTrendPivotTableBody', total: 'metricsGenreQualifyingTrendPivotTotalAmount' },
         parentView: 'metricsMain',
       },
+
+      // --- 프로그램별 광고매출(programAd) 탭 --------------------------------------------------------
+      // 지표 피벗과 같은 방식: dataSource가 매출 쪽 전역(rawData/filteredData)이 아니라 programAd 자기 데이터
+      // (programAdRows를 컨트롤바 연/월/채널/장르/프로그램 검색으로 좁힌 결과 — program-ad.js의
+      // programAd*DataForPivot())를 돌려준다. **프리셋 키가 곧 뷰 키**(programAdMain/programAdDetail)여야 한다 —
+      // 빌더 패널의 드래그앤드롭 핸들러가 currentView로 프리셋을 찾는다(pvBuilderCtx).
+      //
+      // 엔진은 한 번에 값 하나만 그린다(maxValues:1). 매출 5종·전체매출·GRPs 2종은 전부 값 well에 놓을 수 있는
+      // 필드(DD_VALUE_ONLY_FIELDS)이고, 놓는 즉시 PV_VALUE_FORMAT_BY_FIELD의 서식이 붙는다.
+      // 컨트롤바에 있는 연/월/채널/장르/프로그램은 필터 well에 놓을 수 없다(filterBarCoveredFields).
+      programAdMain: {
+        rows: ['genre', 'program', 'channel'],
+        rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
+        fieldSorters: { genre: 'genreOrder', program: 'valueDesc', channel: 'channelOrder' },
+        fieldOrderSorters: { genre: 'genreOrder' }, // 행 라벨 우클릭 메뉴의 '기본 순서' — 이 프리셋에서만
+        escapeLabels: true, // 프로그램명 등 데이터 문자열이 라벨·토글 속성에 들어간다 — HTML 이스케이프(pvEscHtml)
+        columns: ['year', 'month'],
+        values: [{ field: 'revTotal', agg: 'sum', format: PV_FMT_PROGRAM_AD_MONEY }],
+        sourceFilter: null,
+        dataSource: () => programAdMainDataForPivot(),
+        filterBarCoveredFields: ['genre', 'program'],
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedProgramAdMainPivot,
+        expandedCols: () => expandedProgramAdMainYearColumns,
+        render: () => renderProgramAdPivot('programAdMain'),
+        resetBtn: 'programAdMainPivotResetBtn',
+        layoutId: 'programAdMainPivotSection', builderBtn: 'programAdMainPivotBuilderBtn',
+        builderDom: { fieldList:'programAdMainDdFieldList', filterBar:'programAdMainDdFilterBar', filters:'programAdMainDdWellFilterBody', columns:'programAdMainDdWellColumnsBody', rows:'programAdMainDdWellRowsBody', values:'programAdMainDdWellValuesBody' },
+        dom: { head1: 'programAdMainPivotHeaderRow1', head2: 'programAdMainPivotHeaderRow2', body: 'programAdMainPivotTableBody', total: 'programAdMainPivotTotalAmount' },
+      },
+
+      // 상세 피벗 — 차트에서 항목을 눌러 들어온 지표(programAdDetailMetric) 하나를 장르→프로그램 트리로 본다.
+      // 값 필드가 진입 지표에 따라 달라서 values를 getter로 둔다: 최초 구성과 '↺ 원래대로'가 항상 현재 지표를 가리킨다
+      // (openProgramAdDetail이 진입할 때 구성을 새로 만든다).
+      programAdDetail: {
+        rows: ['genre', 'program'],
+        rowFallbacks: ['(미지정)', '(미지정)'],
+        fieldSorters: { genre: 'genreOrder', program: 'valueDesc' },
+        fieldOrderSorters: { genre: 'genreOrder' },
+        escapeLabels: true,
+        columns: ['year', 'month'],
+        get values() { return [programAdDetailValueDef()]; },
+        sourceFilter: null,
+        dataSource: () => programAdDetailDataForPivot(),
+        filterBarCoveredFields: ['genre', 'program'],
+        columnDefaultExpanded: true,
+        subtotalDepths: [0],
+        toggleDepth: 0,
+        depthStyles: PV_STYLE_TREE,
+        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
+        totalStyle: PV_TOTAL_STYLE_TREE,
+        header: PV_HEADER_TREE,
+        grandTotal: PV_GRAND_TREE,
+        expandedRows: () => expandedProgramAdDetailPivot,
+        expandedCols: () => expandedProgramAdDetailYearColumns,
+        render: () => renderProgramAdPivot('programAdDetail'),
+        resetBtn: 'programAdDetailPivotResetBtn',
+        layoutId: 'programAdDetailPivotSection', builderBtn: 'programAdDetailPivotBuilderBtn',
+        builderDom: { fieldList:'programAdDetailDdFieldList', filterBar:'programAdDetailDdFilterBar', filters:'programAdDetailDdWellFilterBody', columns:'programAdDetailDdWellColumnsBody', rows:'programAdDetailDdWellRowsBody', values:'programAdDetailDdWellValuesBody' },
+        dom: { head1: 'programAdDetailPivotHeaderRow1', head2: 'programAdDetailPivotHeaderRow2', body: 'programAdDetailPivotTableBody', total: 'programAdDetailPivotTotalAmount' },
+        parentView: 'programAdMain',
+      },
     };
 
     // 목표 피벗의 빌더 패널에 내보내는 필드. 목표가 이 축들로만 편성돼 있어서 이 밖은 놓을 수 없다.
@@ -1023,6 +1113,10 @@
     // 행에 metricsGenreQualifyingBandDataForPivot()(metrics-ratings.js)가 구간(band) 필드 하나만 얹어
     // 넘긴다. avgRating 대신 band를 노출해 사용자가 표편집에서 구간을 행/열/필터로 옮길 수 있게 한다.
     const PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS = ['channel', 'program', 'genre', 'band', 'year', 'month'];
+    // 프로그램별 광고매출 두 피벗 전용(programAdMain/programAdDetail) — programAdRows의 실제 필드. 축 5개 + 값 8개
+    // (매출 5종·전체매출·GRPs 2종, 전부 값 well 전용 — detail-data.js DD_VALUE_ONLY_FIELDS).
+    const PV_PROGRAM_AD_FIELDS = ['genre', 'program', 'channel', 'year', 'month',
+      'revTotal', 'revPackage', 'revGeneralGrps', 'revInfomercial', 'revImc', 'revOther', 'grp2049', 'grpHousehold'];
 
     // 뷰별 필드 화이트리스트(빌더 목록에 이 순서로 나오고, 드롭도 이것만 받는다).
     const PV_FIELD_WHITELIST = {
@@ -1034,6 +1128,7 @@
       metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
       metricsGenreQualifyingBarPivot: PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS,
+      programAdMain: PV_PROGRAM_AD_FIELDS, programAdDetail: PV_PROGRAM_AD_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)
@@ -1063,7 +1158,7 @@
         ['value:desc', '값 큰 순'], ['value:asc', '값 작은 순'],
         ['label:asc', isYm ? '오름차순' : '이름 오름차순'], ['label:desc', isYm ? '내림차순' : '이름 내림차순'],
       ];
-      if (PV_FIELD_ORDER_SORTER[field]) items.push(['preset:asc', '기본 순서'], ['preset:desc', '기본 순서 역순']);
+      if (pvOrderSorterName(PIVOT_PRESETS[viewKey], field)) items.push(['preset:asc', '기본 순서'], ['preset:desc', '기본 순서 역순']);
       return pvShowMenu(ev, `${detailDataFieldLabel(field)} 정렬`,
         items.map(([v, t]) => [t, v === cur, `pvPickRowSort('${viewKey}','${pvEsc(field)}','${v}')`]));
     }
@@ -1240,6 +1335,7 @@
       if (format === 'percent') return (value === null || value === undefined || !isFinite(value)) ? '-' : value.toFixed(1) + '%';
       if (format && typeof format === 'object') {
         if (value === null || value === undefined || !isFinite(value)) return '-';
+        if (format.zeroDash && !value) return '-'; // programAd 서식 전용 옵트인 — 0은 값 없음으로 본다
         return (value * format.multiplier).toLocaleString(undefined, { minimumFractionDigits: format.decimals, maximumFractionDigits: format.decimals }) + (format.suffix || '');
       }
       // 값이 없을 때만 대시. **음수를 대시로 감추지 않는다** — 회계조정은 음수인 경우가 많아서,
@@ -1254,6 +1350,11 @@
     // 채널은 편성 순서를 그대로 따라가야 하기 때문이다. 프리셋에 없는 필드는 값 내림차순.
     // 필드가 스스로 갖는 고정 순서(프리셋과 무관하다 — 부서는 어디서나 팀 번호순이다).
     const PV_FIELD_ORDER_SORTER = { dept: 'deptOrder', categoryReclassified: 'categoryOrder', channel: 'channelOrder', scope: 'scopeOrder' };
+    // 필드의 '기본 순서' 정렬자 이름. 프리셋이 fieldOrderSorters로 자기 필드(programAd의 장르 등)만 더 얹을 수 있다 —
+    // 전역 표(PV_FIELD_ORDER_SORTER)에 넣으면 같은 이름의 필드를 쓰는 다른 프리셋 메뉴까지 바뀐다.
+    function pvOrderSorterName(preset, field) {
+      return (preset && preset.fieldOrderSorters && preset.fieldOrderSorters[field]) || PV_FIELD_ORDER_SORTER[field];
+    }
     function pvRowSorterFor(preset, field, cfg) {
       // 이름순은 **필드를 아는** 비교자로 만든다. 연·월을 문자로 비교하면 1, 10, 11, 12, 2… 가 된다.
       const byLabel = (dir) => (a, b) => pvCompareFieldValues(field, a, b, dir === 'desc' ? 'desc' : 'asc');
@@ -1262,8 +1363,8 @@
         const flip = (fn) => (a, b, ta, tb) => -fn(a, b, ta, tb);
         if (s.by === 'value') return s.dir === 'asc' ? PV_ROW_SORTERS.valueAsc : PV_ROW_SORTERS.valueDesc;
         if (s.by === 'label') return byLabel(s.dir);
-        if (s.by === 'preset' && PV_FIELD_ORDER_SORTER[field]) {
-          const base = PV_ROW_SORTERS[PV_FIELD_ORDER_SORTER[field]];
+        if (s.by === 'preset' && pvOrderSorterName(preset, field)) {
+          const base = PV_ROW_SORTERS[pvOrderSorterName(preset, field)];
           return s.dir === 'asc' ? base : flip(base);
         }
       }
@@ -1301,10 +1402,13 @@
         const pathKey = path.join('||');
         const isExpanded = !!expandedRows[pathKey];
         const st = preset.depthStyles[Math.min(depth, preset.depthStyles.length - 1)];
-        const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('${preset.key}','${pvEsc(pathKey)}')">${isExpanded ? '-' : '+'}</span>` : '';
+        // escapeLabels(프리셋 옵트인): 라벨은 HTML 텍스트로, 토글 키는 속성 안에서 안전하게. 미지정 프리셋은 기존과 동일.
+        const keyArg = preset.escapeLabels ? pvEscHtml(pvEsc(pathKey)) : pvEsc(pathKey);
+        const toggle = hasMore ? `<span class="toggle-icon" onclick="togglePvRowNode('${preset.key}','${keyArg}')">${isExpanded ? '-' : '+'}</span>` : '';
         const trClass = st.rowClass ? ` class="${st.rowClass}"` : '';
         // 표시용 이름만 바꾼다 — 접힘 상태 키(pathKey)는 원래 값 그대로여야 한다.
-        const shown = pvFormatFieldValue(rowFields[depth], k);
+        const shownRaw = pvFormatFieldValue(rowFields[depth], k);
+        const shown = preset.escapeLabels ? pvEscHtml(shownRaw) : shownRaw;
         const label = st.labelWrap ? st.labelWrap(toggle + shown, hasMore) : (toggle + shown);
 
         // 우클릭하면 **이 레벨의 필드**에 대한 정렬 메뉴가 뜬다. 열 헤더 클릭은 전 레벨 공통이라
@@ -1360,6 +1464,9 @@
         // 전역 필터바/컨트롤바가 가리는 필드 중, 이 프리셋에서만은 실제로 안 가려지는 것들
         // (DD_FILTER_BAR_COVERED_FIELDS, detail-data.js — ddFilterBarCovers()가 참조).
         filterBarUncoveredFields: new Set(p.filterBarUncoveredFields || []),
+        // 반대로 이 프리셋의 컨트롤바가 전역 목록(DD_FILTER_BAR_COVERED_FIELDS)에 없는 필드까지 이미 가리는 경우
+        // (programAd의 장르·프로그램 검색) 그 필드도 필터 well에 놓지 못하게 막는다 — 위쪽 조건과 이중으로 걸리지 않게.
+        filterBarCoveredFields: new Set(p.filterBarCoveredFields || []),
       };
     }
     function pvBuilderCtx() { return pvBuilderCtxFor(currentView); }

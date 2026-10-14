@@ -1,7 +1,7 @@
 // ============================================================
 // js/features/program-ad.js
 // 프로그램별 광고매출 & GRPs 탭(family: 'programAd'): 컨트롤바(연/월/채널/장르/프로그램 검색) /
-// KPI 5장 / 차트 4종 / 프로그램 피벗 표(아코디언·정렬·페이지·Excel) / 항목별 상세 피벗(programAdDetail)
+// KPI 5장 / 차트 4종 / 프로그램 피벗 표(공용 엔진 programAdMain) / 항목별 상세 피벗(공용 엔진 programAdDetail) / Excel
 //
 // 기존 별도 저장소(program-ad)의 index.html·app.js 기능을 그대로 옮기고 디자인만 이 대시보드 것을 쓴다.
 // 매출·지표 탭과 완전히 독립이다 — rawData/filteredData/applyFilters/revenueBasisMode 등 매출 쪽 상태를
@@ -9,9 +9,8 @@
 // programAdFilteredRows, UI 상태는 state.js의 programAd* 변수. 전역 스코프를 공유하므로 모든 이름에
 // programAd 접두사를 붙인다.
 //
-// 피벗 엔진(pivot-builder.js)은 쓰지 않는다: 이 표는 '프로그램 단일 축 + 채널 아코디언 + 컬럼 정렬 +
-// 페이지네이션'이라는 고정 동작이고 엔진은 행 N단계×열 N단계×값 복수를 데이터 필터바(filteredData)와
-// 묶어 쓰는 구조라, 이 탭의 독립 상태와 섞이지 않게 원본 동작을 그대로 옮겼다(docs/features/program-ad.md).
+// 피벗 두 개는 공용 엔진(pivot-builder.js)의 PIVOT_PRESETS.programAdMain / programAdDetail이 그린다 — 지표 탭 피벗과
+// 같은 방식으로 dataSource만 이 탭 데이터(programAdFilteredRows)를 가리킨다(docs/features/program-ad.md).
 // ============================================================
 
     const PROGRAM_AD_CHANNEL_ORDER = ['ENA', 'ENA DRAMA', 'ENA PLAY', 'ENA STORY', 'ONCE', 'OLIFE', 'ENA SPORTS', 'CHING', 'ONT', '헬스메디TV'];
@@ -48,14 +47,10 @@
       if (v === null || v === undefined || isNaN(v) || !v) return '–';
       return Number(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
     }
-    // 피벗·표의 매출은 백만원 소수 1자리(CLAUDE.md 절대원칙 8), KPI·차트는 억원.
-    function programAdFmtMillion(won) { return programAdFmtNum(won / 1e6, 1); }
+    // KPI·차트는 억원. (피벗의 백만원 소수 1자리 서식은 엔진 쪽 PV_FMT_PROGRAM_AD_MONEY 한 곳에서 정한다.)
     function programAdFmt100M(won, d) {
       if (!won || isNaN(won)) return '0억원';
       return (won / 1e8).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '억원';
-    }
-    function programAdFmtCell(metricKey, v) {
-      return PROGRAM_AD_METRICS[metricKey].kind === 'grps' ? programAdFmtNum(v, 2) : programAdFmtMillion(v);
     }
     // 장르 정렬: 드라마&영화 → 오락 → 정보 → 나머지 가나다.
     function programAdGenreRank(genreName) {
@@ -97,10 +92,10 @@
       if (monthBox) monthBox.addEventListener('click', onPill('month'));
       ['channel', 'genre'].forEach(type => {
         const list = document.getElementById('listProgramAd' + (type === 'channel' ? 'Channel' : 'Genre') + 'Checkboxes');
-        if (list) list.addEventListener('change', () => { programAdSyncCheckboxState(type); applyProgramAdFilters(false); });
+        if (list) list.addEventListener('change', () => { programAdSyncCheckboxState(type); applyProgramAdFilters(); });
       });
       const search = document.getElementById('inputProgramAdSearch');
-      if (search) search.addEventListener('input', () => { applyProgramAdFilters(false); });
+      if (search) search.addEventListener('input', () => { applyProgramAdFilters(); });
     }
 
     // ------------------------------------------------------------
@@ -133,8 +128,7 @@
     function applyProgramAdDefaultFilters() {
       if (!programAdDataLoaded || !programAdFiltersInitialized) return;
       programAdResetToDefault();
-      programAdCurrentPage = 1;
-      applyProgramAdFilters(false);
+      applyProgramAdFilters();
     }
 
     // "필터 초기화" 버튼 — 전체 연도·전체 월·전체 채널/장르.
@@ -146,7 +140,7 @@
       const search = document.getElementById('inputProgramAdSearch');
       if (search) search.value = '';
       renderProgramAdPills();
-      applyProgramAdFilters(false);
+      applyProgramAdFilters();
     }
 
     function renderProgramAdPills() {
@@ -181,7 +175,7 @@
       }
       if (type === 'year') programAdPruneMonths();
       renderProgramAdPills();
-      applyProgramAdFilters(false);
+      applyProgramAdFilters();
     }
 
     function programAdToggleAllPills(type) {
@@ -195,7 +189,7 @@
         programAdFilterStates.month = allSel ? [] : avail;
       }
       renderProgramAdPills();
-      applyProgramAdFilters(false);
+      applyProgramAdFilters();
     }
 
     // 연도를 바꾼 뒤 데이터 없는 월은 선택에서 빼고, 하나도 안 남으면 가능한 월 전체를 고른다.
@@ -228,7 +222,7 @@
     function onProgramAdSelectAll(type, el) {
       document.querySelectorAll('.chk-programad-' + type).forEach(c => { c.checked = el.checked; });
       programAdSyncCheckboxState(type);
-      applyProgramAdFilters(false);
+      applyProgramAdFilters();
     }
 
     // 체크박스 → 상태 + 라벨 + 전체선택 체크 동기화.
@@ -250,7 +244,7 @@
     // ------------------------------------------------------------
     // 필터 적용 → 현재 화면 다시 그리기
     // ------------------------------------------------------------
-    function applyProgramAdFilters(preservePage) {
+    function applyProgramAdFilters() {
       const st = programAdFilterStates;
       const search = (document.getElementById('inputProgramAdSearch').value || '').trim().toLowerCase();
       programAdProgramSearch = search;
@@ -262,10 +256,9 @@
         if (search && !r.program.toLowerCase().includes(search)) return false;
         return true;
       });
-      if (!preservePage) programAdCurrentPage = 1;
       applyChartAnimDuration();
       if (currentView === 'programAdMain') renderProgramAdContent();
-      else if (currentView === 'programAdDetail') renderProgramAdDetailTable();
+      else if (currentView === 'programAdDetail') renderProgramAdPivot('programAdDetail');
     }
 
     // 데이터가 아직 없으면 지연 로딩을 시작하고 false. 끝나면 현재 화면을 다시 그린다.
@@ -302,13 +295,13 @@
       loadingEl.style.display = 'none'; errorEl.style.display = 'none'; bodyEl.style.display = 'flex';
       initProgramAdFilters();
       renderProgramAdDataAsOfLabel();
-      applyProgramAdFilters(true);
+      applyProgramAdFilters();
     }
 
     function renderProgramAdContent() {
       renderProgramAdKpis();
       renderProgramAdCharts();
-      renderProgramAdTable();
+      renderProgramAdPivot('programAdMain');
     }
 
     function renderProgramAdKpis() {
@@ -326,6 +319,9 @@
     // ------------------------------------------------------------
     function openProgramAdDetail(metricKey) {
       programAdDetailMetric = metricKey;
+      // 진입 지표가 바뀌면 값 필드가 달라지므로 표 구성(값·축·정렬)과 행 펼침을 처음 모양으로 되돌린다.
+      pvResetConfig('programAdDetail');
+      Object.keys(expandedProgramAdDetailPivot).forEach(k => { delete expandedProgramAdDetailPivot[k]; });
       switchView('programAdDetail');
     }
 
@@ -462,200 +458,83 @@
     }
 
     // ------------------------------------------------------------
-    // 프로그램 피벗 표 (채널·장르·프로그램 그룹 → 채널별 아코디언)
+    // 피벗 두 개 — 공용 엔진(pivot-builder.js)의 PIVOT_PRESETS.programAdMain(본표) / programAdDetail(상세)
+    //
+    // 지표 탭 피벗(metricsRevenueTrendPivot 등)과 같은 방식이다. 프리셋의 dataSource가 매출 쪽 전역이 아니라 이
+    // 탭의 programAdRows를 컨트롤바(연/월/채널/장르/프로그램 검색)로 좁힌 결과를 읽는다. 컨트롤바에 있는 조건은
+    // 여기(위쪽)에서만 걸고, 빌더의 필터 well에는 놓을 수 없게 막아 이중으로 걸리지 않는다.
+    // 프리셋 키가 곧 뷰 키(programAdMain/programAdDetail)여야 빌더 드래그앤드롭이 동작한다.
     // ------------------------------------------------------------
-    const PROGRAM_AD_TABLE_COLS = [
-      { key: 'channel', label: '채널', text: true },
-      { key: 'genre', label: '장르', text: true },
-      { key: 'prog', label: '프로그램', text: true },
-      { key: 'grps2049', label: '2049 GRPs', metric: 'grps2049' },
-      { key: 'grpsHh', label: '가구 GRPs', metric: 'grpsHh' },
-      { key: 'pkg', label: '패키지', metric: 'pkg' },
-      { key: 'gen', label: 'GRPs기여', metric: 'gen' },
-      { key: 'info', label: '인포', metric: 'info' },
-      { key: 'imc', label: 'IMC', metric: 'imc' },
-      { key: 'oth', label: '기타', metric: 'oth' },
-      { key: 'tot', label: '전체매출', metric: 'tot' }
-    ];
-
-    function sortProgramAdTable(col) {
-      if (programAdSortCol === col) programAdSortDir = programAdSortDir === 'desc' ? 'asc' : 'desc';
-      else { programAdSortCol = col; programAdSortDir = (col === 'channel' || col === 'genre' || col === 'prog') ? 'asc' : 'desc'; }
-      renderProgramAdTable();
+    // 지금 그려지는 값(빌더 구성의 첫 값, 값 well이 비면 프리셋 기본값)이 합계(sum)이면 그 필드가 0인 행은 뺀다 —
+    // 0은 합에 영향이 없고, 빼지 않으면 해당 지표가 없는 프로그램이 `-` 행으로 줄줄이 나온다. 평균·개수는 0 행이
+    // 결과를 바꾸므로 거르지 않는다. 사용자가 값 well에서 필드를 바꾸면 그 필드 기준으로 따라간다.
+    function programAdCurrentValueDef(viewKey) {
+      const cfg = pvConfigFor(viewKey);
+      return cfg.values[0] || PIVOT_PRESETS[viewKey].values[0];
     }
-    function changeProgramAdPage(d) { programAdCurrentPage += d; renderProgramAdTable(); }
-    function toggleProgramAdRow(i) {
-      document.querySelectorAll(`.programad-child-row[data-pa-row="${i}"]`).forEach(r => r.classList.toggle('open'));
-      const icon = document.getElementById('programAdToggleIcon' + i);
-      if (icon) icon.innerText = icon.innerText === '▶' ? '▼' : '▶';
+    function programAdPivotRows(viewKey) {
+      const v = programAdCurrentValueDef(viewKey);
+      if (!v || v.agg !== 'sum') return programAdFilteredRows;
+      const f = v.field;
+      return programAdFilteredRows.filter(r => r[f]);
+    }
+    function programAdMainDataForPivot() { return programAdPivotRows('programAdMain'); }
+    function programAdDetailDataForPivot() { return programAdPivotRows('programAdDetail'); }
+
+    // 상세 피벗의 값 정의 — 차트에서 들어온 지표의 필드(장르 차트는 전체매출). 프리셋의 values getter가 부른다.
+    function programAdDetailValueDef() {
+      const key = programAdDetailMetric === 'genre' ? 'tot' : programAdDetailMetric;
+      const field = PROGRAM_AD_METRICS[key].field;
+      return { field, agg: 'sum', format: PV_VALUE_FORMAT_BY_FIELD[field] };
     }
 
-    // 프로그램별 합산 + 채널별 하위 합산
-    function programAdAggregateByProgram(rows) {
-      const map = new Map();
-      rows.forEach(d => {
-        let p = map.get(d.program);
-        if (!p) { p = { prog: d.program, genre: d.genre, channel: d.channel, grps2049: 0, grpsHh: 0, pkg: 0, gen: 0, info: 0, imc: 0, oth: 0, tot: 0, chs: new Map() }; map.set(d.program, p); }
-        let c = p.chs.get(d.channel);
-        if (!c) { c = { ch: d.channel, grps2049: 0, grpsHh: 0, pkg: 0, gen: 0, info: 0, imc: 0, oth: 0, tot: 0 }; p.chs.set(d.channel, c); }
-        [p, c].forEach(o => {
-          o.grps2049 += d.grp2049; o.grpsHh += d.grpHousehold; o.pkg += d.revPackage; o.gen += d.revGeneralGrps;
-          o.info += d.revInfomercial; o.imc += d.revImc; o.oth += d.revOther; o.tot += d.revTotal;
-        });
-      });
-      return Array.from(map.values());
+    function programAdMetricByField(field) {
+      return Object.values(PROGRAM_AD_METRICS).find(m => m.field === field) || null;
     }
 
-    function renderProgramAdTable() {
-      const data = programAdAggregateByProgram(programAdFilteredRows);
-      const col = programAdSortCol, dir = programAdSortDir;
-      data.sort((a, b) => {
-        let va, vb;
-        if (col === 'channel') { va = a.channel || ''; vb = b.channel || ''; }
-        else if (col === 'genre') { va = a.genre || ''; vb = b.genre || ''; }
-        else if (col === 'prog') { va = a.prog || ''; vb = b.prog || ''; }
-        else { va = a[col] || 0; vb = b[col] || 0; }
-        if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb, 'ko') : vb.localeCompare(va, 'ko');
-        return dir === 'asc' ? va - vb : vb - va;
-      });
-
-      // 헤더 — 정렬 아이콘 + 항목 색 점(색은 테마별 PAC()). 테마 전환 시 화면이 다시 그려지므로 색도 따라온다.
-      let head = '<tr>';
-      PROGRAM_AD_TABLE_COLS.forEach(c => {
-        const active = programAdSortCol === c.key;
-        const icon = active ? (programAdSortDir === 'asc' ? '▲' : '▼') : '↕';
-        const dot = (c.metric && c.metric !== 'tot') ? `<span class="programad-dot" style="background:${PAC(c.metric)};"></span>` : '';
-        head += `<th data-pvsort="${c.key}" onclick="sortProgramAdTable('${c.key}')" style="${c.text ? 'text-align:left;' : 'text-align:right;'}">${dot}${c.label} <span style="${active ? 'color:var(--primary-blue);' : 'opacity:0.55;'}">${icon}</span></th>`;
-      });
-      head += '</tr>';
-      document.getElementById('programAdTableHead').innerHTML = head;
-
-      const totalPages = Math.ceil(data.length / PROGRAM_AD_PAGE_SIZE) || 1;
-      if (programAdCurrentPage > totalPages) programAdCurrentPage = totalPages;
-      if (programAdCurrentPage < 1) programAdCurrentPage = 1;
-      const start = (programAdCurrentPage - 1) * PROGRAM_AD_PAGE_SIZE;
-      const pageData = data.slice(start, start + PROGRAM_AD_PAGE_SIZE);
-
-      const numCells = (o, bold) => PROGRAM_AD_TABLE_COLS.slice(3).map(c =>
-        `<td class="programad-num" style="${bold && (c.key === 'tot' || c.key === 'pkg') ? 'font-weight:600;' : ''}">${programAdFmtCell(c.metric, o[c.key])}</td>`).join('');
-      let html = '';
-      if (!pageData.length) html = '<tr><td colspan="11" style="text-align:center; padding:24px;">데이터가 없습니다.</td></tr>';
-      else pageData.forEach((row, i) => {
-        const chList = Array.from(row.chs.values());
-        const chText = chList.length > 1 ? `${chList[0].ch} 등` : chList[0].ch;
-        html += `<tr class="programad-parent-row" onclick="toggleProgramAdRow(${i})">
-          <td><span class="toggle-icon" id="programAdToggleIcon${i}">▶</span><strong>${programAdEscapeHtml(programAdLabel(chText))}</strong></td>
-          <td>${programAdEscapeHtml(programAdLabel(row.genre))}</td><td><strong>${programAdEscapeHtml(programAdLabel(row.prog))}</strong></td>${numCells(row, true)}</tr>`;
-        chList.forEach(ch => {
-          html += `<tr class="programad-child-row" data-pa-row="${i}">
-            <td style="color:var(--text-secondary); padding-left:36px;">└ ${programAdEscapeHtml(programAdLabel(ch.ch))}</td><td></td><td></td>${numCells(ch, false)}</tr>`;
-        });
-      });
-      document.getElementById('programAdTableBody').innerHTML = html;
-      document.getElementById('programAdPageInfo').innerText = `${data.length ? start + 1 : 0} - ${Math.min(start + PROGRAM_AD_PAGE_SIZE, data.length)} / 총 ${data.length.toLocaleString('ko-KR')}건`;
-      document.getElementById('btnProgramAdPrevPage').disabled = programAdCurrentPage <= 1;
-      document.getElementById('btnProgramAdNextPage').disabled = programAdCurrentPage >= totalPages;
+    // 표 위 "합계 : 전체매출 (백만원)" 문구 — 값 well에서 필드·집계를 바꾸면 따라 바뀐다.
+    function programAdValueCaption(v) {
+      if (!v) return '합계';
+      const label = detailDataFieldLabel(v.field);
+      if (v.agg === 'count' || v.agg === 'distinct') return `${DETAIL_DATA_AGG_LABELS[v.agg]} : ${label} (건)`;
+      const m = programAdMetricByField(v.field);
+      return `${v.agg === 'avg' ? '평균' : '합계'} : ${label} (${m && m.kind === 'grps' ? 'GRPs' : '백만원'})`;
     }
 
-    // ------------------------------------------------------------
-    // 항목별 상세 피벗 (programAdDetail) — 프로그램(또는 장르 → 프로그램) × 연도(펼치면 월) 값
-    // ------------------------------------------------------------
-    function toggleProgramAdPivotYear(year) {
-      programAdExpandedYears[year] = !programAdExpandedYears[year];
-      renderProgramAdDetailTable();
-    }
-    function toggleProgramAdGenreGroup(i) {
-      document.querySelectorAll(`.programad-child-row[data-pa-row="g${i}"]`).forEach(r => r.classList.toggle('open'));
-      const icon = document.getElementById('programAdGenreIcon' + i);
-      if (icon) icon.innerText = icon.innerText === '▶' ? '▼' : '▶';
+    // 엔진이 그린 뒤 이 탭에만 있는 보조 요소(합계 문구·상세 제목·빈 데이터 안내)를 채운다.
+    // 프리셋의 render가 이 함수라서 토글·정렬·빌더 조작 등 엔진이 다시 그리는 모든 경로를 거친다.
+    function renderProgramAdPivot(viewKey) {
+      const preset = PIVOT_PRESETS[viewKey];
+      renderPresetPivot(viewKey);
+      const captionEl = document.getElementById(viewKey + 'PivotTotalLabel');
+      if (captionEl) captionEl.innerText = programAdValueCaption(programAdCurrentValueDef(viewKey)); // 값 well이 비면 실제로 그려진 기본값 이름
+      if (viewKey === 'programAdDetail') renderProgramAdDetailTitle();
+      if (!preset.dataSource().length) {
+        document.getElementById(preset.dom.body).innerHTML =
+          '<tr><td colspan="100" style="text-align:center; color:var(--text-tertiary); padding:40px;">선택된 조건에 해당하는 데이터가 없습니다.</td></tr>';
+      }
     }
 
+    function renderProgramAdDetailTitle() {
+      const key = programAdDetailMetric;
+      const valueKey = key === 'genre' ? 'tot' : key;
+      const dot = (key !== 'genre' && valueKey !== 'tot') ? `<span class="programad-dot" style="background:${PAC(valueKey)}; width:10px; height:10px;"></span>` : '';
+      document.getElementById('programAdDetailTitle').innerHTML = dot + programAdEscapeHtml(PROGRAM_AD_DETAIL_TITLES[key] || '매출 상세 분석');
+    }
+
+    // VIEW_CONFIG.programAdDetail.render()의 진입점 (view-router.js)
     function renderProgramAdDetail() {
-      const errorEl = document.getElementById('programAdDetailTable');
+      const bodyEl = document.getElementById('programAdDetailPivotTableBody');
       if (!programAdDataLoaded) {
-        errorEl.innerHTML = '<tbody><tr><td style="padding:40px; text-align:center;">데이터를 불러오는 중입니다…</td></tr></tbody>';
+        bodyEl.innerHTML = '<tr><td style="padding:40px; text-align:center;">데이터를 불러오는 중입니다…</td></tr>';
         fetchProgramAdDataHttp()
           .then(() => { if (currentView === 'programAdDetail') renderProgramAdDetail(); })
-          .catch(err => { errorEl.innerHTML = `<tbody><tr><td style="padding:40px; text-align:center; color:var(--accent-red);">${programAdEscapeHtml('데이터를 불러오지 못했습니다: ' + (err && err.message ? err.message : err))}</td></tr></tbody>`; });
+          .catch(err => { bodyEl.innerHTML = `<tr><td style="padding:40px; text-align:center; color:var(--accent-red);">${programAdEscapeHtml('데이터를 불러오지 못했습니다: ' + (err && err.message ? err.message : err))}</td></tr>`; });
         return;
       }
       initProgramAdFilters();
       renderProgramAdDataAsOfLabel();
-      applyProgramAdFilters(true); // 현재 필터로 programAdFilteredRows를 만들고 renderProgramAdDetailTable()까지 호출
-    }
-
-    function renderProgramAdDetailTable() {
-      const key = programAdDetailMetric;
-      const isGenre = key === 'genre';
-      const valueKey = isGenre ? 'tot' : key;
-      const field = PROGRAM_AD_METRICS[valueKey].field;
-      const titleEl = document.getElementById('programAdDetailTitle');
-      const dot = isGenre ? '' : (valueKey !== 'tot' ? `<span class="programad-dot" style="background:${PAC(valueKey)}; width:10px; height:10px;"></span>` : '');
-      titleEl.innerHTML = dot + programAdEscapeHtml(PROGRAM_AD_DETAIL_TITLES[key] || '매출 상세 분석');
-
-      // 값이 0인 행은 제외(원본과 동일) → 연도/월 목록도 값이 있는 것만 나온다.
-      const ymMonths = {};      // year → Set(month)
-      const progMap = {};       // program → { total, years: { y: { total, m: {month: v} } } }
-      const genreMap = {};      // genre → { total, programs: { prog: same shape } }
-      programAdFilteredRows.forEach(d => {
-        const v = d[field]; if (!v) return;
-        (ymMonths[d.year] || (ymMonths[d.year] = new Set())).add(d.month);
-        const add = (node) => {
-          node.total += v;
-          const y = node.years[d.year] || (node.years[d.year] = { total: 0, m: {} });
-          y.total += v; y.m[d.month] = (y.m[d.month] || 0) + v;
-        };
-        const pNode = (map, name) => map[name] || (map[name] = { total: 0, years: {} });
-        if (isGenre) {
-          const g = genreMap[d.genre] || (genreMap[d.genre] = { total: 0, years: {}, programs: {} });
-          add(g); add(pNode(g.programs, d.program));
-        } else add(pNode(progMap, d.program));
-      });
-
-      const years = Object.keys(ymMonths).map(Number).sort((a, b) => b - a);
-      const monthsOf = {};
-      years.forEach(y => { monthsOf[y] = [...ymMonths[y]].sort((a, b) => a - b); });
-      const fmt = (v) => programAdFmtCell(valueKey, v);
-      const cellStyle = (v) => v > 0 ? '' : 'color:var(--text-tertiary);';
-
-      let h1 = `<tr><th rowspan="2" style="text-align:left;">${isGenre ? '장르 / 프로그램' : '프로그램'}</th>`;
-      let h2 = '<tr>';
-      years.forEach(y => {
-        const exp = !!programAdExpandedYears[y];
-        h1 += `<th colspan="${exp ? monthsOf[y].length + 1 : 1}" class="pv-th-summary" style="cursor:pointer;" onclick="toggleProgramAdPivotYear(${y})"><span class="year-toggle-btn">${exp ? '−' : '+'}</span> ${y}년</th>`;
-        if (exp) monthsOf[y].forEach(m => { h2 += `<th>${m}월</th>`; });
-        h2 += '<th class="pv-th-summary">연간합계</th>';
-      });
-      h1 += '<th rowspan="2" class="pv-th-total">전체 총합계</th></tr>'; h2 += '</tr>';
-
-      const cells = (node) => {
-        let s = '';
-        years.forEach(y => {
-          const yn = node.years[y];
-          if (programAdExpandedYears[y]) monthsOf[y].forEach(m => { const v = yn && yn.m[m] ? yn.m[m] : 0; s += `<td class="programad-num" style="${cellStyle(v)}">${fmt(v)}</td>`; });
-          const yt = yn ? yn.total : 0;
-          s += `<td class="programad-num" style="font-weight:600; ${cellStyle(yt)}">${fmt(yt)}</td>`;
-        });
-        return s + `<td class="programad-num" style="font-weight:600;">${fmt(node.total)}</td>`;
-      };
-
-      let body = '';
-      if (isGenre) {
-        const genres = Object.keys(genreMap).sort((a, b) => { const r = programAdGenreRank(a) - programAdGenreRank(b); return r !== 0 ? r : genreMap[b].total - genreMap[a].total; });
-        if (!genres.length) body = '<tr><td colspan="100" style="text-align:center; padding:40px;">선택된 조건에 해당하는 장르 데이터가 없습니다.</td></tr>';
-        genres.forEach((g, gi) => {
-          const gn = genreMap[g];
-          body += `<tr class="programad-parent-row" onclick="toggleProgramAdGenreGroup(${gi})"><td><span class="toggle-icon" id="programAdGenreIcon${gi}">▶</span><strong>[장르] ${programAdEscapeHtml(programAdLabel(g))}</strong></td>${cells(gn)}</tr>`;
-          Object.keys(gn.programs).sort((a, b) => gn.programs[b].total - gn.programs[a].total).forEach(p => {
-            body += `<tr class="programad-child-row" data-pa-row="g${gi}"><td style="color:var(--text-secondary); padding-left:36px;">└ ${programAdEscapeHtml(programAdLabel(p))}</td>${cells(gn.programs[p])}</tr>`;
-          });
-        });
-      } else {
-        const progs = Object.keys(progMap).sort((a, b) => progMap[b].total - progMap[a].total);
-        if (!progs.length) body = '<tr><td colspan="100" style="text-align:center; padding:40px;">선택된 조건에 해당하는 데이터가 없습니다.</td></tr>';
-        progs.forEach(p => { body += `<tr><td><strong>${programAdEscapeHtml(programAdLabel(p))}</strong></td>${cells(progMap[p])}</tr>`; });
-      }
-      document.getElementById('programAdDetailTable').innerHTML = `<thead>${h1}${h2}</thead><tbody>${body}</tbody>`;
+      applyProgramAdFilters(); // 현재 필터로 programAdFilteredRows를 만들고 상세 피벗까지 그린다
     }
 
     // ------------------------------------------------------------
@@ -673,12 +552,4 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(out), '월별_광고실적_상세');
       XLSX.writeFile(wb, `KT_ENA_프로그램별_광고매출_월별실적_${programAdToday()}.xlsx`);
-    }
-
-    function exportProgramAdDetailToExcel() {
-      const table = document.getElementById('programAdDetailTable');
-      if (!table || table.rows.length === 0) { alert('다운로드할 피벗 데이터가 없습니다.'); return; }
-      const wb = XLSX.utils.table_to_book(table, { raw: true });
-      const title = (document.getElementById('programAdDetailTitle').innerText || '피벗_상세분석').trim();
-      XLSX.writeFile(wb, `KT_ENA_${title}_${programAdToday()}.xlsx`);
     }
