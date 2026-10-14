@@ -533,3 +533,61 @@ alter table program_ratings_monthly enable row level security;
 
 revoke all on program_ratings_monthly from anon, authenticated;
 grant select, insert, update on program_ratings_monthly to service_role;
+
+-- ------------------------------------------------------------
+-- 10. program_ad_sales — 프로그램별 광고매출 대시보드(program-ad 저장소에서 통합)
+--
+-- scripts/etl/load-program-ad.mjs가 data.xlsx(Sheet2: 월/채널/장르/프로그램 + 5개 매출 + GRPs 2종)를
+-- upsert로만 채운다(배치/컷오버 없음 — load-program-ratings.mjs와 같은 방식).
+--
+-- 매출 5분류(패키지/GRPs기여/인포머셜/IMC/기타)는 addata의 5대분류(일반/IMC/인포머셜/큐톤/기타)와
+-- 기준이 달라 합산·대조하지 않는다 — 독립 탭이다(2026-10-14, 사용자 확정). 그래서 v_bonbu_sales와
+-- 연결하지 않고 이 테이블 하나만 쓴다. 금액 단위는 원.
+--
+-- 프로그램명은 적재 전에 정제(괄호·'스페셜'·'패키지' 등 접미사 제거)한 뒤 같은 키로 합산한다 —
+-- 기존 program-ad/app.js(cleanProgramName + aggMap)와 동일한 규칙이라, 원본에서 별개 행이던
+-- 것이 정제 후 한 행으로 합쳐진다(실측: 19,085행 → 17,874행). 원본 행은 보존하지 않는다.
+-- ------------------------------------------------------------
+create table if not exists program_ad_sales (
+  id               bigint generated always as identity primary key,
+  year             int  not null,
+  month            int  not null,
+  channel          text not null,
+  genre            text not null,
+  program          text not null,
+  rev_package      numeric not null default 0,  -- 일반광고(패키지)
+  rev_general_grps numeric not null default 0,  -- 일반광고(GRPs기여)
+  rev_infomercial  numeric not null default 0,  -- 인포머셜
+  rev_imc          numeric not null default 0,  -- IMC
+  rev_other        numeric not null default 0,  -- 기타광고
+  grp_2049         numeric not null default 0,
+  grp_household    numeric not null default 0,
+  updated_at       timestamptz not null default now(),
+  unique (year, month, channel, genre, program)
+);
+
+alter table program_ad_sales enable row level security;
+-- 정책 없음 — 다른 base table과 동일하게 anon/authenticated 전부 차단, service_role만 접근.
+-- 브라우저 노출은 /api/program-ad 프록시(requireTabAccess('programAd'))를 통해서만.
+
+revoke all on program_ad_sales from anon, authenticated;
+grant select, insert, update on program_ad_sales to service_role;
+
+-- ------------------------------------------------------------
+-- 11. profiles.allowed_tabs — 탭 단위 열람 권한
+--
+-- RLS가 아니라 프록시에서 강제한다: 브라우저는 Supabase를 직접 조회하지 않고 Pages Functions가
+-- service_role로 대신 조회하므로(RLS 우회) RLS로는 탭을 막을 수 없다. 프록시가 JWT의 sub로 이
+-- 컬럼을 조회해 403을 낸다(shared/supabase-proxy.mjs의 requireTabAccess).
+--
+-- 탭 키: sales(매출) / metrics(지표) / programAd(프로그램별 광고매출).
+-- 기본값은 sales+metrics — 기존 사용자는 지금과 똑같이 보이고 programAd만 명시 부여한다.
+-- 세 탭 모두 서버에서 강제한다(2026-10-14, 사용자 확정: 프로그램별 광고매출은 기존 두 탭과
+-- 완전히 독립 — programAd만 가진 사용자는 매출·지표 데이터를 받을 수 없어야 한다). profiles 행이
+-- 없으면 기본값(sales+metrics)으로 취급한다 — 지금 열려 있는 두 탭은 그대로 열리고 programAd만
+-- 닫힌다. profiles 조회 자체가 실패하면 요청을 거부한다(503) — 기본값으로 열면 제한 계정이 일시
+-- 장애 중에 매출 데이터를 받는다. 지표 탭은 프론트가 'sales'도 함께 요구한다(ENA 매출 치환에
+-- 매출 데이터가 필요, js/core/auth.js). 값은 scripts/etl/provision-auth-users.mjs가 name.xlsx의
+-- '매출'/'지표'/'프로그램' 컬럼에서 채운다.
+-- ------------------------------------------------------------
+alter table profiles add column if not exists allowed_tabs text[] not null default '{sales,metrics}';

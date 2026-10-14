@@ -34,8 +34,8 @@
     // VIEW OPENERS & TOGGLERS
     // ==========================================================================
     function hideAllViews() { document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active')); }
-    // family: 'sales'(기존 매출 대시보드 15개 뷰) | 'metrics'(지표 대시보드 2개 뷰).
-    // switchView()가 이 값으로 상단 탭 강조와 filter-bar 표시 여부를 정한다(지표 탭은 자기 컨트롤바를 쓴다).
+    // family: 'sales'(기존 매출 대시보드 15개 뷰) | 'metrics'(지표 대시보드 2개 뷰) | 'programAd'(프로그램별 광고매출 2개 뷰).
+    // switchView()가 이 값으로 상단 탭 강조와 filter-bar 표시 여부를 정한다(지표·programAd 탭은 각자 컨트롤바를 쓴다).
     const VIEW_CONFIG = {
       main: { containerId: 'mainDashboardView', title: '광고사업본부 매출 분석 대시보드', showBreadcrumb: false, family: 'sales', render: () => { applyFilters(); } },
       category: { containerId: 'categoryPivotView', title: '항목별 (대·중·소분류) 월별 분석', showBreadcrumb: true, family: 'sales', render: () => renderCategoryPivotTable() },
@@ -80,26 +80,60 @@
       // 문제로 다른 8개와 동일한 renderMetricsPivotView() 경로로 되돌아왔다(2026-09-17).
       metricsGenreQualifyingBarPivot: { containerId: 'metricsGenreQualifyingBarPivotView', title: '1%↑ 시청률 프로그램 수 (채널별) — 구간별 분포 — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingBarPivot') },
       metricsGenreQualifyingTrendPivot: { containerId: 'metricsGenreQualifyingTrendPivotView', title: '1%↑ 시청률 프로그램 수 (월별 추이) — 피벗 상세', showBreadcrumb: true, family: 'metrics', parentView: 'metricsMain', render: () => renderMetricsPivotView('metricsGenreQualifyingTrendPivot') },
+      // --- 프로그램별 광고매출(js/features/program-ad.js) ---------------------------------
+      // 매출·지표 탭과 완전히 독립 — 자기 컨트롤바(.programad-control-bar)·상태 칩·데이터셋을 쓴다.
+      programAdMain: { containerId: 'programAdMainView', title: '프로그램별 광고매출 & GRPs', showBreadcrumb: false, family: 'programAd', render: () => renderProgramAdMain() },
+      programAdDetail: { containerId: 'programAdDetailView', title: '프로그램별 광고매출 — 상세 피벗', showBreadcrumb: true, family: 'programAd', parentView: 'programAdMain', render: () => renderProgramAdDetail() },
     };
+
+    // 탭(family)별 접근 권한 — js/core/auth.js가 /api/me로 채운 salesAccessAllowed/metricsAccessAllowed/
+    // programAdAccessAllowed를 본다. 헤더 버튼 숨김은 콘솔로 우회할 수 있으므로 여기가 UX상 방어선이고,
+    // 진짜 방어선은 서버 403(shared/supabase-proxy.mjs requireTabAccess)이다.
+    function isFamilyAccessAllowed(family) {
+      if (family === 'metrics') return !!metricsAccessAllowed;
+      if (family === 'programAd') return !!programAdAccessAllowed;
+      return !!salesAccessAllowed;
+    }
+    // 허용된 첫 탭의 첫 화면(헤더 탭 순서: 매출 → 지표 → 프로그램별). 하나도 없으면 null.
+    function firstAllowedViewKey() {
+      if (isFamilyAccessAllowed('sales')) return 'main';
+      if (isFamilyAccessAllowed('metrics')) return 'metricsMain';
+      if (isFamilyAccessAllowed('programAd')) return 'programAdMain';
+      return null;
+    }
+    // 매출 데이터 적재가 없는(= sales 권한이 없는) 사용자의 첫 화면. 매출 쪽은 데이터 적재가 끝난 뒤
+    // finalizeLoadedData()가 restoreViewFromHash()를 부르지만, 이 사용자는 그 적재를 하지 않으므로
+    // init.js가 이 함수로 직접 주소의 #뷰키(허용되는 경우) 또는 허용된 첫 탭으로 들어간다.
+    function enterInitialViewWithoutSales() {
+      const hashKey = viewKeyFromHash();
+      const hashCfg = VIEW_CONFIG[hashKey];
+      const key = (hashCfg && hashKey !== 'main' && isFamilyAccessAllowed(hashCfg.family)) ? hashKey : firstAllowedViewKey();
+      if (key) switchView(key, false);
+      else showErrorMessage('열람 가능한 탭이 없습니다. 관리자에게 권한을 요청해 주세요.');
+    }
 
     function switchView(viewKey, pushHistory) {
       if (pushHistory === undefined) pushHistory = true;
       const cfg = VIEW_CONFIG[viewKey]; if (!cfg) return;
-      // 롤백 스위치(METRICS_DASHBOARD_ENABLED, state.js) 꺼짐 또는 이메일 허용목록 밖이면 해시로
-      // 직접 진입해도 못 들어오게 막는다 — 헤더 탭 숨김(js/core/auth.js)은 콘솔로 우회 가능해서
-      // 여기가 실제 방어선이다(단, 진짜 방어선은 파일 자체를 막는 서버 쪽 403 — requireMetricsAccess).
-      if (cfg.family === 'metrics' && !metricsAccessAllowed) { switchView('main', pushHistory); return; }
+      // 롤백 스위치(METRICS_DASHBOARD_ENABLED, state.js) 꺼짐 또는 탭 권한(/api/me allowed_tabs) 밖이면
+      // 해시로 직접 진입해도 못 들어오게 막고 허용된 첫 탭으로 보낸다 — 헤더 탭 숨김(js/core/auth.js)은
+      // 콘솔로 우회 가능해서 여기가 UX상 방어선이다(진짜 방어선은 서버 쪽 403 — requireTabAccess).
+      if (!isFamilyAccessAllowed(cfg.family)) {
+        const fallbackKey = firstAllowedViewKey();
+        if (fallbackKey && isFamilyAccessAllowed(VIEW_CONFIG[fallbackKey].family)) switchView(fallbackKey, pushHistory);
+        return;
+      }
       currentView = viewKey; hideAllViews();
       document.getElementById(cfg.containerId).classList.add('active');
       document.getElementById('breadcrumbBox').style.display = cfg.showBreadcrumb ? 'flex' : 'none';
       document.getElementById('headerMainTitle').innerText = cfg.title;
       // 매출 탭은 filter-bar, 지표 탭은 .metrics-control-bar — 서로 반대로 토글한다.
       const filterBarSection = document.getElementById('filterBarSection');
-      if (filterBarSection) filterBarSection.style.display = cfg.family === 'metrics' ? 'none' : '';
+      if (filterBarSection) filterBarSection.style.display = cfg.family === 'sales' ? '' : 'none';
       // "실시간 연결/원본 수정"(매출 데이터 전용) — filter-bar와 같은 원칙으로 매출 쪽 전체(15개 뷰)에서
       // 계속 보이고, 지표 탭에서만 숨긴다(2026-09-16, 사용자: "이거까지는 매출대시보드 내에서는 고정").
       const salesStatusLegend = document.getElementById('salesStatusLegend');
-      if (salesStatusLegend) salesStatusLegend.style.display = cfg.family === 'metrics' ? 'none' : '';
+      if (salesStatusLegend) salesStatusLegend.style.display = cfg.family === 'sales' ? '' : 'none';
       // 지표 탭 전용 컨트롤바(연도/월/①②/매출기준) — filter-bar와 정확히 반대로 토글한다. 예전엔
       // #metricsMainView 안에 갇혀 있어서 metricsMain을 벗어나면(다른 view-section으로 바뀌면) 이
       // hideAllViews()가 손대지 않아도 컨테이너 자체가 사라지며 같이 사라졌다 — 이제 dashboard.html에서
@@ -113,6 +147,12 @@
       // 위치와 맞춤).
       const metricsDataAsOfBar = document.getElementById('metricsDataAsOfBar');
       if (metricsDataAsOfBar) metricsDataAsOfBar.style.display = cfg.family === 'metrics' ? '' : 'none';
+      // 프로그램별 광고매출 탭 전용 데이터 기준/상태 칩 + 컨트롤바 — 위 두 쌍과 정확히 같은 원칙으로,
+      // 다른 탭의 바는 programAd 화면에 새지 않고 programAd 바도 다른 탭에 새지 않는다.
+      const programAdDataAsOfBar = document.getElementById('programAdDataAsOfBar');
+      if (programAdDataAsOfBar) programAdDataAsOfBar.style.display = cfg.family === 'programAd' ? '' : 'none';
+      const programAdControlBar = document.getElementById('programAdControlBar');
+      if (programAdControlBar) programAdControlBar.style.display = cfg.family === 'programAd' ? '' : 'none';
       syncDashboardTabs(cfg.family);
       // 화면 전환 중 생성되는 차트만 긴 인트로를 쓴다. render() 안에서 applyFilters()가
       // 다시 불릴 수 있으므로(main 뷰), 플래그는 render()가 끝나면 반드시 되돌린다.
@@ -125,7 +165,14 @@
       if (pushHistory) history.pushState({ view: viewKey }, '', viewKey === 'main' ? location.pathname + location.search : '#' + viewKey);
     }
 
-    function returnToMainDashboard() { switchView('main'); }
+    // 로고 클릭. 프로그램별 광고매출 탭 안에서는 그 탭의 기본 필터(최신 연도·전체 월/채널/장르)로 되돌리고
+    // 그 탭의 메인에 머문다(원본 program-ad의 로고 동작 — 매출·지표 탭 상태는 건드리지 않는다).
+    // 그 외 탭은 예전처럼 'main' — 매출 권한이 없으면 switchView()가 허용된 첫 탭으로 돌려보낸다.
+    function returnToMainDashboard() {
+      const cfg = VIEW_CONFIG[currentView];
+      if (cfg && cfg.family === 'programAd') { applyProgramAdDefaultFilters(); switchView('programAdMain'); return; }
+      switchView('main');
+    }
     // breadcrumb의 "⬅" 버튼은 이제 이 함수를 부른다(하드코딩된 returnToMainDashboard() 대신).
     // parentView 미지정 뷰(기존 11개 매출 드릴다운)는 'main'으로 기본 처리되어 동작이 예전과 같다.
     // returnToMainDashboard() 자신은 .brand-logo가 여전히 직접 호출하므로 그대로 남겨 둔다.
@@ -133,22 +180,29 @@
       const cfg = VIEW_CONFIG[currentView];
       switchView((cfg && cfg.parentView) || 'main');
     }
-    // 헤더 탭 스트립("매출 대시보드"/"지표 대시보드") 활성 표시. family 기준으로 켠다 —
+    // 헤더 탭 스트립("매출 대시보드"/"지표 대시보드"/"프로그램별 광고매출") 활성 표시. family 기준으로 켠다 —
     // 매출 쪽 15개 뷰 중 어디에 있든 "매출 대시보드" 탭이, metricsMain/metricsDetail 어디든
     // "지표 대시보드" 탭이 켜진다.
     function syncDashboardTabs(family) {
       const salesTab = document.getElementById('dashboardTabSales');
       const metricsTab = document.getElementById('dashboardTabMetrics');
-      if (salesTab) salesTab.classList.toggle('active', family !== 'metrics');
+      const programAdTab = document.getElementById('dashboardTabProgramAd');
+      if (salesTab) salesTab.classList.toggle('active', family === 'sales');
       if (metricsTab) metricsTab.classList.toggle('active', family === 'metrics');
+      if (programAdTab) programAdTab.classList.toggle('active', family === 'programAd');
       // 헤더 "세부데이터" 버튼은 매출/지표 두 탭에서 서로 다른 화면(detailData/metricsDetail)을
       // 여는데 라벨이 같아 헷갈렸다(2026-09-16, 사용자 요청: "세부데이터 표기를 매출 세부데이터 /
       // 지표 세부데이터 이렇게 바꾸자") — 지금 보고 있는 탭에 맞춰 라벨을 바꾼다.
       const detailDataBtn = document.getElementById('detailDataBtn');
-      if (detailDataBtn) detailDataBtn.textContent = family === 'metrics' ? '🔍 지표 세부데이터' : '🔍 매출 세부데이터';
+      if (detailDataBtn) {
+        detailDataBtn.textContent = family === 'metrics' ? '🔍 지표 세부데이터' : '🔍 매출 세부데이터';
+        // 프로그램별 광고매출 탭에는 세부데이터 화면이 없다(상세 피벗은 차트 클릭으로 들어간다).
+        detailDataBtn.style.display = family === 'programAd' ? 'none' : '';
+      }
     }
     function openMetricsMainView() { switchView('metricsMain'); }
     function openMetricsDetailView() { switchView('metricsDetail'); }
+    function openProgramAdMainView() { switchView('programAdMain'); }
     function openCategoryPivotView() { switchView('category'); }
     function openDeptPivotView() { switchView('dept'); }
     function openManagerPivotView() { switchView('manager'); }

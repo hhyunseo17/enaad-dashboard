@@ -35,9 +35,66 @@ let metricsAccessAllowed = false;
 
 function applyMetricsAccessGate(email) {
   // METRICS_DASHBOARD_ENABLED(state.js)는 롤백 스위치 — false면 로그인 여부와 무관하게 탭을 숨긴다.
-  metricsAccessAllowed = METRICS_DASHBOARD_ENABLED && !!email;
+  // 그 위에 /api/me의 allowed_tabs('metrics' 포함 여부)가 겹친다 — applyTabAccessGate() 참고.
+  // 지표 탭은 'sales' 권한도 요구한다 — KT ENA 행을 내부 매출(rawData)로 치환하므로(metrics-data-loader.js의
+  // computeEnaMonthlyRevenue) 매출 데이터가 없으면 지표 화면이 "매출 데이터 로딩 중…"에서 영원히 멈추거나
+  // ENA 수치가 조용히 0이 된다(2026-10-14 검증에서 확인). 서버는 'metrics'만 있어도 지표 API를 내주지만
+  // 프론트는 이 조합을 열지 않는다. name.xlsx에서 지표만 Y인 행은 provision 스크립트가 경고한다.
+  metricsAccessAllowed = METRICS_DASHBOARD_ENABLED && !!email
+    && allowedDashboardTabs.includes('metrics') && allowedDashboardTabs.includes('sales');
   const tabBtn = document.getElementById('dashboardTabMetrics');
   if (tabBtn) tabBtn.style.display = metricsAccessAllowed ? '' : 'none';
+}
+
+// 헤더 탭 권한(UX). 서버는 각 /api/* 엔드포인트에서 이미 403으로 강제하므로(shared/supabase-proxy.mjs의
+// requireTabAccess) 여기서는 버튼을 숨기고 switchView() 진입을 막는 용도뿐이다 — 콘솔로 우회해도
+// 데이터는 내려오지 않는다. 키: sales / metrics / programAd (profiles.allowed_tabs와 동일).
+const KNOWN_DASHBOARD_TABS = ['sales', 'metrics', 'programAd'];
+// /api/me 조회 실패(네트워크, 미배포, 비JSON 응답)나 형식 오류 시 쓰는 기존 동작: 매출·지표 노출, programAd 숨김.
+const DEFAULT_DASHBOARD_TABS = ['sales', 'metrics'];
+
+// 부팅이 이 응답을 기다린 뒤에야 데이터 적재를 시작하므로(ensureAuthenticated → init.js) 서버가 멈춰도
+// 앱 전체가 로딩 오버레이에서 풀리지 않는 일이 없도록 타임아웃을 둔다. 타임아웃도 실패와 같이 폴백 처리.
+const ME_REQUEST_TIMEOUT_MS = 4000;
+
+async function loadAllowedTabs() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ME_REQUEST_TIMEOUT_MS);
+  try {
+    const authHeader = await getAuthorizationHeader();
+    const res = await fetch('/api/me', { cache: 'no-store', signal: controller.signal, headers: authHeader ? { Authorization: authHeader } : {} });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const body = await res.json();
+    if (!body || !Array.isArray(body.allowed_tabs)) throw new Error('allowed_tabs 형식 오류');
+    return body.allowed_tabs.filter(t => KNOWN_DASHBOARD_TABS.includes(t));
+  } catch (err) {
+    console.warn('[auth] /api/me 조회 실패 — 기본 탭 권한(매출·지표)으로 폴백:', err.message);
+    return DEFAULT_DASHBOARD_TABS.slice();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function applyTabAccessGate(email, tabs) {
+  allowedDashboardTabs = tabs;
+  salesAccessAllowed = !!email && tabs.includes('sales');
+  programAdAccessAllowed = !!email && tabs.includes('programAd');
+  applyMetricsAccessGate(email); // metricsAccessAllowed + 지표 탭 버튼
+  const salesBtn = document.getElementById('dashboardTabSales');
+  if (salesBtn) salesBtn.style.display = salesAccessAllowed ? '' : 'none';
+  const programAdBtn = document.getElementById('dashboardTabProgramAd');
+  if (programAdBtn) programAdBtn.style.display = programAdAccessAllowed ? '' : 'none';
+
+  // 열람 가능한 탭이 하나뿐이면 탭 영역 자체를 없앤다 — 하나짜리 탭 묶음만 남아 있어도 "다른 탭이 있다"는
+  // 걸 알려 주기 때문이다(2026-10-14, 사용자: "다른 탭의 존재를 모르게"). 브라우저 탭 제목도 같은 이유로
+  // 매출 분석 대시보드 이름 대신 그 탭 이름을 쓴다. 탭이 둘 이상인 기존 사용자는 아무것도 달라지지 않는다.
+  const openTabCount = [salesAccessAllowed, metricsAccessAllowed, programAdAccessAllowed].filter(Boolean).length;
+  const tabNav = document.querySelector('.dashboard-tabs');
+  if (tabNav) tabNav.style.display = openTabCount <= 1 ? 'none' : '';
+  // 로그인 화면·초기 제목은 어느 탭 사용자인지 모르는 상태라 중립 이름("광고사업본부 대시보드")이다(dashboard.html,
+  // renderLoginForm). 권한을 안 뒤에 그 사용자가 쓰는 탭 이름으로 바꾼다 — 매출 권한이 있으면 기존 제목 그대로.
+  if (openTabCount === 1 && programAdAccessAllowed) document.title = 'KT ENA 광고사업본부 프로그램별 광고매출 대시보드';
+  else if (salesAccessAllowed) document.title = 'KT ENA 광고사업본부 매출 분석 대시보드';
 }
 
 function renderLoginForm() {
@@ -51,7 +108,7 @@ function renderLoginForm() {
           <img class="logo-on-light" src="logo-color.png" alt="KT ENA" onerror="this.style.display='none';">
           <img class="logo-on-dark" src="logo-white.png" alt="KT ENA" onerror="this.style.display='none';">
         </div>
-        <h1 class="auth-login-title">광고사업본부 매출 분석 대시보드</h1>
+        <h1 class="auth-login-title">광고사업본부 대시보드</h1>
         <p class="auth-login-subtitle">사내 계정으로 로그인하세요</p>
         <input type="email" id="authLoginEmail" class="auth-login-input" placeholder="이메일" autocomplete="username" required />
         <input type="password" id="authLoginPassword" class="auth-login-input" placeholder="비밀번호" autocomplete="current-password" required />
@@ -108,7 +165,8 @@ async function ensureAuthenticated() {
     await renderLoginForm();
   }
   const { data: finalData } = await supabaseAuthClient.auth.getSession();
-  applyMetricsAccessGate(finalData.session && finalData.session.user && finalData.session.user.email);
+  const sessionEmail = finalData.session && finalData.session.user && finalData.session.user.email;
+  applyTabAccessGate(sessionEmail, await loadAllowedTabs());
   const headerStatus = document.querySelector('.header-status');
   if (headerStatus && !document.getElementById('authLogoutBtn')) {
     const logoutBtn = document.createElement('button');

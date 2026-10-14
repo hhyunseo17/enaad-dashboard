@@ -236,21 +236,72 @@ function unauthorizedResponse() {
   });
 }
 
+// ------------------------------------------------------------
+// 탭 단위 권한 — profiles.allowed_tabs(supabase/schema.sql 11절)를 서버에서 강제한다.
+//
+// RLS가 아니라 여기서 막는 이유: 브라우저는 Supabase를 직접 조회하지 않고 이 프록시가 service_role로
+// 대신 조회하므로(RLS 우회) RLS로는 탭을 구분할 수 없다. 탭 키: sales / metrics / programAd.
+// 프로그램별 광고매출(programAd)은 기존 두 탭과 완전히 독립이라(2026-10-14, 사용자 확정) programAd만
+// 가진 사용자는 sales·metrics 엔드포인트도 403을 받는다.
+//
+// profiles 행이 **없으면**(조회는 성공) 기본값(sales+metrics)으로 취급한다 — 지금 열려 있는 두 탭은
+// 그대로 열리고 programAd만 닫힌다.
+// 조회 자체가 **실패하면 닫는다**(503). 기본값으로 열어주면 programAd 전용 계정이 일시 장애 중에
+// sales·metrics 데이터를 받게 되어 "완전히 독립"이라는 요구가 깨진다(2026-10-14 검증에서 지적). 조회가
+// 실패했다는 건 데이터 조회에 쓰는 같은 Supabase가 불안정하다는 뜻이라 닫아도 잃는 게 거의 없다.
+// 실패 결과는 캐시하지 않는다. 조회 결과는 isolate 메모리에 60초 캐시 — /api/sales 같은 핫패스에
+// 왕복이 매번 붙지 않게 하되, 권한을 회수했을 때 최대 이만큼 늦게 반영된다.
+// ------------------------------------------------------------
+const DEFAULT_ALLOWED_TABS = ['sales', 'metrics'];
+const TAB_CACHE_TTL_MS = 60 * 1000;
+const tabCache = new Map(); // sub → { tabs, fetchedAt }
+
+// 조회 실패 시 throw한다 — 호출부(requireTabAccess / handleMeRequest)가 503으로 바꾼다.
+async function fetchAllowedTabs(env, sub) {
+  const hit = tabCache.get(sub);
+  if (hit && Date.now() - hit.fetchedAt < TAB_CACHE_TTL_MS) return hit.tabs;
+  const url = `${env.SUPABASE_URL}/rest/v1/profiles?select=allowed_tabs&id=eq.${encodeURIComponent(sub)}&limit=1`;
+  const res = await fetch(url, { headers: authHeaders(env) });
+  if (!res.ok) throw new Error(`profiles 조회 HTTP ${res.status}`);
+  const rows = await res.json();
+  const tabs = rows[0] && Array.isArray(rows[0].allowed_tabs) ? rows[0].allowed_tabs : DEFAULT_ALLOWED_TABS;
+  tabCache.set(sub, { tabs, fetchedAt: Date.now() });
+  return tabs;
+}
+
+function tabCheckUnavailableResponse(err) {
+  console.error('profiles.allowed_tabs 조회 실패(요청을 거부함):', err.message);
+  return new Response(JSON.stringify({ error: '권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.' }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+  });
+}
+
+function forbiddenResponse() {
+  return new Response(JSON.stringify({ error: '이 탭을 열람할 권한이 없습니다.' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+  });
+}
+
 // 각 handle*Request 맨 앞에서 호출한다 — null이면 통과, Response면 그대로 반환하고 중단.
-async function requireAuth(env, request) {
+async function requireTabAccess(env, request, tab) {
   const user = await verifySupabaseJwt(env, request);
   if (!user) return unauthorizedResponse();
+  let tabs;
+  try {
+    tabs = await fetchAllowedTabs(env, user.sub);
+  } catch (err) {
+    return tabCheckUnavailableResponse(err);
+  }
+  if (!tabs.includes(tab)) return forbiddenResponse();
   return null;
 }
 
-// 지표 대시보드(경쟁채널 벤치마크) 전용 게이트 — 이메일 허용목록 롤아웃은 종료(2026-09-16, 사용자
-// 요청: "supabase에서도 가입가능한 사람 다 보이게 해줘"). 이제 다른 /api/* 엔드포인트와 동일하게
-// 로그인 여부만 검사한다 — 함수명·호출부(handleCompetitorRatingsRequest 등 3곳)는 그대로 두고
-// 내부 구현만 requireAuth()와 동등하게 맞췄다(다시 좁힐 일이 생기면 이 함수 하나만 고치면 된다).
+// 지표 대시보드(경쟁채널 벤치마크) 게이트 — 이메일 허용목록 롤아웃은 종료(2026-09-16)했고, 지금은
+// profiles.allowed_tabs의 'metrics'를 본다. 함수명·호출부(handleCompetitorRatingsRequest 등)는 유지.
 export async function requireMetricsAccess(env, request) {
-  const user = await verifySupabaseJwt(env, request);
-  if (!user) return unauthorizedResponse();
-  return null;
+  return requireTabAccess(env, request, 'metrics');
 }
 
 // ------------------------------------------------------------
@@ -272,8 +323,8 @@ export async function requireMetricsAccess(env, request) {
 //   2) Pages 환경변수 EDGE_CACHE_DISABLED=1 — 재배포 없이 즉시.
 //   3) 이 커밋 revert.
 //
-// 인증은 캐시보다 앞에 있다: 각 handle*Request가 withEdgeCache를 부르기 전에 requireAuth()로
-// Supabase Auth JWT를 검증하므로(위 "인증 게이트" 절), 인증된 요청만 여기 도달한다.
+// 인증은 캐시보다 앞에 있다: 각 handle*Request가 withEdgeCache를 부르기 전에 requireTabAccess()로
+// Supabase Auth JWT·탭 권한을 검증하므로(위 "인증 게이트" 절), 인증된 요청만 여기 도달한다.
 // caches.default는 이 함수 안에서만 접근하는 서버 측 캐시다. 다만 브라우저로 내려보내는
 // 헤더는 public이 아니라 private으로 바꿔 공용 프록시에 남지 않게 한다
 // (캐시에 넣을 때는 public이어야 한다 — Cache API가 private 응답을 저장하지 않는다).
@@ -346,7 +397,7 @@ export function jsonResponse(payload) {
 
 export async function handleSalesRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
-  const authError = await requireAuth(env, request);
+  const authError = await requireTabAccess(env, request, 'sales');
   if (authError) return authError;
   try {
     // 별칭 select — 응답 키는 SALES_COLUMN_ALIASES의 짧은 이름이다(위 주석 참고).
@@ -362,7 +413,7 @@ export async function handleSalesRequest(env, request, waitUntil) {
 
 export async function handleUpfrontContractsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
-  const authError = await requireAuth(env, request);
+  const authError = await requireTabAccess(env, request, 'sales');
   if (authError) return authError;
   try {
     return await proxyView(env, 'v_upfront_contracts_current');
@@ -372,8 +423,7 @@ export async function handleUpfrontContractsRequest(env, request) {
 }
 
 // 지표 대시보드(경쟁채널 벤치마크) — R2 바인딩이 이 Pages 프로젝트에서 원인 불명으로 전혀 붙지
-// 않아(2026-09-15, 이름을 바꿔도 재현) Supabase 경유로 전환. requireAuth가 아니라
-// requireMetricsAccess를 쓴다 — 로그인만으로는 부족하고 이메일 허용목록 통과까지 필요(롤아웃 초기).
+// 않아(2026-09-15, 이름을 바꿔도 재현) Supabase 경유로 전환. requireMetricsAccess(= 'metrics' 탭 권한)를 쓴다.
 // 테이블이 작아(2만/8천행대) v_bonbu_sales처럼 컬럼 별칭으로 줄일 필요는 없다 — select=*.
 export async function handleCompetitorRatingsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
@@ -427,9 +477,36 @@ export async function handleProgramRatingsRequest(env, request) {
   }
 }
 
+// 프로그램별 광고매출 대시보드 — 기존 두 탭과 완전히 독립(2026-10-14, 사용자 확정)이라 'programAd'
+// 탭 권한이 있는 사용자만 받는다. program_ad_sales는 약 1.8만행이라 select=*로 충분하다
+// (scripts/etl/load-program-ad.mjs가 월×채널×장르×프로그램 단위로 미리 합산해 둔 테이블).
+export async function handleProgramAdRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const authError = await requireTabAccess(env, request, 'programAd');
+  if (authError) return authError;
+  try {
+    return await proxyView(env, 'program_ad_sales');
+  } catch (err) {
+    return proxyErrorResponse(err);
+  }
+}
+
+// 프론트가 어떤 탭 버튼을 보여줄지 알기 위한 조회 — 서버 강제와는 별개의 UX용이다(숨겨도 엔드포인트는
+// 여전히 403을 낸다). 로그인만 확인하고 자기 자신의 allowed_tabs만 돌려준다.
+export async function handleMeRequest(env, request) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
+  const user = await verifySupabaseJwt(env, request);
+  if (!user) return unauthorizedResponse();
+  try {
+    return jsonResponse({ allowed_tabs: await fetchAllowedTabs(env, user.sub) });
+  } catch (err) {
+    return tabCheckUnavailableResponse(err);
+  }
+}
+
 export async function handleTargetsRequest(env, request) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
-  const authError = await requireAuth(env, request);
+  const authError = await requireTabAccess(env, request, 'sales');
   if (authError) return authError;
   try {
     return await proxyView(env, 'sales_targets');
@@ -440,7 +517,7 @@ export async function handleTargetsRequest(env, request) {
 
 export async function handleLatestBatchRequest(env, request, waitUntil) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return missingEnvResponse();
-  const authError = await requireAuth(env, request);
+  const authError = await requireTabAccess(env, request, 'sales');
   if (authError) return authError;
   try {
     // 이 조회가 /api/sales보다 앞에 서게 되었으므로(프론트가 배치 ID를 알아야 URL을 만든다)

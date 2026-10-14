@@ -75,11 +75,22 @@ Google Drive `ENAAD-data` 폴더의 `name.xlsx`(부서 | 성명 | 직책 | ID/�
 부서별 데이터 차등이 필요해질 때 쓸 자리만 마련해둔 것이다.
 
 ```
-node provision-auth-users.mjs "C:\경로\name.xlsx"
+node provision-auth-users.mjs "C:\경로\name.xlsx" --dry-run   # 먼저: 무엇이 바뀔지만 출력
+node provision-auth-users.mjs "C:\경로\name.xlsx"             # 실제 반영
 ```
-- `.env`에 `PROVISION_INITIAL_PASSWORD`(전원 공통 초기 비밀번호)를 먼저 채워야 한다.
+- `.env`에 `PROVISION_INITIAL_PASSWORD`(전원 공통 초기 비밀번호)를 먼저 채워야 한다(`--dry-run`은 불필요).
 - 이미 존재하는 이메일은 Auth 계정을 새로 만들지 않고 `profiles`만 갱신한다 — 인원이 늘거나 부서가
   바뀌면 그냥 재실행하면 된다(비밀번호가 바뀌지는 않음).
+
+**탭 권한(2026-10-14)**: `name.xlsx`에 `매출` / `지표` / `프로그램` 세 컬럼을 두고 그 사람이 볼 수 있는 탭만
+`O`로 표시한다. `profiles.allowed_tabs`(`sales`/`metrics`/`programAd`)로 옮겨지고, 서버(`shared/supabase-proxy.mjs`의
+`requireTabAccess`)가 세 탭 모두 강제한다 — RLS가 아니라 프록시에서 막는 이유는 `supabase/schema.sql` 11절 참고.
+- 세 컬럼이 **모두 있으면** 파일 기준으로 덮어쓴다. **빈 칸·X는 "권한 없음"** — 기존 사용자의 `매출`/`지표`에도
+  O를 채우지 않으면 그 사람은 접근을 잃는다. 그래서 처음 채운 뒤나 대량 수정 뒤에는 `--dry-run`으로 "기존 접근을 잃는
+  사람 N명"이 의도한 숫자인지 먼저 확인한다.
+- 세 컬럼이 **하나도 없으면** `allowed_tabs`를 건드리지 않는다. **일부만 있으면** 오타로 보고 중단한다.
+- O/X(빈 칸) 외의 값이 있는 행은 그 사람 권한만 건너뛰고 경고한다.
+- 권한 변경은 서버 캐시(60초) 때문에 최대 1분 뒤 반영된다. `profiles` 행이 없는 계정은 기본값(`sales`,`metrics`)으로 취급된다.
 - Supabase 프로젝트의 Authentication 설정에서 "Allow new users to sign up"을 꺼서 이 스크립트로
   등록한 계정만 로그인 가능하게 해야 한다(대시보드 작업, 코드로 안 됨).
 
@@ -112,6 +123,21 @@ node load-competitor-data.mjs "C:\경로\경쟁채널 지표 현황.xlsx" "C:\�
 node load-program-ratings.mjs "C:\경로\program-ratings.xlsx"
 ```
 파일에서 삭제된 과거 행은 upsert만으로는 정리되지 않는다(다른 스크립트와 동일한 한계) — 필요 시 Supabase에서 수동 확인.
+
+## 프로그램별 광고매출 적재 (`load-program-ad.mjs`)
+프로그램별 광고매출 탭(`programAd`, 기존 `program-ad` 저장소의 대시보드를 통합한 것)용. 기존 매출·지표 탭과
+**완전히 독립**된 데이터라 `v_bonbu_sales`와 연결하지 않고 `program_ad_sales` 테이블 하나만 쓴다. 다른 독립 스크립트와
+같이 배치/컷오버 없이 upsert만 한다.
+```
+node load-program-ad.mjs "C:\경로\data.xlsx"
+```
+- 원본은 Google Drive `ENAAD-data/program-ad/data.xlsx`(로컬은 DRM이 걸리므로 Drive에서 받은 사본을 쓴다). 시트
+  `Sheet2`(월/채널/장르/프로그램 + 매출 5종 + GRPs 2종, 월×채널×프로그램 단위). `장르` 시트는 쓰지 않는다.
+- 프로그램명·채널명 정제는 기존 `program-ad/app.js`와 동일한 규칙을 ETL이 한다(괄호·`스페셜`·`패키지` 접미사 제거,
+  `PLAY`→`ENA PLAY` 등). 정제 후 같은 키(연,월,채널,장르,프로그램)가 되는 행은 합산한다(실측 19,085행 → 17,874행).
+  프론트는 다시 정제하지 않는다.
+- 파일에서 사라진 과거 행은 upsert로 정리되지 않는다 — **프로그램명 정제 규칙을 바꾸면 옛 이름의 행이 남으므로**
+  그때는 Supabase에서 수동 정리한다. 적재 후 합계(`sum(rev_*)`, `sum(grp_*)`)를 원본과 대조해 둘 것.
 
 ## 목표 적재 (`load-targets.mjs`)
 `run.mjs`(매출 ETL)와는 독립된 스크립트다. `target.xlsx`의 `목표 합산` 시트(담당자 | 부서 | 매출기준 | 대분류 | 귀속월 | 목표)를

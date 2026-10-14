@@ -537,3 +537,24 @@
 #panelMetricsDetailMetric { min-width: 320px; }
 
 .auth-login-error { font-size: 13px; color: var(--accent-red); margin: 0; text-align: center; }
+
+
+/* ============================================================
+   프로그램별 광고매출 탭(family: 'programAd') — 컨트롤바 / 안내 칩 / 표 보조 규칙
+   컨트롤바는 .metrics-control-bar와 같은 표면·여백이지만 클래스를 따로 둔다 — switchView()가
+   '.metrics-control-bar'를 querySelector로 집어 토글하므로 같은 클래스를 쓰면 탭끼리 서로를 켜고 끈다.
+   ============================================================ */
+.programad-control-bar { background: var(--surface-filterbar); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
+.programad-control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; row-gap: 10px; column-gap: 22px; }
+.programad-control-row + .programad-control-row { padding-top: 10px; border-top: 1px solid var(--border-default); }
+/* "어드레서블/큐톤 미반영" 안내 — 오류가 아니라 확인 신호라 notice-banner와 같은 주황 계열(토큰)을 칩으로 쓴다. */
+.programad-notice-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--radius-full); background: var(--accent-orange-bg); border: 1px solid var(--accent-orange); color: var(--text-primary); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.programad-card-sub { font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
+/* 표 머리글의 항목 색 점 — 색은 인라인(PAC(), theme-system.js)으로 준다. 글자색은 건드리지 않는다. */
+.programad-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }
+/* 아코디언 하위(채널) 행은 접어 두고 부모 행 클릭 때만 편다. */
+.programad-child-row { display: none; }
+.programad-child-row.open { display: table-row; }
+.programad-parent-row { cursor: pointer; }
+.programad-num { text-align: right; }
+#btnProgramAdPrevPage:disabled, #btnProgramAdNextPage:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }

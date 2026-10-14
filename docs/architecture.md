@@ -14,17 +14,18 @@ docs/                      문서 (js/features와 1:1 매칭)
   data-rules.md  architecture.md
   features/  (mom, agency-comp, bucket, new-advertiser, upfront,
               ranking, trend-portfolio-channel, detail-pivots, detail-data, kpi,
-              metrics-dashboard)
+              metrics-dashboard, program-ad)
 css/                       theme / layout / pivot-table
-js/core/                   state, theme-system, data-loader, metrics-data-loader,
-                           filters, view-router, init
+js/core/                   state, auth, theme-system, data-loader, metrics-data-loader,
+                           programad-data-loader, filters, view-router, init
 js/features/               shared-helpers, detail-pivots, kpi,
-                           metrics-dashboard, metrics-ratings,
+                           metrics-dashboard, metrics-ratings, program-ad,
                            trend-portfolio-channel, mom, agency-comp,
                            new-advertiser, upfront, ranking, bucket, detail-data
 functions/                 Cloudflare Pages Functions — 실제 배포(Pages)가 실행하는 경로
   addata.js  index.js  api/sales.js  api/upfront-contracts.js  api/latest-batch.js  api/targets.js
   api/competitor-ratings.js  api/competitor-revenue.js   (지표 대시보드, Supabase 경유 — 아래 참고)
+  api/program-ad.js  api/me.js   (프로그램별 광고매출 데이터 / 탭 권한 조회)
 shared/supabase-proxy.mjs  Supabase 프록시 공용 로직 (functions/api/*.js + worker.js가 공유)
 .claude/agents/            feature-dev, data, reviewer
 worker.js / wrangler.toml  standalone Cloudflare Worker(R2 서빙 + Supabase 프록시) 설정 — 현재 미배포, 향후 Pages→Worker 전환 대비.
@@ -47,6 +48,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/core/theme-system.js          CH/mapPivotHtml/toggleTheme + Chart.register
   js/core/data-loader.js           연결·파싱·정규화 + export/유틸 (매출 데이터셋)
   js/core/metrics-data-loader.js   지표 대시보드 전용 연결(Supabase 경유, /api/competitor-*)·ENA 치환 (지연 로딩)
+  js/core/programad-data-loader.js 프로그램별 광고매출 전용 연결(/api/program-ad) (지연 로딩)
   js/core/filters.js               체크박스/필터/applyFilters() (매출 데이터셋 전용)
   js/features/shared-helpers.js    신규광고주 판별, 차트 모드 토글
   js/features/pivot-builder.js     피벗 엔진 + PIVOT_PRESETS (detail-pivots보다 먼저)
@@ -54,6 +56,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/features/kpi.js               KPI 카드 + 업프론트 목표(월할)
   js/features/metrics-dashboard.js 지표 대시보드: 컨트롤바/KPI 1·2/M-S 트렌드/매출 트렌드·랭킹
   js/features/metrics-ratings.js   지표 대시보드: KPI 3·4·5/CPRP·시청률·GRP 미니차트/상세표
+  js/features/program-ad.js        프로그램별 광고매출: 컨트롤바/KPI/차트 4종/프로그램 피벗 표/상세 피벗
   js/features/trend-portfolio-channel.js
   js/features/mom.js
   js/features/agency-comp.js
@@ -67,12 +70,14 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 ```
 > reviewer는 이 순서를 어긴 로드(features가 core보다 먼저 등)를 오류로 잡는다.
 
-## 두 탭(family) 구조 — 매출 대시보드 / 지표 대시보드
-헤더의 `<nav class="dashboard-tabs">`가 `switchView('main')`/`switchView('metricsMain')`으로 전환하는 두 화면군. `VIEW_CONFIG`(view-router.js)의 모든 항목이 `family: 'sales' | 'metrics'`를 갖는다:
+## 세 탭(family) 구조 — 매출 대시보드 / 지표 대시보드 / 프로그램별 광고매출
+헤더의 `<nav class="dashboard-tabs">`가 `switchView('main')`/`switchView('metricsMain')`/`switchView('programAdMain')`으로 전환하는 세 화면군. `VIEW_CONFIG`(view-router.js)의 모든 항목이 `family: 'sales' | 'metrics' | 'programAd'`를 갖는다:
 - **`sales`**(기존 15개 뷰) — `main` 이하 매출 대시보드 전체. 상단 `.filter-bar`(연/월/부서/채널/방송디지털/대분류/매출기준)를 공유한다.
 - **`metrics`**(`metricsMain`/`metricsDetail`) — 지표 대시보드. `.filter-bar` 대신 자기만의 `.metrics-control-bar`를 쓰고, 데이터셋도(`metricsRevenueData`/`metricsRatingsData`) 상태도(`state.js`의 `metricsSelectedYear` 등) 전부 분리돼 있다.
 
-`switchView()`는 `cfg.family`를 보고 `#filterBarSection`(매출 필터바에 부여된 id)을 숨기고, `syncDashboardTabs(family)`로 헤더 탭 강조를 바꾼다. `returnToParentView()`(breadcrumb "⬅" 버튼)는 `VIEW_CONFIG[currentView].parentView`를 따라가며(미지정 시 `'main'`), `metricsDetail`은 `parentView: 'metricsMain'`이라 그쪽으로 돌아간다 — 기존 11개 매출 드릴다운은 `parentView` 미지정이라 동작이 그대로다.
+- **`programAd`**(`programAdMain`/`programAdDetail`) — 프로그램별 광고매출. 자기만의 `.programad-control-bar`·`#programAdDataAsOfBar`·상태(`state.js`의 `programAd*`)·데이터셋(`programAdRows`)을 쓰고 매출 쪽 상태(`rawData`/`applyFilters` 등)는 읽지도 바꾸지도 않는다. 상세는 `docs/features/program-ad.md`.
+
+`switchView()`는 `cfg.family`를 보고 `#filterBarSection`·`#salesStatusLegend`(매출 필터바·상태 칩, `sales`일 때만 표시)·`.metrics-control-bar`·`#metricsDataAsOfBar`(`metrics`일 때만)·`#programAdControlBar`·`#programAdDataAsOfBar`(`programAd`일 때만)를 서로 반대로 토글하고, `syncDashboardTabs(family)`로 헤더 탭 강조를 바꾼다. 탭 권한: 로그인 직후 `auth.js`가 `/api/me`의 `allowed_tabs`로 탭 버튼을 숨기고 `switchView()`가 허용되지 않은 family 진입을 허용된 첫 탭으로 돌려보낸다(진짜 차단은 서버 `requireTabAccess` 403). sales 권한이 없으면 `init.js`가 매출 데이터 적재(`initDataConnection`)를 건너뛴다. `returnToParentView()`(breadcrumb "⬅" 버튼)는 `VIEW_CONFIG[currentView].parentView`를 따라가며(미지정 시 `'main'`), `metricsDetail`은 `parentView: 'metricsMain'`이라 그쪽으로 돌아간다 — 기존 11개 매출 드릴다운은 `parentView` 미지정이라 동작이 그대로다.
 
 ## 테마 전환 — 세 갈래 경로 (정리 대상)
 라이트/다크 전환이 한 곳이 아니라 **세 경로**로 나뉘어 있다. 색을 건드릴 때 세 곳을 모두 봐야 한다.

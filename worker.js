@@ -8,7 +8,7 @@
  * 관리하지 않는다.
  *
  * 개인별 인증은 Supabase Auth(로그인 화면)가 맡고, /api/* 각 핸들러가 요청의
- * Authorization: Bearer <JWT>를 shared/supabase-proxy.mjs의 requireAuth()로 검증한다
+ * Authorization: Bearer <JWT>를 shared/supabase-proxy.mjs의 requireTabAccess()로 검증한다
  * (Cloudflare Access 무료 플랜의 인증 사용자 50명 제한 때문에 개인별 게이트를 옮겼다).
  * Zero Trust(Access)는 IP 허용목록 등 네트워크 레벨 방어로만 남기는 것이 목표이며, 이 전환은
  * Cloudflare 대시보드 작업이라 이 레포와 별개로 진행한다(진행 전까지는 Access 이메일 정책이

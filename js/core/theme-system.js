@@ -111,6 +111,37 @@
       return r ? r[currentTheme === 'light' ? 'light' : 'dark'] : '#8B95A1';
     }
 
+    // ==========================================================================
+    // 프로그램별 광고매출(programAd) 탭의 계열색 — 매출 5종 + GRPs 2종.
+    //
+    // 이 탭의 5개 매출항목(패키지 / GRPs기여 / 인포머셜 / IMC / 기타)은 addata의 5대분류와 **의미가
+    // 다르다**(일반광고가 패키지·GRPs기여로 쪼개져 있고 큐톤광고는 아예 없다). 그래서 categoryColors를
+    // 이름으로 조회(catColor)하지 않고 이 표에 역할을 따로 둔다. 다만 색상(hue)은 CLAUDE.md 절대원칙 10대로
+    // 화면에 이미 있는 것만 쓴다 — 파랑 · 주황 · 초록 · 빨강 · 무채, 5종이 정확히 한 색씩 받는다.
+    //   패키지      파랑   (일반광고 계열의 대표 — 가장 큰 비중이라 기준점)
+    //   GRPs기여    주황   (같은 일반광고의 나머지 — 파랑 옆에서 가장 구별되는 자리. 이 탭에는 큐톤광고가
+    //                       없어(어드레서블·큐톤 미반영) 주황이 큐톤을 뜻하는 일은 없다)
+    //   인포머셜    초록(165° 제이드)
+    //   IMC         빨강
+    //   기타광고    무채
+    // GRPs 2종은 매출 5색과 겹치지 않게 SERIES_ROLES의 curr(2049, 주인공)와 prev(가구, 비교 기준 회색)를
+    // 쓴다. **테마별 값을 각각 직접 적는다** — 한쪽에서 계산해 다른 쪽을 만들지 않는다. 값은 각 테마의
+    // 기존 역할색과 같다(5대분류 L62~73 / 다크 L50~67 대역 안).
+    // ==========================================================================
+    const PROGRAM_AD_ROLES = {
+      pkg:     { light: '#479FFF', dark: '#0A84FF' },
+      gen:     { light: '#FFB347', dark: '#FF9F0A' },
+      info:    { light: '#43DBB5', dark: '#2ED1A8' },
+      imc:     { light: '#FF4D3D', dark: '#FF453A' },
+      oth:     { light: '#B3B3B6', dark: '#98989D' },
+      grps2049: { light: '#47A0FF', dark: '#0F83FF' },
+      grpsHh:   { light: '#89929F', dark: '#B1BAC6' }
+    };
+    function PAC(key) {
+      const r = PROGRAM_AD_ROLES[key];
+      return r ? r[currentTheme === 'light' ? 'light' : 'dark'] : '#8B95A1';
+    }
+
     Chart.register(ChartDataLabels);
 
     // **차트 글꼴은 본문과 따로 논다.** Chart.js는 캔버스에 직접 그리므로 body의 font-family를
@@ -559,5 +590,5 @@
       document.documentElement.setAttribute('data-theme', currentTheme);
       const btn = document.getElementById('themeToggleBtn');
       if (btn) btn.innerText = currentTheme === 'dark' ? '☀️ 라이트모드' : '🌙 다크모드';
-      if (rawData.length > 0) switchView(currentView, false);
+      if (rawData.length > 0 || programAdDataLoaded) switchView(currentView, false);
     }

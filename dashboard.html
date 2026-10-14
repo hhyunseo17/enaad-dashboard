@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KT ENA 광고사업본부 매출 분석 대시보드</title>
+  <title>KT ENA 광고사업본부 대시보드</title>
   
   <!-- 본문 폰트 — IBM Plex Sans KR 시범 적용. 되돌리려면 이 커밋만 revert 하면 된다.
        Pretendard도 계속 불러 둔다: 폴백이자, 돌아갈 때 이 링크를 지울 필요가 없게. -->
@@ -63,12 +63,14 @@
           <img class="logo-on-dark" src="logo-white.png" alt="KT ENA" onerror="this.style.display='none';">
         </div>
         <div class="brand-title">
-          <h1 id="headerMainTitle" class="title-pill">광고사업본부 매출 분석 대시보드</h1>
+          <h1 id="headerMainTitle" class="title-pill">광고사업본부 대시보드</h1>
         </div>
         <!-- "매출 대시보드"/"지표 대시보드" 상위 탭. family 기준 강조는 syncDashboardTabs()(view-router.js)가 처리. -->
         <nav class="dashboard-tabs">
           <button id="dashboardTabSales" class="dashboard-tab active" onclick="switchView('main')">매출 대시보드</button>
           <button id="dashboardTabMetrics" class="dashboard-tab" onclick="switchView('metricsMain')">지표 대시보드</button>
+          <!-- 기본은 숨김 — /api/me의 allowed_tabs에 'programAd'가 있을 때만 js/core/auth.js가 보여준다. -->
+          <button id="dashboardTabProgramAd" class="dashboard-tab" style="display:none;" onclick="switchView('programAdMain')">프로그램별 광고매출</button>
         </nav>
       </div>
 
@@ -284,6 +286,71 @@
          data-loader.js의 setRevenueBasis()를 그대로 호출해 메인 대시보드 버튼/필터도 함께
          동기화한다). 연도/월 pill·①②드롭다운이 전역 하나뿐이므로, 이걸 조작하면 "지금 보고 있는
          화면"을 다시 그려야 한다 — rerenderCurrentMetricsView()(metrics-dashboard.js)가 그 역할. -->
+    <!-- 프로그램별 광고매출 탭 전용 "데이터 기준 + 실시간 연결 칩" — metricsDataAsOfBar와 같은 위상(전역, 컨트롤바
+         바로 위)이고 switchView()가 family==='programAd'일 때만 보이게 토글한다. 칩은 fetchProgramAdDataHttp()
+         (programad-data-loader.js)가 채운다. -->
+    <section class="metrics-source-legend" id="programAdDataAsOfBar" style="display:none;">
+      <span class="metrics-legend-chip status-badge">
+        <span id="programAdStatusDot" class="status-dot"></span>
+        <span id="programAdStatusModeText">실시간 연결</span>
+      </span>
+      <span id="programAdDataAsOfLabel" class="metrics-legend-chip"></span>
+    </section>
+
+    <!-- 프로그램별 광고매출 탭 전용 컨트롤바. 매출 탭의 filter-bar·지표 탭의 metrics-control-bar와 같은
+         표면을 쓰되 상태(programAdFilterStates 등)는 전부 따로다. 매출기준(취급고/회계) 토글은 없다 —
+         이 데이터는 기준 구분이 없는 프로그램별 사전집계다. -->
+    <section class="programad-control-bar" id="programAdControlBar" style="display:none;">
+      <div class="programad-control-row">
+        <div class="filter-group">
+          <span class="filter-label">연도 선택</span>
+          <div id="programAdYearPills" class="pills-group"></div>
+          <span class="filter-hint">Ctrl(⌘)+클릭 시 복수 선택</span>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">월 선택</span>
+          <div id="programAdMonthPills" class="pills-group"></div>
+          <span class="filter-hint">Ctrl(⌘)+클릭 시 복수 선택</span>
+        </div>
+      </div>
+      <div class="programad-control-row">
+        <div class="filter-group">
+          <span class="filter-label">채널</span>
+          <div class="multi-dropdown" id="dropdownProgramAdChannel">
+            <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('ProgramAdChannel')">
+              <span id="labelProgramAdChannel">전체 채널</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelProgramAdChannel">
+              <label class="checkbox-item checkbox-item-all">
+                <input type="checkbox" id="checkAllProgramAdChannel" onchange="onProgramAdSelectAll('channel', this)">전체선택
+              </label>
+              <div id="listProgramAdChannelCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">장르</span>
+          <div class="multi-dropdown" id="dropdownProgramAdGenre">
+            <button class="multi-dropdown-btn metrics-cascade-btn" onclick="toggleMultiDropdown('ProgramAdGenre')">
+              <span id="labelProgramAdGenre">전체 장르</span> ▾
+            </button>
+            <div class="multi-dropdown-panel" id="panelProgramAdGenre">
+              <label class="checkbox-item checkbox-item-all">
+                <input type="checkbox" id="checkAllProgramAdGenre" onchange="onProgramAdSelectAll('genre', this)">전체선택
+              </label>
+              <div id="listProgramAdGenreCheckboxes" class="checkbox-list"></div>
+            </div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">프로그램 검색</span>
+          <input type="text" id="inputProgramAdSearch" class="text-input" placeholder="프로그램명 입력...">
+        </div>
+        <button class="btn btn-sm" onclick="resetProgramAdFilters()">필터 초기화</button>
+        <span class="programad-notice-chip"><span aria-hidden="true">ⓘ</span>어드레서블, 큐톤 등 광고유형 미포함</span>
+      </div>
+    </section>
+
     <section class="metrics-control-bar" style="display:none;">
       <div class="metrics-control-row">
         <div class="filter-group">
@@ -2171,6 +2238,130 @@
         </section>
       </section>
     </div>
+
+    <!-- ==========================================================================
+       프로그램별 광고매출 탭 (family: 'programAd') — js/features/program-ad.js
+       ========================================================================== -->
+    <div id="programAdMainView" class="view-section">
+
+      <div id="programAdLoadingMessage" style="display:none; padding: 60px 20px; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
+        <div class="spinner"></div>
+        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">프로그램별 광고매출 데이터를 불러오는 중입니다…</div>
+      </div>
+      <div id="programAdErrorMessage" style="display:none; padding: 20px; text-align:center; color: var(--accent-red); font-size: 13px;"></div>
+
+      <div id="programAdContentBody" style="display:none; flex-direction: column; gap: 20px;">
+
+        <section class="metrics-kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">총 매출액</span></div>
+            <div class="kpi-value-box">
+              <div id="programAdKpiTotal" class="kpi-value">0억</div>
+              <div class="kpi-source-note">5대 광고 항목 총합계</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">누적 2049 GRPs</span></div>
+            <div class="kpi-value-box">
+              <div id="programAdKpi2049" class="kpi-value">0.00</div>
+              <div class="kpi-source-note">핵심 타깃(2049) 총 시청률</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">누적 가구 GRPs</span></div>
+            <div class="kpi-value-box">
+              <div id="programAdKpiHh" class="kpi-value">0.00</div>
+              <div class="kpi-source-note">가구 기준 총 시청률</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">일반광고(패키지)</span></div>
+            <div class="kpi-value-box">
+              <div id="programAdKpiPkg" class="kpi-value">0억</div>
+              <div class="kpi-source-note">프로그램 패키지 매출</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">일반광고(GRPs기여)</span></div>
+            <div class="kpi-value-box">
+              <div id="programAdKpiGen" class="kpi-value">0억</div>
+              <div class="kpi-source-note">패키지 외 일반광고 매출</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid-2col grid-zone5">
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>5대 광고매출 항목별 비중</h2><span class="programad-card-sub">억원 · 항목 클릭 시 상세 피벗으로 이동</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdRevenueMix"></canvas></div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>TOP 10 프로그램별 매출 세부 구성</h2><span class="programad-card-sub">억원 · 항목 클릭 시 상세 피벗으로 이동</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdBreakdown"></canvas></div>
+          </div>
+        </section>
+
+        <section class="grid-2col grid-zone5">
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>프로그램별 2049 vs 가구 GRPs 비교</h2><span class="programad-card-sub">상위 10개 프로그램 · 항목 클릭 시 상세 피벗으로 이동</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdGrps"></canvas></div>
+          </div>
+          <div class="card-box">
+            <div class="card-box-header">
+              <div class="card-box-title"><h2>장르별 매출 집행 현황</h2><span class="programad-card-sub">억원 · 클릭 시 장르별 상세 피벗으로 이동</span></div>
+            </div>
+            <div class="chart-container" style="height: 400px;"><canvas id="chartProgramAdGenre"></canvas></div>
+          </div>
+        </section>
+
+        <section class="table-container">
+          <div class="table-controls">
+            <div>
+              <h2 style="font-size: 16px; font-weight: 600;">프로그램별 상세 매출 &amp; GRPs 실적 (피벗 합산)</h2>
+              <span class="programad-card-sub">행을 클릭하면 프로그램의 채널별 세부 실적이 펼쳐집니다. 컬럼 제목을 클릭하면 정렬됩니다. 매출 단위: 백만원</span>
+            </div>
+            <button class="btn btn-sm" onclick="exportProgramAdToExcel()">📥 Excel 다운로드</button>
+          </div>
+          <div class="table-wrapper" style="max-height: 700px;">
+            <table class="data-table pivot-tree-table" id="programAdTable">
+              <thead id="programAdTableHead"></thead>
+              <tbody id="programAdTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <span id="programAdPageInfo" class="page-info">0 - 0 / 총 0건</span>
+            <div style="display:flex; gap:6px;">
+              <button id="btnProgramAdPrevPage" class="btn btn-sm" onclick="changeProgramAdPage(-1)">이전</button>
+              <button id="btnProgramAdNextPage" class="btn btn-sm" onclick="changeProgramAdPage(1)">다음</button>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /programAdContentBody -->
+    </div><!-- /programAdMainView -->
+
+    <div id="programAdDetailView" class="view-section">
+      <section class="table-container">
+        <div class="table-controls">
+          <div>
+            <h2 id="programAdDetailTitle" style="font-size: 17px; font-weight: 600;">매출 상세 분석</h2>
+            <span class="programad-card-sub">연도 머리글의 [+]를 눌러 연도별 월 값을 펼칩니다. 연간합계는 각 연도 오른쪽에 표시됩니다. 매출 단위: 백만원 (GRPs는 소수 2자리)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-sm" onclick="exportProgramAdDetailToExcel()">📥 피벗 엑셀 다운로드</button>
+          </div>
+        </div>
+        <div class="table-wrapper" style="max-height: 700px;">
+          <table class="data-table pivot-tree-table" id="programAdDetailTable"></table>
+        </div>
+      </section>
+    </div>
   </div>
   <!-- App modules — 로드 순서가 곧 의존성 (architecture.md 참조) -->
   <script src="js/core/state.js"></script>
@@ -2178,6 +2369,7 @@
   <script src="js/core/theme-system.js"></script>
   <script src="js/core/data-loader.js"></script>
   <script src="js/core/metrics-data-loader.js"></script>
+  <script src="js/core/programad-data-loader.js"></script>
   <script src="js/core/filters.js"></script>
   <script src="js/features/shared-helpers.js"></script>
   <script src="js/features/pivot-builder.js"></script>
@@ -2185,6 +2377,7 @@
   <script src="js/features/kpi.js"></script>
   <script src="js/features/metrics-dashboard.js"></script>
   <script src="js/features/metrics-ratings.js"></script>
+  <script src="js/features/program-ad.js"></script>
   <script src="js/features/trend-portfolio-channel.js"></script>
   <script src="js/features/mom.js"></script>
   <script src="js/features/agency-comp.js"></script>

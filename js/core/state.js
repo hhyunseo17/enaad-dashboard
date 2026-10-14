@@ -254,6 +254,28 @@
     const METRICS_DASHBOARD_ENABLED = true;
 
     // ============================================================
+    // 헤더 탭 권한 + 프로그램별 광고매출(programAd) 탭 전용 UI 상태
+    // 세 탭(sales / metrics / programAd)은 서로 완전히 독립이다. programAd는 rawData/filteredData/
+    // applyFilters/revenueBasisMode 등 매출 쪽 상태를 읽지도 바꾸지도 않는다 — 데이터는
+    // js/core/programad-data-loader.js(programAdRows 등), 렌더는 js/features/program-ad.js.
+    // ============================================================
+    // /api/me의 allowed_tabs를 js/core/auth.js의 loadAllowedTabs()가 로그인 직후 한 번 채운다
+    // (UX용 — 숨기는 것뿐이고, 실제 차단은 서버 403이다). 실패 시 기본값(매출·지표 노출, programAd 숨김)을 유지한다.
+    let allowedDashboardTabs = ['sales', 'metrics'];
+    let salesAccessAllowed = true;
+    let programAdAccessAllowed = false;
+    // 필터: 연/월은 비어 있으면 전체. 채널/장르는 체크된 값 목록(비어 있거나 전부면 필터 없음 — program-ad 원본과 동일).
+    let programAdFilterStates = { year: [], month: [], channel: [], genre: [] };
+    let programAdProgramSearch = '';
+    let programAdFiltersInitialized = false;
+    let programAdCurrentPage = 1;
+    const PROGRAM_AD_PAGE_SIZE = 15;
+    let programAdSortCol = 'tot';
+    let programAdSortDir = 'desc';
+    let programAdDetailMetric = 'pkg';       // programAdDetail 화면이 보여주는 지표 키
+    let programAdExpandedYears = {};         // programAdDetail 화면: 연도 열 펼침 상태
+
+    // ============================================================
     // 지표 대시보드(경쟁채널 벤치마크) 전용 UI 상태 — js/features/metrics-dashboard*.js가 사용.
     // metricsRevenueData 등 데이터 계약 관련 상태는 js/core/metrics-data-loader.js에 있다(그 파일의
     // 몫 — 렌더는 하지 않는 경계). 여기 있는 것은 순수 UI 선택 상태다.
