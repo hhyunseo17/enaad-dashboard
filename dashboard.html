@@ -2344,51 +2344,25 @@
 
         <section class="table-container">
           <div class="table-controls">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <h2 style="font-size: 16px; font-weight: 600;">프로그램별 상세 매출 &amp; GRPs 실적</h2>
-                <span class="tag-badge"><span id="programAdMainPivotTotalLabel">합계</span> : <span id="programAdMainPivotTotalAmount">0</span></span>
-              </div>
-              <span class="programad-card-sub">장르 → 프로그램 → 채널 순으로 +를 눌러 펼칩니다. 보는 값은 ⚙ 표 편집의 Σ 값에서 바꿉니다(매출 5종·전체매출·GRPs). 위 조회조건이 그대로 적용됩니다.</span>
+            <div>
+              <h2 style="font-size: 16px; font-weight: 600;">프로그램별 상세 매출 &amp; GRPs 실적 (피벗 합산)</h2>
+              <span class="programad-card-sub">행을 클릭하면 프로그램의 채널별 세부 실적이 펼쳐집니다. 컬럼 제목을 클릭하면 정렬됩니다. 매출 단위: 백만원</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              <button class="btn btn-sm" id="programAdMainPivotResetBtn" onclick="pvResetPivot('programAdMain')" style="display:none;">↺ 원래대로</button>
-              <button class="btn btn-sm btn-toggle" id="programAdMainPivotBuilderBtn" onclick="pvToggleBuilder('programAdMain')" title="필터·행·열·값을 바꿔 표를 다시 구성합니다"><span>⚙ 표 편집</span><span class="btn-caret">◀</span></button>
-              <button class="btn btn-primary btn-sm" onclick="exportProgramAdToExcel()">📥 엑셀 다운로드</button>
+            <button class="btn btn-sm" onclick="exportProgramAdToExcel()">📥 Excel 다운로드</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table pivot-tree-table programad-fill-table" id="programAdTable">
+              <thead id="programAdTableHead"></thead>
+              <tbody id="programAdTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <span id="programAdPageInfo" class="page-info">0 - 0 / 총 0건</span>
+            <div class="pagination-btns">
+              <button id="btnProgramAdPrevPage" class="btn btn-sm" onclick="changeProgramAdPage(-1)">이전</button>
+              <button id="btnProgramAdNextPage" class="btn btn-sm" onclick="changeProgramAdPage(1)">다음</button>
             </div>
           </div>
-        <section class="dd-layout dd-layout-collapsed" id="programAdMainPivotSection">
-          <div class="dd-main">
-            <div class="dd-filter-bar" id="programAdMainDdFilterBar"></div>
-            <div class="table-wrapper">
-              <table class="data-table pivot-tree-table programad-fill-table">
-                <thead><tr id="programAdMainPivotHeaderRow1"></tr><tr id="programAdMainPivotHeaderRow2"></tr></thead>
-                <tbody id="programAdMainPivotTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <aside class="dd-sidebar">
-            <div class="dd-field-list" id="programAdMainDdFieldList" ondragover="event.preventDefault();" ondrop="onDetailDataWellDrop(event,'list')"></div>
-            <div class="dd-wells">
-              <div class="dd-well" data-well="filters" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'filters')">
-                <div class="dd-well-title">🏷 필터</div>
-                <div class="dd-well-body" id="programAdMainDdWellFilterBody"></div>
-              </div>
-              <div class="dd-well" data-well="columns" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'columns')">
-                <div class="dd-well-title">▤ 열</div>
-                <div class="dd-well-body" id="programAdMainDdWellColumnsBody"></div>
-              </div>
-              <div class="dd-well" data-well="rows" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'rows')">
-                <div class="dd-well-title">☰ 행</div>
-                <div class="dd-well-body" id="programAdMainDdWellRowsBody"></div>
-              </div>
-              <div class="dd-well" data-well="values" ondragover="onDetailDataWellDragOver(event)" ondragleave="onDetailDataWellDragLeave(event)" ondrop="onDetailDataWellDrop(event,'values')">
-                <div class="dd-well-title">Σ 값</div>
-                <div class="dd-well-body" id="programAdMainDdWellValuesBody"></div>
-              </div>
-            </div>
-          </aside>
-        </section>
         </section>
 
       </div><!-- /programAdContentBody -->

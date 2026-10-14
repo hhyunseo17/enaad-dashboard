@@ -103,7 +103,7 @@
       // 하드코딩 — 값 하드코딩 중복이 로드순서 깨는 것보다 안전하다. **둘 중 하나만 고치면 조용히
       // 어긋나니 라벨 문자열을 바꿀 땐 반드시 metricsGenreRatingBandFor()도 같이 고칠 것.**
       genreBandOrder: (a, b) => pvOrderListCompare(PV_GENRE_BAND_ORDER, a, b),
-      // 프로그램별 광고매출(programAdMain/programAdDetail)의 장르 고정 순서 — 드라마&영화 → 오락 → 정보 → 나머지
+      // 프로그램별 광고매출 상세 피벗(programAdDetail)의 장르 고정 순서 — 드라마&영화 → 오락 → 정보 → 나머지
       // 가나다. 장르 차트·드롭다운과 같은 규칙이라 program-ad.js의 programAdCompareGenre()를 그대로 쓴다
       // (로드 순서상 호출 시점에 해석되므로 지연 참조로 충분하다).
       genreOrder: (a, b) => programAdCompareGenre(a, b),
@@ -1009,43 +1009,16 @@
         parentView: 'metricsMain',
       },
 
-      // --- 프로그램별 광고매출(programAd) 탭 --------------------------------------------------------
+      // --- 프로그램별 광고매출(programAd) 상세 피벗 ------------------------------------------------
       // 지표 피벗과 같은 방식: dataSource가 매출 쪽 전역(rawData/filteredData)이 아니라 programAd 자기 데이터
       // (programAdRows를 컨트롤바 연/월/채널/장르/프로그램 검색으로 좁힌 결과 — program-ad.js의
-      // programAd*DataForPivot())를 돌려준다. **프리셋 키가 곧 뷰 키**(programAdMain/programAdDetail)여야 한다 —
+      // programAdDetailDataForPivot())를 돌려준다. **프리셋 키가 곧 뷰 키**(programAdDetail)여야 한다 —
       // 빌더 패널의 드래그앤드롭 핸들러가 currentView로 프리셋을 찾는다(pvBuilderCtx).
+      // (메인 화면 맨 아래 본표는 엔진을 쓰지 않는다 — 여러 지표를 열로 나란히 보는 원본 표라서 program-ad.js 자체 렌더러다.)
       //
       // 엔진은 한 번에 값 하나만 그린다(maxValues:1). 매출 5종·전체매출·GRPs 2종은 전부 값 well에 놓을 수 있는
       // 필드(DD_VALUE_ONLY_FIELDS)이고, 놓는 즉시 PV_VALUE_FORMAT_BY_FIELD의 서식이 붙는다.
       // 컨트롤바에 있는 연/월/채널/장르/프로그램은 필터 well에 놓을 수 없다(filterBarCoveredFields).
-      programAdMain: {
-        rows: ['genre', 'program', 'channel'],
-        rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
-        fieldSorters: { genre: 'genreOrder', program: 'valueDesc', channel: 'channelOrder' },
-        fieldOrderSorters: { genre: 'genreOrder' }, // 행 라벨 우클릭 메뉴의 '기본 순서' — 이 프리셋에서만
-        escapeLabels: true, // 프로그램명 등 데이터 문자열이 라벨·토글 속성에 들어간다 — HTML 이스케이프(pvEscHtml)
-        columns: ['year', 'month'],
-        values: [{ field: 'revTotal', agg: 'sum', format: PV_FMT_PROGRAM_AD_MONEY }],
-        sourceFilter: null,
-        dataSource: () => programAdMainDataForPivot(),
-        filterBarCoveredFields: ['genre', 'program'],
-        columnDefaultExpanded: true,
-        subtotalDepths: [0],
-        toggleDepth: 0,
-        depthStyles: PV_STYLE_TREE,
-        subtotalStyle: PV_SUBTOTAL_STYLE_TREE,
-        totalStyle: PV_TOTAL_STYLE_TREE,
-        header: PV_HEADER_TREE,
-        grandTotal: PV_GRAND_TREE,
-        expandedRows: () => expandedProgramAdMainPivot,
-        expandedCols: () => expandedProgramAdMainYearColumns,
-        render: () => renderProgramAdPivot('programAdMain'),
-        resetBtn: 'programAdMainPivotResetBtn',
-        layoutId: 'programAdMainPivotSection', builderBtn: 'programAdMainPivotBuilderBtn',
-        builderDom: { fieldList:'programAdMainDdFieldList', filterBar:'programAdMainDdFilterBar', filters:'programAdMainDdWellFilterBody', columns:'programAdMainDdWellColumnsBody', rows:'programAdMainDdWellRowsBody', values:'programAdMainDdWellValuesBody' },
-        dom: { head1: 'programAdMainPivotHeaderRow1', head2: 'programAdMainPivotHeaderRow2', body: 'programAdMainPivotTableBody', total: 'programAdMainPivotTotalAmount' },
-      },
-
       // 상세 피벗 — 차트에서 항목을 눌러 들어온 지표(programAdDetailMetric) 하나를 장르→프로그램 트리로 본다.
       // 값 필드가 진입 지표에 따라 달라서 values를 getter로 둔다: 최초 구성과 '↺ 원래대로'가 항상 현재 지표를 가리킨다
       // (openProgramAdDetail이 진입할 때 구성을 새로 만든다).
@@ -1113,7 +1086,7 @@
     // 행에 metricsGenreQualifyingBandDataForPivot()(metrics-ratings.js)가 구간(band) 필드 하나만 얹어
     // 넘긴다. avgRating 대신 band를 노출해 사용자가 표편집에서 구간을 행/열/필터로 옮길 수 있게 한다.
     const PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS = ['channel', 'program', 'genre', 'band', 'year', 'month'];
-    // 프로그램별 광고매출 두 피벗 전용(programAdMain/programAdDetail) — programAdRows의 실제 필드. 축 5개 + 값 8개
+    // 프로그램별 광고매출 상세 피벗(programAdDetail) 전용 — programAdRows의 실제 필드. 축 5개 + 값 8개
     // (매출 5종·전체매출·GRPs 2종, 전부 값 well 전용 — detail-data.js DD_VALUE_ONLY_FIELDS).
     const PV_PROGRAM_AD_FIELDS = ['genre', 'program', 'channel', 'year', 'month',
       'revTotal', 'revPackage', 'revGeneralGrps', 'revInfomercial', 'revImc', 'revOther', 'grp2049', 'grpHousehold'];
@@ -1128,7 +1101,7 @@
       metricsGrpTrendPivot: PV_METRICS_RATINGS_FIELDS, metricsAdvCountTrendPivot: PV_METRICS_RATINGS_FIELDS,
       metricsGenreQualifyingTrendPivot: PV_METRICS_GENRE_QUALIFYING_FIELDS,
       metricsGenreQualifyingBarPivot: PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS,
-      programAdMain: PV_PROGRAM_AD_FIELDS, programAdDetail: PV_PROGRAM_AD_FIELDS,
+      programAdDetail: PV_PROGRAM_AD_FIELDS,
     };
 
     const PV_GRAND = '__GRAND__'; // 총합계 열의 가상 pathKey (visibleColumns에는 없다)

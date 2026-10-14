@@ -56,7 +56,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
   js/features/kpi.js               KPI 카드 + 업프론트 목표(월할)
   js/features/metrics-dashboard.js 지표 대시보드: 컨트롤바/KPI 1·2/M-S 트렌드/매출 트렌드·랭킹
   js/features/metrics-ratings.js   지표 대시보드: KPI 3·4·5/CPRP·시청률·GRP 미니차트/상세표
-  js/features/program-ad.js        프로그램별 광고매출: 컨트롤바/KPI/차트 4종/피벗 2개(엔진 프리셋 programAdMain·programAdDetail의 dataSource·보조 렌더)
+  js/features/program-ad.js        프로그램별 광고매출: 컨트롤바/KPI/차트 4종/본표(자체 렌더러)/상세 피벗(엔진 프리셋 programAdDetail의 dataSource·보조 렌더)
   js/features/trend-portfolio-channel.js
   js/features/mom.js
   js/features/agency-comp.js
@@ -75,7 +75,7 @@ scripts/etl/               엑셀 → Supabase 적재 스크립트 (독립 Node 
 - **`sales`**(기존 15개 뷰) — `main` 이하 매출 대시보드 전체. 상단 `.filter-bar`(연/월/부서/채널/방송디지털/대분류/매출기준)를 공유한다.
 - **`metrics`**(`metricsMain`/`metricsDetail`) — 지표 대시보드. `.filter-bar` 대신 자기만의 `.metrics-control-bar`를 쓰고, 데이터셋도(`metricsRevenueData`/`metricsRatingsData`) 상태도(`state.js`의 `metricsSelectedYear` 등) 전부 분리돼 있다.
 
-- **`programAd`**(`programAdMain`/`programAdDetail`) — 프로그램별 광고매출. 자기만의 `.programad-control-bar`·`#programAdDataAsOfBar`·상태(`state.js`의 `programAd*`)·데이터셋(`programAdRows`)을 쓰고 매출 쪽 상태(`rawData`/`applyFilters` 등)는 읽지도 바꾸지도 않는다. 피벗 두 개는 공용 엔진(`PIVOT_PRESETS.programAdMain`/`programAdDetail`)이 그린다 — 지표 탭과 같은 방식(`dataSource`가 자기 데이터를 돌려줌, 프리셋 키 = 뷰 키). 상세는 `docs/features/program-ad.md`.
+- **`programAd`**(`programAdMain`/`programAdDetail`) — 프로그램별 광고매출. 자기만의 `.programad-control-bar`·`#programAdDataAsOfBar`·상태(`state.js`의 `programAd*`)·데이터셋(`programAdRows`)을 쓰고 매출 쪽 상태(`rawData`/`applyFilters` 등)는 읽지도 바꾸지도 않는다. 본표는 자체 렌더러, 상세 피벗만 공용 엔진(`PIVOT_PRESETS.programAdDetail`)이 그린다 — 지표 탭과 같은 방식(`dataSource`가 자기 데이터를 돌려줌, 프리셋 키 = 뷰 키). 상세는 `docs/features/program-ad.md`.
 
 `switchView()`는 `cfg.family`를 보고 `#filterBarSection`·`#salesStatusLegend`(매출 필터바·상태 칩, `sales`일 때만 표시)·`.metrics-control-bar`·`#metricsDataAsOfBar`(`metrics`일 때만)·`#programAdControlBar`·`#programAdDataAsOfBar`(`programAd`일 때만)를 서로 반대로 토글하고, `syncDashboardTabs(family)`로 헤더 탭 강조를 바꾼다. 탭 권한: 로그인 직후 `auth.js`가 `/api/me`의 `allowed_tabs`로 탭 버튼을 숨기고 `switchView()`가 허용되지 않은 family 진입을 허용된 첫 탭으로 돌려보낸다(진짜 차단은 서버 `requireTabAccess` 403). sales 권한이 없으면 `init.js`가 매출 데이터 적재(`initDataConnection`)를 건너뛴다. `returnToParentView()`(breadcrumb "⬅" 버튼)는 `VIEW_CONFIG[currentView].parentView`를 따라가며(미지정 시 `'main'`), `metricsDetail`은 `parentView: 'metricsMain'`이라 그쪽으로 돌아간다 — 기존 11개 매출 드릴다운은 `parentView` 미지정이라 동작이 그대로다.
 

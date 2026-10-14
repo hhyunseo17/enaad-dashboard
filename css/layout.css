@@ -550,9 +550,15 @@
 /* "어드레서블/큐톤 미반영" 안내 — 오류가 아니라 확인 신호라 notice-banner와 같은 주황 계열(토큰)을 칩으로 쓴다. */
 .programad-notice-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--radius-full); background: var(--accent-orange-bg); border: 1px solid var(--accent-orange); color: var(--text-primary); font-size: 12px; font-weight: 500; white-space: nowrap; }
 .programad-card-sub { font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
-/* 본표는 매출 대시보드 맨 아래 "상세 매출 내역" 표처럼 카드 폭을 꽉 채운다. 엔진 피벗은 기본이 내용 폭(pivot-table.css
+/* 본표(자체 렌더러)는 매출 대시보드 맨 아래 "상세 매출 내역" 표처럼 카드 폭을 꽉 채운다. 엔진 피벗은 기본이 내용 폭(pivot-table.css
    `table.data-table.pivot-tree-table { min-width: 0 }`)이라 오른쪽이 비는데, 이 표만 min-width를 100%로 되돌린다.
    특정도를 맞추려고 선택자를 그대로 이어 붙였다(떼면 위 규칙에 진다). 넘치면 .table-wrapper 안에서만 가로 스크롤된다. */
 table.data-table.pivot-tree-table.programad-fill-table { min-width: 100%; }
+/* 아코디언 하위(채널) 행은 접어 두고 부모 행 클릭 때만 편다. */
+.programad-child-row { display: none; }
+.programad-child-row.open { display: table-row; }
+.programad-parent-row { cursor: pointer; }
+.programad-num { text-align: right; }
+#btnProgramAdPrevPage:disabled, #btnProgramAdNextPage:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 /* 상세 피벗 제목의 항목 색 점 — 색은 인라인(PAC(), theme-system.js)으로 준다. 글자색은 건드리지 않는다. */
 .programad-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }

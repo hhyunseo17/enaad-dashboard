@@ -6,14 +6,14 @@
 | 파일 | 역할 |
 |---|---|
 | `js/core/programad-data-loader.js` | `/api/program-ad` 지연 로딩(`fetchProgramAdDataHttp`), snake_case → camelCase 변환, 연결 칩(`setProgramAdConnectionStatus`) |
-| `js/features/program-ad.js` | 필터(연/월 pill·채널·장르·프로그램 검색), KPI 5장, 차트 4종, 피벗 2개의 dataSource·보조 렌더(`renderProgramAdPivot`), Excel |
-| `js/features/pivot-builder.js` | `PIVOT_PRESETS.programAdMain`(본표)/`programAdDetail`(상세) — 피벗은 공용 엔진이 그린다 |
-| `js/core/state.js` | `allowedDashboardTabs`/`salesAccessAllowed`/`programAdAccessAllowed`, `programAdFilterStates`, `programAdDetailMetric`, 피벗 접힘 상태 `expandedProgramAd*` |
+| `js/features/program-ad.js` | 필터(연/월 pill·채널·장르·프로그램 검색), KPI 5장, 차트 4종, 본표(자체 렌더러 `renderProgramAdTable`), 상세 피벗의 dataSource·보조 렌더(`renderProgramAdPivot`), Excel |
+| `js/features/pivot-builder.js` | `PIVOT_PRESETS.programAdDetail`(상세 피벗만 — 본표는 엔진을 쓰지 않는다) |
+| `js/core/state.js` | `allowedDashboardTabs`/`salesAccessAllowed`/`programAdAccessAllowed`, `programAdFilterStates`, 본표 정렬·페이지(`programAdSortCol/Dir`, `programAdCurrentPage`), `programAdDetailMetric`, 상세 피벗 접힘 상태 `expandedProgramAdDetail*` |
 | `js/core/theme-system.js` | `PROGRAM_AD_ROLES` + `PAC(key)` — 계열색(테마별 `{light, dark}`) |
 | `js/core/auth.js` | `loadAllowedTabs()`(`/api/me`), `applyTabAccessGate()` |
 | `js/core/view-router.js` | `VIEW_CONFIG.programAdMain/programAdDetail`, 탭 가드(`isFamilyAccessAllowed`), `firstAllowedViewKey`, `enterInitialViewWithoutSales` |
-| `dashboard.html` | `#dashboardTabProgramAd`, `#programAdDataAsOfBar`, `#programAdControlBar`, `#programAdMainView`, `#programAdDetailView`(피벗 마크업은 지표 피벗 섹션과 같은 구조) |
-| `css/layout.css` | `.programad-*` (컨트롤바·안내 칩·제목 점, 본표 폭 채움 `.programad-fill-table`) |
+| `dashboard.html` | `#dashboardTabProgramAd`, `#programAdDataAsOfBar`, `#programAdControlBar`, `#programAdMainView`(본표 `#programAdTable`), `#programAdDetailView`(피벗 마크업은 지표 피벗 섹션과 같은 구조) |
+| `css/layout.css` | `.programad-*` (컨트롤바·안내 칩·제목 점, 본표 아코디언 행 `.programad-parent-row/.programad-child-row/.programad-num`, 폭 채움 `.programad-fill-table`) |
 
 모든 전역 이름에 `programAd`/`PROGRAM_AD` 접두사를 붙였다(전역 스코프 공유).
 
@@ -41,11 +41,11 @@
 - 컨트롤바: 연도/월 pill(일반 클릭 = 단일 선택, Ctrl(⌘)+클릭 = 가감, 데이터 없는 월은 비활성), 채널·장르 체크박스 드롭다운, 프로그램 검색, "필터 초기화"(전체 선택), "어드레서블, 큐톤 등 광고유형 미포함" 안내 칩.
 - KPI 5장: 총 매출액 / 누적 2049 GRPs / 누적 가구 GRPs / 일반광고(패키지) / 일반광고(GRPs기여). 금액은 억원.
 - 차트 4종: 5대 매출항목 비중(도넛) / TOP10 프로그램 매출 세부구성(가로 스택바) / 프로그램별 2049 vs 가구 GRPs(세로 그룹바, 2049 상위 10) / 장르별 매출 집행현황(가로 바). 각 항목 클릭 → 상세 피벗(`programAdDetail`).
-- 프로그램 피벗 표(`programAdMain`, 공용 엔진): 행 장르 → 프로그램 → 채널(+/−로 펼침, 기본 접힘), 열 연 → 월(연도 +/−·'N년 요약'), 소계·총합계 행, 행 라벨 우클릭 정렬 메뉴, ⚙ 표 편집(필드 빌더 사이드바)·↺ 원래대로, 엑셀 다운로드. 레이아웃은 매출 대시보드 맨 아래 "상세 매출 내역" 표처럼 카드 폭을 채운다(`.programad-fill-table`; 넘치면 `.table-wrapper` 안에서만 가로 스크롤). 값은 한 번에 하나이며 기본 전체매출 — 값 well에 매출 5종·전체매출·GRPs(2049)/(가구)를 놓아 바꾼다. 매출 백만원 소수 1자리, GRPs 소수 2자리, 0은 `-`. 장르 정렬은 드라마&영화 → 오락 → 정보 → 나머지 가나다(`genreOrder`). 프로그램 단독으로 보려면 행 well에서 장르를 뺀다.
-- 상세 피벗(`programAdDetail`, 헤더 ⬅ 버튼은 `parentView: 'programAdMain'`): 차트에서 항목을 눌러 들어온 지표(`programAdDetailMetric`, 장르 차트는 전체매출) 하나를 장르 → 프로그램 × 연 → 월 트리로. 진입할 때마다 표 구성을 처음 모양(값 = 그 지표)으로 되돌린다(`openProgramAdDetail`).
-- 데이터 문자열(프로그램명 등)은 프리셋 옵트인 `escapeLabels: true`로 라벨 텍스트와 토글 `onclick` 키 모두 HTML 이스케이프(`pvEscHtml`)를 거친다 — 다른 프리셋은 이스케이프하지 않는다(일부 지표 라벨은 마크업을 담을 수 있다). 엔진 `pvEsc`는 그대로다. 상세 제목은 `programAdEscapeHtml()`.
+- 프로그램 피벗 표(메인 화면 맨 아래, **자체 렌더러** `renderProgramAdTable`): 프로그램 단위 합산 → 행 클릭 시 채널별 세부 행 아코디언(▶/▼), 컬럼 제목 클릭 정렬(기본 전체매출 내림차순), 15개씩 페이지, Excel 다운로드. 컬럼 순서는 **프로그램 | 채널 | 장르** | 2049 GRPs | 가구 GRPs | 패키지 | GRPs기여 | 인포 | IMC | 기타 | 전체매출(프로그램이 맨 왼쪽, 사용자 요청). ▶ 아이콘은 프로그램 칸에 붙고, 펼친 채널 행은 프로그램·장르 칸을 비우고 채널 칸에 `└ 채널명`이 온다. 채널이 둘 이상이면 부모 행 채널 칸은 "ENA 등". 매출 단위 백만원 소수 1자리, GRPs 소수 2자리, 0은 `–`. 겉모양(셀 패딩·글자 크기·헤더·카드 폭 채움 `.programad-fill-table`)은 매출 대시보드 맨 아래 "상세 매출 내역" 표를 따르고, 넘치면 `.table-wrapper` 안에서만 가로 스크롤된다. 데이터 문자열은 `programAdEscapeHtml`, onclick 인자는 숫자뿐.
+- 상세 피벗(`programAdDetail`, 공용 엔진, 헤더 ⬅ 버튼은 `parentView: 'programAdMain'`): 차트에서 항목을 눌러 들어온 지표(`programAdDetailMetric`, 장르 차트는 전체매출) 하나를 장르 → 프로그램 × 연 → 월 트리로. 진입할 때마다 표 구성을 처음 모양(값 = 그 지표)으로 되돌린다(`openProgramAdDetail`).
+- 데이터 문자열(프로그램명 등)은 (상세 피벗) 프리셋 옵트인 `escapeLabels: true`로 라벨 텍스트와 토글 `onclick` 키 모두 HTML 이스케이프(`pvEscHtml`)를 거친다 — 다른 프리셋은 이스케이프하지 않는다(일부 지표 라벨은 마크업을 담을 수 있다). 엔진 `pvEsc`는 그대로다. 상세 제목은 `programAdEscapeHtml()`.
 - dataSource는 지금 그려지는 값 필드가 합계(sum)일 때 그 값이 0인 행을 제외한다(`programAdPivotRows`) — 총합·소계는 그대로이고, 값 well에서 필드를 바꾸면 그 필드 기준으로 따라간다.
-- 두 피벗 모두 현재 컨트롤바 필터(연/월/채널/장르/프로그램 검색)를 그대로 따른다. 이 조건들은 필터 well에 놓을 수 없다(위쪽에서만 건다).
+- 본표와 상세 피벗 모두 현재 컨트롤바 필터(연/월/채널/장르/프로그램 검색)를 그대로 따른다. 상세 피벗에서는 이 조건들을 필터 well에 놓을 수 없다(위쪽에서만 건다).
 - 장르 정렬: 드라마&영화 → 오락 → 정보 → 나머지 가나다.
 - 데이터 기반 문자열은 모두 `programAdEscapeHtml()`을 거쳐 `innerHTML`에 넣는다(이 프로젝트에 같은 용도의 헬퍼가 없어 신설).
 
@@ -64,6 +64,6 @@
 장르 막대는 장르마다 서로 다른 색을 쓴다(`programAdGenreColor()` — 이름으로 고정해 필터로 장르가 빠져도 색이 안 바뀐다. 서수 팔레트 `seriesColor()`에서 고르되 매출 항목 색(파랑·하늘색·초록·빨강)과 겹치는 칸은 피했다). 항목 색은 상세 피벗 제목의 작은 점으로만 준다(글자색은 건드리지 않음 — 라이트에서 회색 글자 대비 문제 회피).
 
 ## 결정 사항
-- **피벗 엔진(`pivot-builder.js`) 사용**: 처음에는 "엔진은 `filteredData`·전역 필터바에 묶여 있다"고 보고 자체 렌더러로 옮겼으나 틀린 판단이었다 — 프리셋의 `dataSource`로 데이터를 따로 받을 수 있고 지표 탭 피벗 10여 개가 그렇게 돈다. 사용자 요구(매출/지표 탭 피벗과 디자인·기능 동일)에 따라 두 표를 엔진으로 이전했다. **프리셋 키는 뷰 키와 같아야 한다**(`programAdMain`/`programAdDetail`) — 빌더 드래그앤드롭이 `currentView`로 프리셋을 찾는다. 이전으로 의도적으로 사라진 것: 15개 페이지네이션, 컬럼 헤더 클릭 정렬(→ 행 라벨·열 헤더 우클릭 메뉴), 8개 지표 열을 한 표에 나란히 보여주던 형태(엔진은 값이 하나 — 값 well로 전환), 비제로 값이 있는 행만 보여주던 상세 피벗(현재 값이 0인 프로그램 행은 dataSource에서 제외).
-- 원본 대비 변경: 본표의 "ENA 등" 표기는 사라지고 채널은 행 트리의 3단계로 나온다. 상세 피벗의 매출 단위는 원본의 원 → 백만원 소수 1자리(절대원칙 8). 금액 KPI 표기 "억" → "억원". 원본의 R2/xlsx 수동 업로드 폴백, 30분 자동 갱신, `#detail-*` 해시 라우팅(이 앱은 `#뷰키` 해시를 쓴다)은 옮기지 않았다. Excel은 엔진에 피벗 내보내기가 없어 두 화면 모두 컨트롤바 필터를 거친 평면 행 전체(모든 지표)를 내려받는다(`exportProgramAdToExcel`).
+- **피벗 엔진(`pivot-builder.js`)은 상세 피벗에만 쓴다.** 처음에는 "엔진은 `filteredData`·전역 필터바에 묶여 있다"고 보고 두 표를 자체 렌더러로 옮겼으나 틀린 판단이었다 — 프리셋의 `dataSource`로 데이터를 따로 받을 수 있고 지표 탭 피벗 10여 개가 그렇게 돈다. 그래서 두 표를 모두 엔진으로 옮겼다가, '맨 아래 표는 원본에 있던 걸 그대로'라는 사용자 요청(2026-10-14)으로 **본표만 원본 자체 렌더러로 되돌렸다**. 이유: 본표는 GRPs 2종·매출 5종·전체매출을 열로 나란히 비교하는 표인데 엔진은 값을 하나만 그린다(`maxValues: 1`). 상세 피벗(차트 클릭으로 진입)은 엔진 그대로다. **엔진 프리셋 키는 뷰 키와 같아야 한다**(`programAdDetail`) — 빌더 드래그앤드롭이 `currentView`로 프리셋을 찾는다. 상세 피벗에서 의도적으로 달라진 것: 값이 0인 프로그램 행은 dataSource가 제외(현재 값 필드 기준).
+- 원본 대비 변경: 본표: 컬럼 순서를 프로그램 | 채널 | 장르로 바꾸고 채널이 1개뿐인 프로그램은 "ENA 등" 대신 채널명만 표시. 상세 피벗의 매출 단위는 원본의 원 → 백만원 소수 1자리(절대원칙 8). 금액 KPI 표기 "억" → "억원". 원본의 R2/xlsx 수동 업로드 폴백, 30분 자동 갱신, `#detail-*` 해시 라우팅(이 앱은 `#뷰키` 해시를 쓴다)은 옮기지 않았다. Excel은 엔진에 피벗 내보내기가 없어 두 화면 모두 컨트롤바 필터를 거친 평면 행 전체(모든 지표)를 내려받는다(`exportProgramAdToExcel`).
 - 연도를 일반 클릭으로 바꿀 때 기존 선택 월 중 해당 연도에 있는 월만 유지한다(원본 동작 그대로) — 월 pill을 일부만 켜 둔 채 연도를 바꾸면 그 월만 보인다.
