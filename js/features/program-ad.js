@@ -102,9 +102,11 @@
     // ------------------------------------------------------------
     // 필터 초기화/렌더 (연·월 pill, 채널·장르 체크박스)
     // ------------------------------------------------------------
+    // 매출 대시보드(resetFilters)와 같은 기본값 — 올해 데이터가 있으면 올해, 없으면 최신 연도.
     function programAdDefaultYear() {
       const ys = programAdAllYears();
-      return ys.length ? ys[ys.length - 1] : null; // 최신 연도
+      const cur = new Date().getFullYear();
+      return ys.includes(cur) ? cur : (ys.length ? ys[ys.length - 1] : null);
     }
 
     // 데이터 적재 후 최초 1회: 최신 연도 + 그 연도의 전체 월 + 전체 채널/장르.
@@ -133,15 +135,10 @@
       applyProgramAdFilters();
     }
 
-    // "필터 초기화" 버튼 — 전체 연도·전체 월·전체 채널/장르. 연·월은 빈 배열 = 전체.
+    // "필터 초기화" 버튼 — 매출 대시보드(resetFilters)와 같다: 기본 연도(올해/최신) 단독 선택 + 월 전체 + 채널/장르 전체 + 검색어 비움.
     function resetProgramAdFilters() {
       if (!programAdDataLoaded) return;
-      programAdFilterStates.year = [];
-      programAdFilterStates.month = [];
-      programAdSetAllCheckboxes(true);
-      const search = document.getElementById('inputProgramAdSearch');
-      if (search) search.value = '';
-      renderProgramAdPills();
+      programAdResetToDefault();
       applyProgramAdFilters();
     }
 
