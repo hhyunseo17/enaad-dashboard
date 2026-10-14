@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ============================================================
 // scripts/etl/load-program-ad.mjs
-// CLI 진입점: program-ad의 data.xlsx(프로그램별 광고매출 + GRPs) → program_ad_sales upsert
-// 사용법: node load-program-ad.mjs <data.xlsx 경로>
+// CLI 진입점: program-ad.xlsx(프로그램별 광고매출 + GRPs, 예전 이름 data.xlsx) → program_ad_sales upsert
+// 사용법: node load-program-ad.mjs <program-ad.xlsx 경로>
 //
 // 원본 구조(직접 확인, 2026-10-14):
 // - 시트 'Sheet2'(월/채널/장르/프로그램 + 매출 5종 + GRPs 2종, 월×채널×프로그램 단위, 약 1.9만행).
@@ -61,7 +61,7 @@ function parseNum(v) {
 export function parseProgramAdWorkbook(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = wb.SheetNames.includes(SHEET_NAME) ? SHEET_NAME : wb.SheetNames[0];
-  if (!sheetName) throw new Error('data.xlsx에 시트가 없습니다.');
+  if (!sheetName) throw new Error('program-ad.xlsx에 시트가 없습니다.');
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: 0 });
   if (rows.length === 0) throw new Error(`시트 "${sheetName}"에 데이터 행이 없습니다.`);
 
@@ -120,7 +120,7 @@ async function main() {
   assertEnv();
   const [filePath] = process.argv.slice(2);
   if (!filePath) {
-    console.error('사용법: node load-program-ad.mjs <data.xlsx 경로>');
+    console.error('사용법: node load-program-ad.mjs <program-ad.xlsx 경로>');
     process.exit(1);
   }
 

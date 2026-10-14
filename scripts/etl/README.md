@@ -129,9 +129,9 @@ node load-program-ratings.mjs "C:\경로\program-ratings.xlsx"
 **완전히 독립**된 데이터라 `v_bonbu_sales`와 연결하지 않고 `program_ad_sales` 테이블 하나만 쓴다. 다른 독립 스크립트와
 같이 배치/컷오버 없이 upsert만 한다.
 ```
-node load-program-ad.mjs "C:\경로\data.xlsx"
+node load-program-ad.mjs "C:\경로\program-ad.xlsx"
 ```
-- 원본은 Google Drive `ENAAD-data/program-ad/data.xlsx`(로컬은 DRM이 걸리므로 Drive에서 받은 사본을 쓴다). 시트
+- 파일 이름은 `program-ad.xlsx`로 쓴다(예전 이름 `data.xlsx`는 `addata.xlsx`와 헷갈려서 바꿨다, 2026-10-14). 원본은 Google Drive `ENAAD-data/program-ad/` 폴더에 있고(Drive 쪽 이름이 `data.xlsx`면 로컬로 받을 때 이름만 바꿔 쓴다), 로컬은 DRM이 걸리므로 Drive에서 받은 사본을 쓴다. 시트
   `Sheet2`(월/채널/장르/프로그램 + 매출 5종 + GRPs 2종, 월×채널×프로그램 단위). `장르` 시트는 쓰지 않는다.
 - 프로그램명·채널명 정제는 기존 `program-ad/app.js`와 동일한 규칙을 ETL이 한다(괄호·`스페셜`·`패키지` 접미사 제거,
   `PLAY`→`ENA PLAY` 등). 정제 후 같은 키(연,월,채널,장르,프로그램)가 되는 행은 합산한다(실측 19,085행 → 17,874행).
