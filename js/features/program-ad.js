@@ -304,14 +304,55 @@
       renderProgramAdPivot('programAdMain');
     }
 
+    // KPI 카드의 전월·전년 증감 배지(지표 탭 KPI와 같은 모양 — metricsRenderBadge 참고, 2026-10-14 사용자 요청).
+    // 비교 대상 행은 현재 컨트롤바의 채널·장르·프로그램 검색을 그대로 걸고 연/월만 바꿔 다시 뽑는다.
+    // - 전년(동기): 연도를 **정확히 하나** 골랐을 때만. 월을 안 골랐으면 그 연도에 데이터가 있는 달(진행 중인 해는
+    //   1~9월처럼 일부)을 "같은 월 범위"로 삼아 전년과 맞춘다 — 12개월 전체와 비교하면 항상 크게 줄어든 것처럼 나온다.
+    // - 전월: 연도 하나 + 월 하나를 골랐을 때만(1월이면 전년 12월). 여러 달 합계의 "전월"은 의미가 없다.
+    // 비교값이 0이면 배지를 숨긴다(0 나누기, 그리고 "신규"인지 "데이터 없음"인지 구분할 수 없다).
+    function programAdRowsFor(years, months) {
+      const st = programAdFilterStates;
+      const search = programAdProgramSearch;
+      return programAdRows.filter(r => years.includes(r.year) && months.includes(r.month)
+        && (!st.channel.length || st.channel.includes(r.channel))
+        && (!st.genre.length || st.genre.includes(r.genre))
+        && (!search || r.program.toLowerCase().includes(search)));
+    }
+    function programAdComparisonRows() {
+      const st = programAdFilterStates;
+      if (st.year.length !== 1) return { yoy: null, mom: null };
+      const y = st.year[0];
+      const months = st.month.length ? st.month : [...new Set(programAdRows.filter(r => r.year === y).map(r => r.month))];
+      const yoy = programAdRowsFor([y - 1], months);
+      let mom = null;
+      if (st.month.length === 1) mom = st.month[0] === 1 ? programAdRowsFor([y - 1], [12]) : programAdRowsFor([y], [st.month[0] - 1]);
+      return { yoy, mom };
+    }
+    function programAdRenderBadge(elId, label, cur, prev) {
+      const el = document.getElementById(elId); if (!el) return;
+      if (prev === null || !(prev > 0)) { el.style.display = 'none'; return; }
+      const pct = (cur - prev) / prev * 100;
+      el.style.display = 'inline-flex';
+      el.className = 'badge-growth ' + (pct >= 0 ? 'up' : 'down');
+      el.innerText = `${label} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% ${pct >= 0 ? '▲' : '▼'}`;
+    }
+
     function renderProgramAdKpis() {
       const rows = programAdFilteredRows;
-      document.getElementById('programAdKpiTotal').innerText = programAdFmt100M(programAdSum(rows, 'revTotal'), 2);
+      const cmp = programAdComparisonRows();
       const grps = (v) => v ? programAdFmtNum(v, 2) : '0.00';
-      document.getElementById('programAdKpi2049').innerText = grps(programAdSum(rows, 'grp2049'));
-      document.getElementById('programAdKpiHh').innerText = grps(programAdSum(rows, 'grpHousehold'));
-      document.getElementById('programAdKpiPkg').innerText = programAdFmt100M(programAdSum(rows, 'revPackage'), 2);
-      document.getElementById('programAdKpiGen').innerText = programAdFmt100M(programAdSum(rows, 'revGeneralGrps'), 2);
+      [
+        ['Total', 'revTotal', (v) => programAdFmt100M(v, 2)],
+        ['2049', 'grp2049', grps],
+        ['Hh', 'grpHousehold', grps],
+        ['Pkg', 'revPackage', (v) => programAdFmt100M(v, 2)],
+        ['Gen', 'revGeneralGrps', (v) => programAdFmt100M(v, 2)],
+      ].forEach(([k, field, fmt]) => {
+        const cur = programAdSum(rows, field);
+        document.getElementById('programAdKpi' + k).innerText = fmt(cur);
+        programAdRenderBadge('programAdKpi' + k + 'MomBadge', '전월', cur, cmp.mom ? programAdSum(cmp.mom, field) : null);
+        programAdRenderBadge('programAdKpi' + k + 'YoyBadge', '전년', cur, cmp.yoy ? programAdSum(cmp.yoy, field) : null);
+      });
     }
 
     // ------------------------------------------------------------
@@ -459,10 +500,11 @@
 
     // 장르별 막대 색 — 장르마다 서로 다르고 필터로 일부 장르가 빠져도 색이 바뀌지 않게 이름으로 고정한다.
     // 값은 theme-system.js의 서수 팔레트(seriesColor — 라이트/다크 값이 각각 따로 적혀 있다, 절대원칙 9)에서 고르고
-    // 새 색은 만들지 않는다(절대원칙 10). 파랑·주황·초록(0~2번)은 다른 차트에서 매출 항목 색(패키지·GRPs기여·인포머셜)으로
-    // 쓰이고 빨강(5번)은 IMC라 장르에는 쓰지 않는다 — 한 화면에서 같은 색이 다른 뜻으로 보이지 않게 하기 위해서다.
+    // 새 색은 만들지 않는다(절대원칙 10). 파랑(0번)·초록(2번)·청록(4번 — GRPs기여 하늘색과 가깝다)은 다른 차트에서 매출
+    // 항목 색으로 쓰이고 빨강(5번)은 IMC라 장르에는 쓰지 않는다 — 한 화면에서 같은 색이 다른 뜻으로 보이지 않게 하기
+    // 위해서다. 주황(1번)과 노랑(7번)은 색상차가 13°뿐이라 막대 순서에서 멀리 떨어진 장르에 나눠 줬다(드라마&영화 ↔ 스포츠).
     // 기타는 무채(9번). 목록에 없는 장르가 원본에 새로 들어오면 5번으로 떨어진다.
-    const PROGRAM_AD_GENRE_PALETTE_INDEX = { '드라마&영화': 3, '오락': 4, '정보': 6, '교육': 7, '스포츠': 8, '기타': 9 };
+    const PROGRAM_AD_GENRE_PALETTE_INDEX = { '드라마&영화': 1, '오락': 3, '정보': 6, '교육': 8, '스포츠': 7, '기타': 9 };
     function programAdGenreColor(genre) {
       const i = PROGRAM_AD_GENRE_PALETTE_INDEX[genre];
       return seriesColor(i === undefined ? 5 : i);
