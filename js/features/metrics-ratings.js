@@ -533,7 +533,7 @@
     // 않았으면 programRatingsData의 마지막 연/월로 폴백한다.
     function renderMetricsGenreQualifyingNote() {
       let asOf = '';
-      const m = typeof programRatingsLastDate === 'string' ? programRatingsLastDate.match(/^(d{4})-(d{2})-(d{2})/) : null;
+      const m = typeof programRatingsLastDate === 'string' ? programRatingsLastDate.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
       if (m) asOf = `${m[1]}.${m[2]}.${m[3]}`;
       else if (programRatingsData.length) {
         const latest = programRatingsData.reduce((a, b) => (b.year > a.year || (b.year === a.year && b.month > a.month)) ? b : a);
