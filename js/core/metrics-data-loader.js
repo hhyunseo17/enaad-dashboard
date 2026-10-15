@@ -96,6 +96,10 @@
     // 채워졌는지) — js/features/metrics-dashboard.js의 renderMetricsDataAsOfLabel()이 이 값을 우선
     // 쓰고, null이면(ETL을 이 컬럼이 생긴 뒤로 재실행하지 않았거나 조회 실패) 기존 계산으로 폴백한다.
     let metricsReportAsOfDate = null;
+    // program-ratings.xlsx에 적힌 마지막 방송일('YYYY-MM-DD') — 같은 싱글턴 메타(competitor_ratings_meta.
+    // program_ratings_last_date, scripts/etl/load-program-ratings.mjs가 채움). "1%↑ 시청률 프로그램 수" 차트의
+    // 기준일 표기용. null이면(적재 전) 렌더 쪽이 programRatingsData의 마지막 연/월로 폴백한다.
+    let programRatingsLastDate = null;
     // 취급고/회계(매출기준)는 이 탭 전용 상태(metricsBasisMode)를 따로 두지 않는다 — "취급고를
     // 누르면 매출 대시보드의 취급고 숫자를, 회계를 누르면 회계 숫자를 가져와 KT ENA/ENA 채널 매출로
     // 쓴다"는 개념(2026-09-15, 사용자 요청)이라, 이 탭에도 버튼은 있지만(dashboard.html) 항상 메인
@@ -146,8 +150,10 @@
       const metaPromise = fetchJson(METRICS_RATINGS_META_URL).then(rows => {
         const row = Array.isArray(rows) ? rows[0] : null;
         metricsReportAsOfDate = (row && row.report_as_of_date) ? row.report_as_of_date : null;
+        programRatingsLastDate = (row && row.program_ratings_last_date) ? row.program_ratings_last_date : null;
       }).catch(err => {
         metricsReportAsOfDate = null;
+        programRatingsLastDate = null;
         console.warn('[metrics-data-loader] 리포트 as-of 날짜 조회 실패(기존 방식으로 폴백):', err.message);
       });
 

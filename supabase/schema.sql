@@ -483,6 +483,9 @@ create table if not exists competitor_ratings_meta (
 );
 insert into competitor_ratings_meta (id) values (1)
   on conflict (id) do nothing;
+-- program-ratings.xlsx에 적힌 마지막 방송일 — scripts/etl/load-program-ratings.mjs가 채운다. 지표 대시보드
+-- "1%↑ 시청률 프로그램 수" 차트가 "기준일"로 표시한다(리포트 as-of와는 별개의 원본이라 별도 컬럼).
+alter table competitor_ratings_meta add column if not exists program_ratings_last_date date;
 
 alter table competitor_ratings enable row level security;
 alter table competitor_revenue enable row level security;

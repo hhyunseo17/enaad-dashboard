@@ -528,8 +528,24 @@
       return [...new Set(rows.map(r => r.channel))];
     }
 
+    // "1%↑ 시청률 프로그램 수" 두 차트 제목 옆 안내 — program-ratings.xlsx의 마지막 날짜를 기준일로 덧붙인다
+    // (이 차트는 File1 리포트(데이터 기준 칩)와 별개 원본이라 기준일이 다를 수 있다). 날짜가 아직 적재되지
+    // 않았으면 programRatingsData의 마지막 연/월로 폴백한다.
+    function renderMetricsGenreQualifyingNote() {
+      let asOf = '';
+      const m = typeof programRatingsLastDate === 'string' ? programRatingsLastDate.match(/^(d{4})-(d{2})-(d{2})/) : null;
+      if (m) asOf = `${m[1]}.${m[2]}.${m[3]}`;
+      else if (programRatingsData.length) {
+        const latest = programRatingsData.reduce((a, b) => (b.year > a.year || (b.year === a.year && b.month > a.month)) ? b : a);
+        asOf = `${latest.year}.${String(latest.month).padStart(2, '0')}`;
+      }
+      const text = '본방 기준 · 수도권 개인 2049' + (asOf ? ` · 프로그램 시청률 기준일 ${asOf}` : '');
+      document.querySelectorAll('.metrics-genre-qualifying-note').forEach(el => { el.innerText = text; });
+    }
+
     // 왼쪽: 채널별 그룹 막대(드라마&영화/오락 나란히). x축은 (합계) 내림차순 — 랭킹차트류와 같은 관례.
     function renderMetricsGenreQualifyingBarChart() {
+      renderMetricsGenreQualifyingNote();
       const canvas = document.getElementById('chartMetricsGenreQualifyingBar'); if (!canvas) return;
       if (chartInstances.metricsGenreQualifyingBar) { chartInstances.metricsGenreQualifyingBar.destroy(); chartInstances.metricsGenreQualifyingBar = null; }
 

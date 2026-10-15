@@ -117,7 +117,7 @@ node load-competitor-data.mjs "C:\경로\경쟁채널 지표 현황.xlsx" "C:\�
 ## 프로그램별 시청률 적재 (`load-program-ratings.mjs`)
 지표 대시보드의 "장르별 1%↑ 시청률 프로그램 수" 차트용. `competitor_ratings`(File1, 월별 집계 리포트)와는 완전히 다른 원본으로, 회차 단위 시청률 데이터(약 259K행)를 담은 로컬 엑셀 파일을 인자로 받는다. `load-competitor-data.mjs`/`load-targets.mjs`와 마찬가지로 독립 스크립트이며 배치/컷오버 없이 upsert만 한다.
 
-시트 이름이 날짜로 매번 바뀌고 헤더 행 위치도 미묘하게 달라질 수 있어, 하드코딩된 행 번호 대신 "채널"이 A열에 정확히 일치하는 행을 찾아 그 다음 행부터 데이터로 취급한다. 본방유무가 "본방"인 행만 남기고(재방 제외 — 시청률이 구조적으로 낮아 프로그램 성과를 왜곡함), (채널,프로그램,장르,연,월) 키로 그룹핑해 `rating_sum`(개인2049 합)/`episode_count`(회차 수)를 `program_ratings_monthly`에 upsert한다. 여러 달을 합산할 때 월별 평균을 다시 평균 내지 않고 `rating_sum`/`episode_count`를 각각 합산한 뒤 나누는 가중평균을 쓰기 위한 구조다.
+시트 이름이 날짜로 매번 바뀌고 헤더 행 위치도 미묘하게 달라질 수 있어, 하드코딩된 행 번호 대신 "채널"이 A열에 정확히 일치하는 행을 찾아 그 다음 행부터 데이터로 취급한다. 본방유무가 "본방"인 행만 남기고(재방 제외 — 시청률이 구조적으로 낮아 프로그램 성과를 왜곡함), (채널,프로그램,장르,연,월) 키로 그룹핑해 `rating_sum`(개인2049 합)/`episode_count`(회차 수)를 `program_ratings_monthly`에 upsert한다. 여러 달을 합산할 때 월별 평균을 다시 평균 내지 않고 `rating_sum`/`episode_count`를 각각 합산한 뒤 나누는 가중평균을 쓰기 위한 구조다. 적재가 끝나면 파일에 적힌 마지막 날짜(본방/재방 구분 없는 전체 행의 최댓값)를 `competitor_ratings_meta.program_ratings_last_date`에 기록해, 지표 대시보드 "1%↑ 시청률 프로그램 수" 차트가 기준일로 표시한다.
 
 ```
 node load-program-ratings.mjs "C:\경로\program-ratings.xlsx"

@@ -42,15 +42,17 @@ function assertEnv() {
   }
 }
 
-// 엑셀 시리얼 날짜(숫자) → { year, month }. XLSX.SSF.parse_date_code를 쓴다(1900 윤년 버그 등을
+// 엑셀 시리얼 날짜(숫자) → { year, month, day }. XLSX.SSF.parse_date_code를 쓴다(1900 윤년 버그 등을
 // 라이브러리가 이미 처리해줌 — 수동 계산보다 안전).
 function serialToYearMonth(serial) {
   const n = Number(serial);
   if (!n || Number.isNaN(n)) return null;
   const parsed = XLSX.SSF.parse_date_code(n);
   if (!parsed) return null;
-  return { year: parsed.y, month: parsed.m };
+  return { year: parsed.y, month: parsed.m, day: parsed.d };
 }
+
+const pad2 = (n) => String(n).padStart(2, '0');
 
 // "채널"이 A열(첫 컬럼)에 정확히 일치하는 행을 찾아 그 행을 헤더로, 다음 행부터 데이터로 취급한다.
 // 하드코딩된 행 번호(현재 관측: 5번째 행, index 4) 대신 이 탐지 방식을 쓴다 — 시트/레이아웃이
@@ -82,10 +84,19 @@ export function parseProgramRatingsWorkbook(buffer) {
   const dataRows = matrix.slice(headerRowIdx + 1);
 
   const rawRows = [];
+  // 파일에 적힌 마지막 방송일(본방/재방 구분 없이 전체 행의 최댓값) — 지표 대시보드 "1%↑ 시청률 프로그램 수"
+  // 차트에 "기준일"로 표시한다(competitor_ratings_meta.program_ratings_last_date). 월별 집계로는 일(日)이 사라지므로
+  // 여기서 따로 뽑는다.
+  let lastDate = null;
   dataRows.forEach((row) => {
     if (!row || row.length === 0) return;
     const channel = String(row[col['채널']] ?? '').trim();
     if (!channel) return; // 빈 줄 방어
+    const dt = serialToYearMonth(row[col['일자']]);
+    if (dt) {
+      const iso = `${dt.year}-${pad2(dt.month)}-${pad2(dt.day)}`;
+      if (!lastDate || iso > lastDate) lastDate = iso;
+    }
     const airType = String(row[col['본방유무']] ?? '').trim();
     if (airType !== '본방') return; // 재방은 전부 버린다(사용자 확정)
 
@@ -97,7 +108,7 @@ export function parseProgramRatingsWorkbook(buffer) {
     if (!program || !genre || !ym || Number.isNaN(rating)) return;
     rawRows.push({ channel, program, genre, year: ym.year, month: ym.month, rating });
   });
-  return rawRows;
+  return { rawRows, lastDate };
 }
 
 // (channel, program, genre, year, month) 키로 그룹핑해 rating_sum/episode_count 산출.
@@ -127,6 +138,15 @@ async function upsertAll(supabase, table, rows, onConflict) {
   }
 }
 
+// 파일의 마지막 날짜를 competitor_ratings_meta(싱글턴)에 기록 — 다른 컬럼(report_as_of_date)은 건드리지 않는다.
+// 부가 정보라 실패해도 적재 자체를 막지 않는다.
+export async function updateLastDate(supabase, lastDate) {
+  if (!lastDate) { console.warn('  마지막 날짜를 얻지 못해 program_ratings_last_date 갱신을 건너뜁니다.'); return; }
+  const { error } = await supabase.from('competitor_ratings_meta').upsert({ id: 1, program_ratings_last_date: lastDate }, { onConflict: 'id' });
+  if (error) console.error(`  program_ratings_last_date 갱신 실패(무시하고 계속): ${error.message}`);
+  else console.log(`  program_ratings_last_date=${lastDate} 기록`);
+}
+
 async function main() {
   assertEnv();
   const [filePath] = process.argv.slice(2);
@@ -141,8 +161,8 @@ async function main() {
   const buffer = readFileSync(filePath);
 
   console.log('[2/4] 파싱 + 본방 필터링');
-  const rawRows = parseProgramRatingsWorkbook(buffer);
-  console.log(`  본방 필터링 후 ${rawRows.length}행`);
+  const { rawRows, lastDate } = parseProgramRatingsWorkbook(buffer);
+  console.log(`  본방 필터링 후 ${rawRows.length}행, 파일의 마지막 날짜 ${lastDate}`);
 
   console.log('[3/4] (채널,프로그램,장르,연,월) 기준 월별 집계');
   const monthlyRows = aggregateMonthly(rawRows);
@@ -151,11 +171,16 @@ async function main() {
   console.log('[4/4] program_ratings_monthly upsert');
   await upsertAll(supabase, 'program_ratings_monthly', monthlyRows, 'channel,program,genre,year,month');
 
+  await updateLastDate(supabase, lastDate);
+
   console.log(`완료. 원본 ${rawRows.length}행(본방만) → 집계 ${monthlyRows.length}행 upsert.`);
   console.log('주의: 파일에서 삭제/변경되어 사라진 과거 행은 upsert만으로는 정리되지 않습니다. 필요 시 Supabase에서 수동 확인하세요.');
 }
 
-main().catch((err) => {
-  console.error('프로그램 시청률 적재 실패:', err.message);
-  process.exit(1);
-});
+import { fileURLToPath } from 'node:url';
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err) => {
+    console.error('프로그램 시청률 적재 실패:', err.message);
+    process.exit(1);
+  });
+}
