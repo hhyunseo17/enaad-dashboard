@@ -518,8 +518,22 @@
     // (channel,program,genre,year,month) 단위로 유일해 — 한 행 = 그 달의 프로그램 하나 — band 필드에
     // agg:'count'를 걸면 "그 채널·그 구간·그 달의 프로그램 개수"가 그대로 나온다(pvComputeMetric의
     // count는 metrics.rowCount를 그대로 반환, 필드값을 합산/평균하지 않는다).
+    //
+    // 구간은 "그 달"이 아니라 **조회기간 전체의 가중평균**(rating_sum 합 ÷ episode_count 합)으로 프로그램당
+    // 하나만 정한다 — 차트(computeGenreQualifyingByChannel)와 같은 기준이다. 예전에는 (프로그램,월) 행마다 그 달
+    // 평균으로 구간을 매겨, 월을 열에서 빼면 한 프로그램이 여러 구간에 동시에 잡혔다(2026-10-19, 사용자 지적).
+    // 개수는 행 수가 아니라 programKey(채널|프로그램|장르) 고유 개수로 센다(프리셋의 agg:'distinct') — 월이
+    // 열에 있어도 월별 행이 중복 집계되지 않고, 각 월 칸에는 "그 달에 방영된 프로그램 중 그 구간 프로그램 수"가 나온다.
     function metricsGenreQualifyingBandDataForPivot() {
-      return metricsGenreQualifyingDataForPivot().map(r => ({ ...r, band: metricsGenreRatingBandFor(r.avgRating) }));
+      const rows = metricsGenreQualifyingDataForPivot();
+      const periodAvg = new Map();
+      metricsMergeProgramRatingsRows(rows, ['channel', 'program', 'genre']).forEach(g => {
+        periodAvg.set(g.channel + '|' + g.program + '|' + g.genre, g.episodeCount > 0 ? g.ratingSum / g.episodeCount : 0);
+      });
+      return rows.map(r => {
+        const programKey = r.channel + '|' + r.program + '|' + r.genre;
+        return { ...r, programKey, band: metricsGenreRatingBandFor(periodAvg.get(programKey)) };
+      });
     }
     // 피벗 상세 화면 "② 채널" 드롭다운 후보 — 이 장르 2종+범위 토글 조건에서 구조적으로 데이터가
     // 있는 채널만 남긴다(위 4개 피벗의 channelCandidates와 같은 원칙).

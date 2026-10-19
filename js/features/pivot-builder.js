@@ -942,7 +942,7 @@
         rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc', band: 'genreBandOrder' },
         columns: ['year', 'month'],
-        values: [{ field: 'band', agg: 'count' }],
+        values: [{ field: 'programKey', agg: 'distinct' }], // 프로그램 고유 개수 — 월별 행 중복 집계 방지(metrics-ratings.js 주석)
         sourceFilter: null,
         dataSource: () => metricsGenreQualifyingBandDataForPivot(),
         channelCandidates: () => metricsGenreQualifyingChannelCandidates(),
@@ -1085,7 +1085,7 @@
     // "1%↑ 시청률 프로그램 수" 채널별 막대차트 피벗(metricsGenreQualifyingBarPivot) 전용 — 위와 같은
     // 행에 metricsGenreQualifyingBandDataForPivot()(metrics-ratings.js)가 구간(band) 필드 하나만 얹어
     // 넘긴다. avgRating 대신 band를 노출해 사용자가 표편집에서 구간을 행/열/필터로 옮길 수 있게 한다.
-    const PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS = ['channel', 'program', 'genre', 'band', 'year', 'month'];
+    const PV_METRICS_GENRE_QUALIFYING_BAND_FIELDS = ['channel', 'program', 'genre', 'band', 'year', 'month', 'programKey'];
     // 프로그램별 광고매출 상세 피벗(programAdDetail) 전용 — programAdRows의 실제 필드. 축 5개 + 값 8개
     // (매출 5종·전체매출·GRPs 2종, 전부 값 well 전용 — detail-data.js DD_VALUE_ONLY_FIELDS).
     const PV_PROGRAM_AD_FIELDS = ['genre', 'program', 'channel', 'year', 'month',

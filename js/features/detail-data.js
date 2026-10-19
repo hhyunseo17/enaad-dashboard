@@ -62,7 +62,7 @@
     // 필드 목록이 그 화면에서만 의미 있는 항목으로 길어지지 않게 하기 위함이다.
     // scope/channelGroup/revenue는 지표 대시보드 매출 4종 피벗(metricsMarketByScopePivot 등, pivot-builder.js
     // PV_FIELD_WHITELIST)에서만 쓴다 — metricsRevenueData(File1 사업자별 매출) 전용 필드라 공용 DETAIL_DATA_FIELDS엔 없다.
-    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출', program: '프로그램', genre: '장르', band: '구간', avgRating: '평균 시청률', value: '값',
+    const DD_EXTRA_FIELD_LABELS = { upfrontAdvertiser: '업프론트광고주', scope: '범위', channelGroup: '사업자', revenue: '매출', program: '프로그램', genre: '장르', band: '구간', programKey: '프로그램(고유)', avgRating: '평균 시청률', value: '값',
       // 프로그램별 광고매출(programAd) 피벗의 값 필드 — 화면 항목 이름과 같게 적는다
       revTotal: '전체매출', revPackage: '일반광고(패키지)', revGeneralGrps: '일반광고(GRPs기여)', revInfomercial: '인포머셜',
       revImc: 'IMC', revOther: '기타광고', grp2049: 'GRPs(2049)', grpHousehold: 'GRPs(가구)' };
