@@ -938,8 +938,8 @@
       // 값 크기가 아니라 3%↑→0.5%미만 고정순서라 fieldSorters에 전용 정렬자 genreBandOrder(위
       // PV_ROW_SORTERS 참고)를 쓴다.
       metricsGenreQualifyingBarPivot: {
-        rows: ['channel', 'band'],
-        rowFallbacks: ['(미지정)', '(미지정)'],
+        rows: ['channel', 'band', 'program'], // 구간 아래로 펼치면 그 구간에 속한 프로그램까지 보인다(2026-10-19, 사용자 요청)
+        rowFallbacks: ['(미지정)', '(미지정)', '(미지정)'],
         fieldSorters: { channel: 'enaFirstValueDesc', band: 'genreBandOrder' },
         columns: ['year', 'month'],
         values: [{ field: 'band', agg: 'count' }],
