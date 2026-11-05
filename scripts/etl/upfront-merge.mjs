@@ -21,7 +21,7 @@ export function mergeUpfrontContracts(rows) {
     (r) => isBonbuNonExcluded(r) && r.is_upfront && r.contract_start_y && r.contract_end_y
   );
 
-  // 1차: 광고주(업프론트용)+계약기간 기준 유일 그룹 (업프론트 비고에 "합산"이 있으면 그것을 우선 키로 사용)
+  // 1차: 업프론트 광고주+계약기간 기준 유일 그룹 (업프론트 비고에 "합산"이 있으면 그것을 우선 키로 사용)
   const contractMap = {};
   eligible.forEach((r) => {
     const contractAmountWon = Math.round((r.upfront_contract_amount_eok || 0) * 1e8);
