@@ -192,7 +192,7 @@
           const contractAmountWon = Math.round(contractAmountEok * 1e8);
           const grossNetFlag = (r['GROSS/NET'] || '').toString().trim();
           const contractAmountText = contractAmountEok > 0 ? (contractAmountEok + '억원' + (grossNetFlag === 'NET' ? ' (NET)' : '')) : '';
-          const upfrontAdvertiser = (r['광고주(업프론트용)'] || adv || '(미지정)').toString().trim();
+          const upfrontAdvertiser = (r['업프론트 광고주'] || r['광고주(업프론트용)'] || adv || '(미지정)').toString().trim();
           const upfrontRemark = (r['업프론트 비고'] || '').toString().trim();
           const deptVal = (r['부서'] || '(미지정)').toString().trim();
           const originalManager = (r['담당자'] || '(미지정)').toString().trim();

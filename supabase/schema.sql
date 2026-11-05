@@ -90,7 +90,7 @@ create table if not exists raw_sales_rows (
 
   upfront_contract_amount_eok   numeric(12, 2) not null default 0,      -- 억원 단위 숫자
   gross_net_flag                text not null default '',               -- '' | 'GROSS' | 'NET'
-  upfront_advertiser_raw        text,                                    -- 원본 '광고주(업프론트용)'
+  upfront_advertiser_raw        text,                                    -- 원본 '업프론트 광고주'(2026-11-05 이전 파일은 '광고주(업프론트용)')
   upfront_note                  text,                                    -- 원본 '업프론트 비고'
 
   created_at                    timestamptz not null default now()

@@ -107,7 +107,8 @@ export function transformRow(r, sourceRowNo) {
     contract_end_date: contractEndDate ? contractEndDate.toISOString().slice(0, 10) : null,
     upfront_contract_amount_eok: parseFloat(r['업프론트 계약금액']) || 0,
     gross_net_flag: s(r['GROSS/NET']),
-    upfront_advertiser_raw: s(r['광고주(업프론트용)']) || advertiser,
+    // 열 이름이 '광고주(업프론트용)' → '업프론트 광고주'로 바뀌었다(2026-11-05). 새 이름을 먼저 보고, 옛 파일도 읽히도록 옛 이름을 폴백으로 둔다.
+    upfront_advertiser_raw: s(r['업프론트 광고주']) || s(r['광고주(업프론트용)']) || advertiser,
     upfront_note: s(r['업프론트 비고']),
   };
 }
